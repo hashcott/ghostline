@@ -129,7 +129,7 @@ func TestRunWatchdog_RestoresAfterParentExit(t *testing.T) {
 type failingDNS struct{ fakeDNS }
 
 func (f *failingDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	return []sysdns.RestoreError{{GUID: s[0].GUID, Alias: s[0].Alias, Err: os.ErrPermission}}
+	return []sysdns.RestoreError{{Target: s[0].Alias, Err: os.ErrPermission}}
 }
 
 func TestRestore_FailureKeepsSnapshotForLaterLayers(t *testing.T) {
@@ -156,7 +156,7 @@ func TestRestore_CorruptStateWithFailedResetStaysUnclean(t *testing.T) {
 type failingLoopback struct{}
 
 func (failingLoopback) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	return []sysdns.RestoreError{{GUID: "{B}", Err: os.ErrPermission}}
+	return []sysdns.RestoreError{{Target: "{B}", Err: os.ErrPermission}}
 }
 func (failingLoopback) LoopbackAdapters() ([]sysdns.Adapter, error) {
 	return []sysdns.Adapter{{GUID: "{B}"}}, nil

@@ -125,7 +125,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 	if err != nil {
 		var out []RestoreError
 		for _, s := range snaps {
-			out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+			out = append(out, RestoreError{Target: s.Alias, Err: err})
 		}
 		return out
 	}
@@ -143,7 +143,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 				continue // nothing recorded for this family
 			}
 			if err := m.restoreFamily(a, f.v6, f.dns); err != nil {
-				out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+				out = append(out, RestoreError{Target: s.Alias, Err: err})
 			}
 		}
 	}

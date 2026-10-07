@@ -305,7 +305,7 @@ func (o *Orchestrator) connectSteps() []step {
 				// that snapshot first; snapshotting now would record
 				// 127.0.0.1 as the "original" DNS.
 				if errs := o.disconnectLocked(ctx); len(errs) > 0 {
-					return halt(appErr(CodeRestoreFailed, errs[0], "adapter", errs[0].Alias))
+					return halt(appErr(CodeRestoreFailed, errs[0], "adapter", errs[0].Target))
 				}
 				o.ClearWarning(CodeRestoreFailed)
 			}
@@ -482,7 +482,7 @@ func (o *Orchestrator) restoreOrHalt(snaps []model.AdapterSnapshot, orig error) 
 	errs := o.d.DNS.Restore(snaps)
 	_ = o.d.DNS.Flush()
 	if len(errs) > 0 {
-		return halt(appErr(CodeRestoreFailed, errs[0], "adapter", errs[0].Alias))
+		return halt(appErr(CodeRestoreFailed, errs[0], "adapter", errs[0].Target))
 	}
 	return orig
 }
@@ -509,7 +509,7 @@ func (o *Orchestrator) disconnectLocked(ctx context.Context) []sysdns.RestoreErr
 		o.dirty = true
 		o.mu.Unlock()
 		for _, e := range errs {
-			o.AddWarning(AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": e.Alias}})
+			o.AddWarning(AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": e.Target}})
 		}
 		return errs
 	}
@@ -563,7 +563,7 @@ func (o *Orchestrator) Disconnect(ctx context.Context) error {
 
 	if errs := o.disconnectLocked(ctx); len(errs) > 0 {
 		o.update(func(s *Snapshot) { s.Status = prev })
-		o.log("system", CodeRestoreFailed, "adapter", errs[0].Alias)
+		o.log("system", CodeRestoreFailed, "adapter", errs[0].Target)
 		return nil
 	}
 	o.update(func(s *Snapshot) {

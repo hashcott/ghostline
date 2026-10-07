@@ -163,7 +163,7 @@ func (o *Orchestrator) swapTo(ctx context.Context, picked []model.Server) {
 		o.log("engine", "SWAP_FAILED")
 		if errs := o.disconnectLocked(ctx); len(errs) > 0 {
 			o.update(func(s *Snapshot) {
-				s.Status, s.Error = StatusError, &AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": errs[0].Alias}}
+				s.Status, s.Error = StatusError, &AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": errs[0].Target}}
 			})
 			return
 		}

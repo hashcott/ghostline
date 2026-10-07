@@ -150,7 +150,7 @@ func TestRestore_RetriesThenFallsBackThenReports(t *testing.T) {
 		IPv4: model.FamilyDNS{Mode: model.DNSModeStatic, Servers: []string{"9.9.9.9"}}}}
 	errs := m.Restore(snaps)
 	require.Len(t, errs, 1)
-	require.Equal(t, "{A}", errs[0].GUID)
+	require.Equal(t, "Ethernet", errs[0].Target)
 	require.Equal(t, 3, api.setCalls)
 	require.Equal(t, int32(2), sleeps.Load())
 	require.Equal(t, []string{"netsh:7:v4:9.9.9.9", "netsh:7:v4:"}, api.netshCalls)

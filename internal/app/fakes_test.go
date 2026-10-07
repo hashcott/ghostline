@@ -122,7 +122,7 @@ func (d *fDNS) ApplyLoopback(snaps []model.AdapterSnapshot, v6 bool) error {
 func (d *fDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
 	_ = d.r.add("dns.restore")
 	if d.restoreErr {
-		return []sysdns.RestoreError{{GUID: s[0].GUID, Alias: s[0].Alias, Err: errBoom}}
+		return []sysdns.RestoreError{{Target: s[0].Alias, Err: errBoom}}
 	}
 	return nil
 }
