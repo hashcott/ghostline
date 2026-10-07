@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"context"
 	"image/color"
 	"log/slog"
 	"net/netip"
@@ -60,10 +59,9 @@ var statusColour = map[app.Status]color.RGBA{
 }
 
 type ui struct {
-	app  *application.App
-	orch *app.Orchestrator
-	box  *app.SettingsBox
-	log  *slog.Logger
+	app *application.App
+	b   trayBackend
+	log *slog.Logger
 
 	mu sync.Mutex
 	// win is the open window, nil while Ghostline sits in the tray. Only
@@ -74,17 +72,13 @@ type ui struct {
 	dpiItem     *application.MenuItem
 	proxyItem   *application.MenuItem
 	checkItem   *application.MenuItem
-	svc         *app.Service
 	openItem    *application.MenuItem
 	quitItem    *application.MenuItem
 	updItem     *application.MenuItem
 	lastState   app.Status
 	lastFakeSNI bool
 	updTag      string // newer release, "" if none
-	// lanDNSClients counts LAN devices that used the DNS server in the
-	// last 10 minutes (0 while it is off); nil means none.
-	lanDNSClients func() int
-	updURL        string
+	updURL      string
 }
 
 // createWindow opens the main window. Closing it to the tray destroys it
@@ -93,7 +87,7 @@ type ui struct {
 func (u *ui) createWindow() {
 	// The initial size must match the saved mode: resizing a window that
 	// has not been shown yet is ignored.
-	s := u.box.Get()
+	s := u.b.GetSettings()
 	opts := application.WebviewWindowOptions{
 		Name:                "main",
 		Title:               brand.AppName,
@@ -113,7 +107,7 @@ func (u *ui) createWindow() {
 	w := u.app.Window.NewWithOptions(opts)
 	u.win = w
 	w.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
-		if u.box.Get().CloseToTray {
+		if u.b.GetSettings().CloseToTray {
 			if u.win == w {
 				u.win = nil // let it close; the tray stays
 			}
@@ -146,7 +140,7 @@ func (u *ui) resize(mode string) {
 	x, y := u.win.Position()
 	w0, h0 := u.win.Size()
 	cx, cy := x+w0/2, y+h0/2
-	s := u.box.Get()
+	s := u.b.GetSettings()
 	w, h := simpleW, simpleH
 	if mode == store.ModeFull {
 		w, h = max(s.FullWindow.Width, minFullW), max(s.FullWindow.Height, minFullH)
@@ -155,7 +149,7 @@ func (u *ui) resize(mode string) {
 	} else {
 		if w0 >= minFullW { // remember the full-interface size
 			s.FullWindow.Width, s.FullWindow.Height = w0, h0
-			_ = u.box.Save(s)
+			_ = u.b.SaveSettings(s)
 		}
 		u.win.SetMinSize(simpleW, simpleH)
 		u.win.SetResizable(false)
@@ -167,7 +161,7 @@ func (u *ui) resize(mode string) {
 func (u *ui) createTray() {
 	u.tray = u.app.SystemTray.New()
 	u.tray.SetIcon(icon.Ring(statusColour[app.StatusDisconnected], trayIconSize()))
-	tt := trayText(u.box.Get().Language)
+	tt := trayText(u.b.GetSettings().Language)
 	u.tray.SetTooltip(brand.AppName + " · " + tt.status[app.StatusDisconnected])
 	menu := application.NewMenu()
 	u.updItem = menu.Add("").SetHidden(true).OnClick(func(*application.Context) {
@@ -180,30 +174,21 @@ func (u *ui) createTray() {
 	})
 	u.connItem = menu.Add(tt.connect).OnClick(func(*application.Context) {
 		go func() {
-			if st := u.orch.Snapshot().Status; st == app.StatusProtected || st == app.StatusDegraded {
-				if !u.confirmDisconnect(tt) {
-					return
-				}
-				_ = u.orch.Disconnect(context.Background())
-			} else {
-				_ = u.orch.Connect(context.Background())
-			}
+			_ = trayToggle(u.b, func(n int) bool { return u.confirmDisconnect(tt, n) })
 		}()
 	})
-	u.dpiItem = menu.AddCheckbox(tt.dpi, u.box.Get().DPI.Enabled)
+	u.dpiItem = menu.AddCheckbox(tt.dpi, u.b.GetSettings().DPI.Enabled)
 	u.dpiItem.OnClick(func(c *application.Context) {
 		on := c.IsChecked()
 		go func() {
-			if err := u.orch.SetDPIEnabled(context.Background(), on); err != nil {
+			if err := u.b.SetDPIEnabled(on); err != nil {
 				u.dpiItem.SetChecked(!on)
 			}
 		}()
 	})
-	u.proxyItem = menu.Add(tt.proxyLabel(u.box.Get().Proxy.Enabled)).OnClick(func(*application.Context) {
+	u.proxyItem = menu.Add(tt.proxyLabel(u.b.GetSettings().Proxy.Enabled)).OnClick(func(*application.Context) {
 		go func() {
-			if u.svc != nil {
-				_ = u.svc.SetProxyEnabled(!u.box.Get().Proxy.Enabled)
-			}
+			_ = u.b.SetProxyEnabled(!u.b.GetSettings().Proxy.Enabled)
 			u.onLanguage()
 		}()
 	})
@@ -238,7 +223,7 @@ func (u *ui) relabel(status app.Status) {
 	if u.tray == nil {
 		return
 	}
-	tt := trayText(u.box.Get().Language)
+	tt := trayText(u.b.GetSettings().Language)
 	u.mu.Lock()
 	tag := u.updTag
 	fakeSNI := u.lastFakeSNI
@@ -253,7 +238,7 @@ func (u *ui) relabel(status app.Status) {
 		u.connItem.SetLabel(tt.connect)
 	}
 	u.dpiItem.SetLabel(tt.dpi)
-	u.proxyItem.SetLabel(tt.proxyLabel(u.box.Get().Proxy.Enabled))
+	u.proxyItem.SetLabel(tt.proxyLabel(u.b.GetSettings().Proxy.Enabled))
 	u.checkItem.SetLabel(tt.checkUpdate)
 	u.openItem.SetLabel(tt.open)
 	u.quitItem.SetLabel(tt.quit)
@@ -285,14 +270,14 @@ func (u *ui) onUpdate(tag, url string) {
 // checkUpdate is the tray's "Check for updates": a newer release shows up
 // through onUpdate (menu item + tooltip); otherwise the tooltip says so.
 func (u *ui) checkUpdate() {
-	if u.svc == nil || u.tray == nil {
+	if u.b == nil || u.tray == nil {
 		return
 	}
-	r, err := u.svc.CheckUpdateNow()
+	r, err := u.b.CheckUpdateNow()
 	if err == nil && r.Newer {
 		return
 	}
-	tt := trayText(u.box.Get().Language)
+	tt := trayText(u.b.GetSettings().Language)
 	msg := tt.upToDate + " (" + brand.Version + ")"
 	if err != nil {
 		msg = tt.checkFailed
@@ -301,15 +286,11 @@ func (u *ui) checkUpdate() {
 	time.AfterFunc(10*time.Second, u.onLanguage) // back to the status tooltip
 }
 
-// confirmDisconnect asks before a tray disconnect while LAN devices use
+// confirmDisconnect asks before a tray disconnect while n LAN devices use
 // this PC's DNS: they lose the internet with it. Shutdown and Quit do not
 // ask.
-func (u *ui) confirmDisconnect(tt trayStrings) bool {
-	if u.lanDNSClients == nil || u.app == nil {
-		return true
-	}
-	n := u.lanDNSClients()
-	if n == 0 {
+func (u *ui) confirmDisconnect(tt trayStrings, n int) bool {
+	if u.app == nil {
 		return true
 	}
 	ok := false

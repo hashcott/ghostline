@@ -92,8 +92,7 @@ func Run(o Options) error {
 		fatalBox(err)
 		return err
 	}
-	ui.orch, ui.box, ui.svc = c.Orch, c.Settings, c.Svc
-	ui.lanDNSClients = c.Svc.LANDNSClients
+	ui.b = c.Svc
 
 	opts := application.Options{
 		Name:        brand.AppName,
