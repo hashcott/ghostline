@@ -32,14 +32,9 @@ type Engine interface {
 	Stats() engine.Stats
 }
 
-// DNS changes adapter DNS settings.
-type DNS interface {
-	Select(mode string, guids []string) ([]sysdns.Adapter, error)
-	Snapshot([]sysdns.Adapter) ([]model.AdapterSnapshot, error)
-	ApplyLoopback([]model.AdapterSnapshot, bool) error
-	Restore([]model.AdapterSnapshot) []sysdns.RestoreError
-	Flush() error
-}
+// DNS changes the system's DNS (sysdns.Backend: adapters on Windows,
+// NetworkManager, systemd-resolved or resolv.conf on Linux).
+type DNS = sysdns.Backend
 
 // DPI runs one DPI bypass engine at a time (dpi.Manager).
 type DPI interface {

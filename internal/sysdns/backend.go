@@ -36,9 +36,12 @@ type Backend interface {
 	Snapshot(sel Selection) (Snapshot, error)
 	// Apply points the recorded configuration at 127.0.0.1 (and ::1).
 	Apply(s Snapshot, v6 bool) error
-	// Reconcile runs after a network change: it returns the updated
-	// snapshot (recorded before anything changed) and what it touched.
-	Reconcile(s Snapshot, sel Selection, v6 bool) (Snapshot, []Change, error)
+	// Reconcile runs after a network change and changes nothing: it returns
+	// next (s plus whatever is new, recorded as it is now), toApply (the
+	// part to point at loopback again) and what that covers. The caller
+	// persists next before it applies toApply, so a crash in between never
+	// leaves an unrecorded change.
+	Reconcile(s Snapshot, sel Selection) (next, toApply Snapshot, changes []Change, err error)
 	// StillOurs keeps the part of s Ghostline's configuration still holds,
 	// so recovery never overwrites what the user set since.
 	StillOurs(s Snapshot) Snapshot

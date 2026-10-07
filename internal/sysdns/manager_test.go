@@ -13,14 +13,15 @@ import (
 )
 
 type fakeAPI struct {
-	adapters   []sysdns.Adapter
-	dns        map[string][]string // guid|v4 or guid|v6
-	setErr     error
-	netshErr   error
-	netshDHCP  error
-	netshCalls []string
-	setCalls   int
-	flushes    int
+	adapters    []sysdns.Adapter
+	adaptersErr error
+	dns         map[string][]string // guid|v4 or guid|v6
+	setErr      error
+	netshErr    error
+	netshDHCP   error
+	netshCalls  []string
+	setCalls    int
+	flushes     int
 }
 
 func key(guid string, v6 bool) string {
@@ -30,7 +31,7 @@ func key(guid string, v6 bool) string {
 	return guid + "|v4"
 }
 
-func (f *fakeAPI) Adapters() ([]sysdns.Adapter, error) { return f.adapters, nil }
+func (f *fakeAPI) Adapters() ([]sysdns.Adapter, error) { return f.adapters, f.adaptersErr }
 func (f *fakeAPI) GetDNS(guid string, v6 bool) ([]string, error) {
 	return f.dns[key(guid, v6)], nil
 }

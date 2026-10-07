@@ -2,12 +2,10 @@ package platform
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
@@ -18,7 +16,7 @@ import (
 func (d Deps) Recovery(states *store.StateStore, stopDPI func() error, log *slog.Logger) watchdog.Deps {
 	return watchdog.Deps{
 		States:          states,
-		DNS:             sysdns.NewManager(d.DNS, time.Sleep),
+		DNS:             d.DNS,
 		StopDPI:         stopDPI,
 		Alive:           d.Procs.Alive,
 		Log:             log,

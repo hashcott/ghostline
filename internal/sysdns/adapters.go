@@ -2,7 +2,6 @@ package sysdns
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/model"
@@ -40,13 +39,12 @@ func (b *adapterBackend) Snapshot(sel Selection) (Snapshot, error) {
 
 func (b *adapterBackend) Apply(s Snapshot, v6 bool) error { return b.m.ApplyLoopback(s.Windows, v6) }
 
-// Reconcile records and redirects adapters that appeared since s was
-// taken. Each one is in the returned snapshot before it is changed; one
-// that cannot be redirected stays recorded and is reported in the error.
-func (b *adapterBackend) Reconcile(s Snapshot, sel Selection, v6 bool) (Snapshot, []Change, error) {
+// Reconcile records adapters that appeared since s was taken; toApply
+// holds only them, so adapters already handled are not touched again.
+func (b *adapterBackend) Reconcile(s Snapshot, sel Selection) (Snapshot, Snapshot, []Change, error) {
 	ads, err := b.m.Select(sel.Mode, sel.IDs)
 	if err != nil {
-		return s, nil, err
+		return s, Snapshot{}, nil, err
 	}
 	known := map[string]bool{}
 	for _, a := range s.Windows {
@@ -54,8 +52,8 @@ func (b *adapterBackend) Reconcile(s Snapshot, sel Selection, v6 bool) (Snapshot
 	}
 	next := s
 	next.Windows = append([]model.AdapterSnapshot(nil), s.Windows...)
+	toApply := Snapshot{Backend: s.Backend}
 	var changes []Change
-	var errs []error
 	for _, a := range ads {
 		if known[a.GUID] {
 			continue
@@ -65,16 +63,10 @@ func (b *adapterBackend) Reconcile(s Snapshot, sel Selection, v6 bool) (Snapshot
 			continue
 		}
 		next.Windows = append(next.Windows, snaps...)
-		if err := b.m.ApplyLoopback(snaps, v6); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", a.Alias, err))
-			continue
-		}
+		toApply.Windows = append(toApply.Windows, snaps...)
 		changes = append(changes, Change{Target: a.Alias, Added: true})
 	}
-	if len(changes) > 0 {
-		_ = b.m.Flush()
-	}
-	return next, changes, errors.Join(errs...)
+	return next, toApply, changes, nil
 }
 
 // StillOurs keeps the adapters whose DNS still points at loopback: one the

@@ -45,16 +45,21 @@ func TestAdapterBackend_ReconcileAddsNewAdapter(t *testing.T) {
 	nb.Alias = "Ethernet 2"
 	api.adapters = append(api.adapters, nb)
 	api.dns["{B}|v4"] = []string{"8.8.8.8"}
-	next, changes, err := b.Reconcile(s, sysdns.Selection{Mode: "auto"}, false)
+	next, toApply, changes, err := b.Reconcile(s, sysdns.Selection{Mode: "auto"})
 	require.NoError(t, err)
 	require.Len(t, next.Windows, 2)
-	require.Equal(t, []string{"8.8.8.8"}, next.Windows[1].IPv4.Servers, "recorded before it was changed")
+	require.Equal(t, []string{"8.8.8.8"}, next.Windows[1].IPv4.Servers, "recorded as it was")
 	require.Equal(t, []sysdns.Change{{Target: "Ethernet 2", Added: true}}, changes)
+	require.Equal(t, []string{"8.8.8.8"}, api.dns["{B}|v4"], "Reconcile changes nothing")
+	require.Len(t, toApply.Windows, 1, "only the new adapter is applied")
+	require.Equal(t, "{B}", toApply.Windows[0].GUID)
+	require.NoError(t, b.Apply(toApply, false))
 	require.Equal(t, []string{"127.0.0.1"}, api.dns["{B}|v4"])
 
-	next2, changes, err := b.Reconcile(next, sysdns.Selection{Mode: "auto"}, false)
+	next2, toApply2, changes, err := b.Reconcile(next, sysdns.Selection{Mode: "auto"})
 	require.NoError(t, err)
 	require.Empty(t, changes, "nothing new")
+	require.True(t, toApply2.Empty())
 	require.Equal(t, next, next2)
 }
 
@@ -97,4 +102,12 @@ func TestUnsupportedBackend(t *testing.T) {
 	require.NoError(t, err)
 	stop()
 	require.Equal(t, "unsupported", b.Info().Backend)
+}
+
+// If the current DNS cannot be read, restoring everything is the safe side.
+func TestAdapterBackend_StillOursKeepsAllWhenUnreadable(t *testing.T) {
+	api := &fakeAPI{adaptersErr: errors.New("access denied"), dns: map[string][]string{}}
+	b := sysdns.NewAdapterBackend(api, noWatch)
+	s := model.DNSSnapshot{Backend: "windows", Windows: []model.AdapterSnapshot{{GUID: "{A}"}, {GUID: "{B}"}}}
+	require.Equal(t, s, b.StillOurs(s))
 }

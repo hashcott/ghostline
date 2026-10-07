@@ -45,7 +45,7 @@ func testDeps(t *testing.T) platform.Deps {
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
-		DNS: sysdns.Unsupported{}, WatchNetwork: watch,
+		DNS:      sysdns.UnsupportedBackend{},
 		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
 		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
@@ -61,10 +61,18 @@ func testDeps(t *testing.T) platform.Deps {
 	}
 }
 
-// noAdapters is a system DNS with no adapters to manage.
-type noAdapters struct{ sysdns.Unsupported }
+// noAdapters is a system DNS with nothing of Ghostline's to reset.
+type noAdapters struct{ sysdns.UnsupportedBackend }
 
-func (noAdapters) Adapters() ([]sysdns.Adapter, error) { return nil, nil }
+func (noAdapters) RestoreDefault() error { return nil }
+
+// watchedDNS counts Watch registrations and stops.
+type watchedDNS struct {
+	sysdns.UnsupportedBackend
+	watch func(func()) (func(), error)
+}
+
+func (w watchedDNS) Watch(f func()) (func(), error) { return w.watch(f) }
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
@@ -128,12 +136,12 @@ func TestStart_WatchesRegisteredBeforeReturn(t *testing.T) {
 	p := testDeps(t)
 	var mu sync.Mutex
 	registered, stopped := 0, 0
-	p.WatchNetwork = func(func()) (func(), error) {
+	p.DNS = watchedDNS{watch: func(func()) (func(), error) {
 		mu.Lock()
 		registered++
 		mu.Unlock()
 		return func() { mu.Lock(); stopped++; mu.Unlock() }, nil
-	}
+	}}
 	c := newCore(t, p, Options{})
 	ctx, cancel := context.WithCancel(context.Background())
 	wait := c.Start(ctx)

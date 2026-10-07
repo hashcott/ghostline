@@ -97,6 +97,7 @@ type ServiceDeps struct {
 	LoadCustom   func() ([]model.Server, error)
 	SaveCustom   func([]model.Server) error
 	ListAdapters func() ([]sysdns.Adapter, error)
+	DNSInfo      func() sysdns.Info // the system DNS backend, for Settings
 	StopService  func(name string) error
 	SetMode      func(mode string)
 	RestoreNow   func() error
@@ -688,6 +689,15 @@ func (s *Service) RestoreDNSNow() error {
 // StopConflictingService stops a Windows service holding port 53. The UI
 // calls it only after the user confirmed in-page.
 func (s *Service) StopConflictingService(name string) error { return s.x.StopService(name) }
+
+// DNSInfo describes how Ghostline changes this system's DNS (Settings
+// shows the adapter choice, or the backend chain).
+func (s *Service) DNSInfo() sysdns.Info {
+	if s.x.DNSInfo == nil {
+		return sysdns.Info{Interfaces: []string{}}
+	}
+	return s.x.DNSInfo()
+}
 
 // ListAdapters lists network adapters for manual selection.
 func (s *Service) ListAdapters() []sysdns.Adapter {

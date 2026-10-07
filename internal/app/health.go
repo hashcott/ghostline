@@ -181,8 +181,10 @@ func (o *Orchestrator) swapTo(ctx context.Context, picked []model.Server) {
 	o.log("ok", "SWAPPED", "servers", len(picked))
 }
 
-// OnNetworkChange snapshots and redirects adapters that appeared while
-// connected. The snapshot is persisted before the adapter is changed.
+// OnNetworkChange lets the DNS backend catch up with the network: a new
+// adapter is recorded and redirected (Windows), a configuration the
+// system changed is set again (Linux). The updated snapshot is persisted
+// before anything is applied.
 func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 	o.opMu.Lock()
 	defer o.opMu.Unlock()
@@ -190,42 +192,34 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 		return
 	}
 	s := o.d.Settings()
-	ads, err := o.d.DNS.Select(s.Adapters, s.AdapterGUIDs)
-	if err != nil {
-		return
-	}
 	o.mu.Lock()
-	known := map[string]bool{}
-	for _, sn := range o.snaps {
-		known[sn.GUID] = true
-	}
+	cur, v6 := o.dnsSnap, o.v6
 	o.mu.Unlock()
-	for _, a := range ads {
-		if known[a.GUID] {
-			continue
-		}
-		snaps, err := o.d.DNS.Snapshot([]sysdns.Adapter{a})
-		if err != nil || len(snaps) == 0 {
-			continue
-		}
+	next, toApply, changes, err := o.d.DNS.Reconcile(cur, sysdns.Selection{Mode: s.Adapters, IDs: s.AdapterGUIDs})
+	if err != nil {
+		o.log("system", CodeSetDNSFailed, "adapter", cur.Label())
+	}
+	if len(changes) > 0 {
 		if err := o.d.States.Update(func(st *store.State) error {
-			st.DNS.Windows = append(st.DNS.Windows, snaps...)
+			st.DNS = next
 			return nil
-		}); err != nil {
-			continue
+		}); err == nil {
+			o.mu.Lock()
+			o.dnsSnap = next
+			o.mu.Unlock()
+			if err := o.d.DNS.Apply(toApply, v6); err != nil {
+				o.log("system", CodeSetDNSFailed, "adapter", toApply.Label())
+			} else {
+				_ = o.d.DNS.Flush()
+				for _, c := range changes {
+					code := CodeDNSReapplied
+					if c.Added {
+						code = "ADAPTER_ADDED"
+					}
+					o.log("system", code, "adapter", c.Target)
+				}
+			}
 		}
-		o.mu.Lock()
-		o.snaps = append(o.snaps, snaps...)
-		o.mu.Unlock()
-		o.mu.Lock()
-		v6 := o.v6
-		o.mu.Unlock()
-		if err := o.d.DNS.ApplyLoopback(snaps, v6); err != nil {
-			o.log("system", CodeSetDNSFailed, "adapter", a.Alias)
-			continue
-		}
-		_ = o.d.DNS.Flush()
-		o.log("system", "ADAPTER_ADDED", "adapter", a.Alias)
 	}
 	// Another network has its own ranking: use it, or build one.
 	go func() {

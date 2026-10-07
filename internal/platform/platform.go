@@ -26,8 +26,7 @@ type Deps struct {
 	// Socket is the daemon's control socket ("" where there is no daemon).
 	Socket string
 
-	DNS           sysdns.API
-	WatchNetwork  func(onChange func()) (stop func(), err error)
+	DNS           sysdns.Backend // also watches the network
 	SysProxy      sysproxy.API
 	WatchSysProxy func(onChange func()) (stop func(), err error)
 	Certs         certstore.Store

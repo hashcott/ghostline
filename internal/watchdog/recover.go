@@ -11,15 +11,18 @@ import (
 	"time"
 
 	"github.com/hashcott/ghostline/internal/firewall"
-	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 )
 
-// Restorer is the part of sysdns.Manager recovery needs.
+// Restorer is the part of a DNS backend recovery needs (sysdns.Backend).
 type Restorer interface {
-	Restore([]model.AdapterSnapshot) []sysdns.RestoreError
-	LoopbackAdapters() ([]sysdns.Adapter, error)
+	Restore(sysdns.Snapshot) []sysdns.RestoreError
+	// StillOurs keeps what Ghostline's configuration still holds, so a
+	// change the user made after a crash is kept.
+	StillOurs(sysdns.Snapshot) sysdns.Snapshot
+	// RestoreDefault undoes Ghostline's configuration without a snapshot.
+	RestoreDefault() error
 }
 
 // Deps wires recovery to the system.
@@ -81,16 +84,7 @@ func RestoreIfOrphaned(d Deps) (Outcome, error) {
 			}
 			// No thumbprints to go by: the sweep removes every session CA.
 			defer d.sweep()
-			ads, lerr := d.DNS.LoopbackAdapters()
-			if lerr != nil {
-				return lerr
-			}
-			var snaps []model.AdapterSnapshot
-			for _, a := range ads {
-				snaps = append(snaps, model.AdapterSnapshot{GUID: a.GUID, LUID: a.LUID, IfIndex: a.IfIndex, Alias: a.Alias,
-					IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}, IPv6: model.FamilyDNS{Mode: model.DNSModeDHCP}})
-			}
-			rerr := joinRestore(d.DNS.Restore(snaps))
+			rerr := d.DNS.RestoreDefault()
 			if d.StopDPI != nil {
 				_ = d.StopDPI()
 			}
@@ -125,7 +119,7 @@ func RestoreIfOrphaned(d Deps) (Outcome, error) {
 		// Order: session CAs, system proxy, firewall, DNS (spec 2B 6.5).
 		cerr := removeSessionCerts(d, st)
 		perr := restoreProxy(d, st)
-		rerr := joinRestore(d.DNS.Restore(stillOurs(d.DNS, st.DNS.Windows)))
+		rerr := joinRestore(d.DNS.Restore(d.DNS.StillOurs(st.DNS)))
 		if st.DPI.Running && d.StopDPI != nil {
 			_ = d.StopDPI()
 		}
@@ -191,27 +185,6 @@ func (d Deps) sweep() {
 	if err := d.SweepSession(nil); err != nil {
 		d.log().Warn("sweeping Fake SNI certificates failed", "err", err)
 	}
-}
-
-// stillOurs keeps the snapshots of adapters whose DNS still points at
-// loopback. An adapter the user re-configured after a crash keeps their
-// settings. If the current DNS cannot be read, everything is restored.
-func stillOurs(dns Restorer, snaps []model.AdapterSnapshot) []model.AdapterSnapshot {
-	ads, err := dns.LoopbackAdapters()
-	if err != nil {
-		return snaps
-	}
-	on := make(map[string]bool, len(ads))
-	for _, a := range ads {
-		on[a.GUID] = true
-	}
-	var out []model.AdapterSnapshot
-	for _, s := range snaps {
-		if on[s.GUID] {
-			out = append(out, s)
-		}
-	}
-	return out
 }
 
 func joinRestore(errs []sysdns.RestoreError) error {

@@ -24,8 +24,8 @@ type UnsupportedBackend struct{}
 func (UnsupportedBackend) Name() string                         { return "unsupported" }
 func (UnsupportedBackend) Snapshot(Selection) (Snapshot, error) { return Snapshot{}, errUnsupported }
 func (UnsupportedBackend) Apply(Snapshot, bool) error           { return errUnsupported }
-func (UnsupportedBackend) Reconcile(s Snapshot, _ Selection, _ bool) (Snapshot, []Change, error) {
-	return s, nil, nil
+func (UnsupportedBackend) Reconcile(s Snapshot, _ Selection) (Snapshot, Snapshot, []Change, error) {
+	return s, Snapshot{}, nil, nil
 }
 func (UnsupportedBackend) StillOurs(Snapshot) Snapshot     { return Snapshot{} }
 func (UnsupportedBackend) Restore(Snapshot) []RestoreError { return nil }

@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
@@ -27,9 +26,14 @@ type orderDNS struct {
 	log *[]string
 }
 
-func (o *orderDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
+func (o *orderDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
 	*o.log = append(*o.log, "dns")
 	return o.fakeDNS.Restore(s)
+}
+
+func (o *orderDNS) RestoreDefault() error {
+	*o.log = append(*o.log, "dns")
+	return o.fakeDNS.RestoreDefault()
 }
 
 func withProxyHooks(d watchdog.Deps, log *[]string, sysErr error) watchdog.Deps {

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var happy = []string{"sys.admin", "sys.listen", "pick", "build", "engine.start", "engine.selftest", "dns.select", "dns.snapshot",
+var happy = []string{"sys.admin", "sys.listen", "pick", "build", "engine.start", "engine.selftest", "dns.snapshot",
 	"state.dns_set", "safety.watchdog", "safety.task.create", "dns.apply", "dns.flush", "engine.expect", "resolve", "engine.saw"}
 
 func TestConnect_HappyPathOrder(t *testing.T) {
