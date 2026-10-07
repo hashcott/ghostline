@@ -93,7 +93,7 @@ Linux:    frontend ──Wails──▶ client.Service ──ctl.sock──▶ r
 
 ## 5. Giao thức (`protocol: 1`)
 
-Mỗi thông điệp là một dòng JSON, tối đa 4 MiB. Dòng dài hơn → đóng kết nối kèm lỗi.
+Mỗi thông điệp là một dòng JSON, tối đa **16 MiB** (backup tới 8 MiB đi qua lời gọi ngược ở dạng base64, khoảng 10,7 MiB). Dòng dài hơn → đóng kết nối.
 
 | Hướng | Thông điệp |
 |---|---|
@@ -118,7 +118,7 @@ Mỗi thông điệp là một dòng JSON, tối đa 4 MiB. Dòng dài hơn → 
 ## 7. Cài đặt và dữ liệu
 
 - `settings.json` giữ v5; `state.json` giữ v3 (v4 ở L3).
-- `platform.New` trên Linux dùng `/var/lib/ghostline/data` cho daemon. GUI dùng `platform.NewClient()` (chỉ socket và `~/.config/ghostline`).
+- `platform.New` trên Linux dùng `/var/lib/ghostline/data` cho daemon. GUI chỉ cần đường dẫn socket: `platform.ClientSocket()` (`$GHOSTLINE_SOCKET` khi dev). Log và tuỳ chọn của GUI nằm ở `~/.config/ghostline`.
 - Khoá `state.json` chuyển sang `/run/ghostline/state.lock`.
 
 ## 8. Xử lý lỗi
@@ -134,7 +134,7 @@ Mỗi mã có chuỗi trong `vi.json` và `en.json`.
 
 ## 9. Kiểm thử
 
-- **`internal/rpc`:** gọi/trả, event tới nhiều client, lỗi `AppError` (giữ code, params, chuỗi), `hello` lệch, peer bị từ chối (peercred giả), dòng quá 4 MiB, lời gọi ngược `ui` tới đúng client, client đóng giữa lời gọi ngược → `NO_UI`.
+- **`internal/rpc`:** gọi/trả, event tới nhiều client, lỗi `AppError` (giữ code, params, chuỗi), `hello` lệch, peer bị từ chối (peercred giả), dòng quá 16 MiB, lời gọi ngược `ui` tới đúng client, client đóng giữa lời gọi ngược → `NO_UI`.
 - **`tools/genrpc`:** file golden; ID sinh ra bằng đúng `fnv32a` của FQN `app.Service`. CI: `go generate ./... && git diff --exit-code`.
 - **`internal/core`:** test của `shell` chuyển theo; thêm test `core.New` với `platform` giả.
 - **Integration (không root, CI Linux):** `ghostlined --daemon --socket <tmp> --allow-uid <uid>` + `client.Service` thật: `GetSnapshot`, `SaveSettings` + event `state`, Connect dừng ở bước DNS và trả lỗi, `ExportSettings` gọi ngược `saveFile` đúng client.
