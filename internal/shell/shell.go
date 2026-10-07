@@ -25,6 +25,7 @@ import (
 	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/probe"
 	"github.com/hashcott/ghostline/internal/scanner"
 	"github.com/hashcott/ghostline/internal/startup"
@@ -85,6 +86,7 @@ func Run(o Options) error {
 	dpiMgr := NewDPIManager(paths, o.GoodbyeDPIAssets, o.Zapret2Assets, strats.get)
 	roots := certstore.NewWindows(certstore.LocalMachine)
 	fw := firewall.NewNetsh(o.Executable)
+	nid := netid.NewWindows()
 	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: winutil.ProcessAlive, Log: log,
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
 		DeleteRule:      fw.DeleteNamed,
@@ -130,7 +132,7 @@ func Run(o Options) error {
 		SaveCache: func(c *scanner.Cache) error {
 			return scanner.SaveCache(paths.ScanCache, c)
 		},
-		NetKey:   networkKey,
+		NetKey:   nid.NetworkKey,
 		Settings: box.Get,
 		Now:      time.Now,
 		Rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
@@ -144,7 +146,7 @@ func Run(o Options) error {
 		bus.Emit(app.EventScan, app.ScanProgress{Done: done, Total: total, Result: r, Running: running})
 	}
 	eng := engine.New(bus.Query)
-	pw := newProxyWiring(box, eng, paths, o.Executable, fw, bus, log)
+	pw := newProxyWiring(box, eng, paths, o.Executable, fw, nid, bus, log)
 	cw := newCertWiring(paths)
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
@@ -180,7 +182,7 @@ func Run(o Options) error {
 
 		DNSServer:    dw,
 		Certs:        cw,
-		LANAddrs:     winutil.LocalLANAddrs,
+		LANAddrs:     netid.LocalLANAddrs,
 		SetMITM:      pw.mitm.set,
 		MITMSelfTest: pw.mitm.selfTest,
 	})
@@ -246,7 +248,7 @@ func Run(o Options) error {
 		Fetcher:         pw.fetcher(),
 		FragCache:       pw.frag,
 		CheckTestDomain: func(d string) error { return picker.CheckDomain(context.Background(), d) },
-		NetKey:          networkKey,
+		NetKey:          nid.NetworkKey,
 		Proxy:           pw,
 		LANInfo:         pw.lanInfo,
 		Protect:         winutil.ProtectString,
@@ -262,14 +264,14 @@ func Run(o Options) error {
 			return p
 		},
 		CurrentSSID: func() string {
-			ssid, err := winutil.CurrentSSID()
+			ssid, err := nid.CurrentSSID()
 			if err != nil {
 				log.Warn("wifi name", "err", err)
 			}
 			return ssid
 		},
 		WifiNames: func() []string {
-			names, err := winutil.WifiNames()
+			names, err := nid.WifiNames()
 			if err != nil {
 				log.Warn("wifi names", "err", err)
 			}
@@ -280,7 +282,7 @@ func Run(o Options) error {
 		DialDirect:    dialDirect,
 		ISPResolvers: func() []string {
 			st, _ := states.Load()
-			return ispResolvers(st, liveAdapters())
+			return ispResolvers(st, nid.LiveAdapters())
 		},
 		OpenFile: func(title string) (string, error) {
 			if wapp == nil {

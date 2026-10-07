@@ -15,6 +15,7 @@ import (
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/engine"
 	"github.com/hashcott/ghostline/internal/firewall"
+	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/proxy"
 	"github.com/hashcott/ghostline/internal/proxy/dialer"
 	"github.com/hashcott/ghostline/internal/proxy/wire"
@@ -34,6 +35,7 @@ type proxyWiring struct {
 	paths  store.Paths
 	exe    string
 	fw     firewall.Manager
+	nid    netid.Source
 	bus    *app.Bus
 	holder *rules.Holder
 	frag   *store.FragCache
@@ -47,12 +49,12 @@ type proxyWiring struct {
 	selfAt time.Time
 }
 
-func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, paths store.Paths, exe string, fw firewall.Manager, bus *app.Bus, log *slog.Logger) *proxyWiring {
+func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, paths store.Paths, exe string, fw firewall.Manager, nid netid.Source, bus *app.Bus, log *slog.Logger) *proxyWiring {
 	fc, err := store.LoadFragCache(paths.FragCache, time.Now())
 	if err != nil {
 		log.Warn("frag cache", "err", err)
 	}
-	return &proxyWiring{box: box, eng: eng, paths: paths, exe: exe, fw: fw, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
+	return &proxyWiring{box: box, eng: eng, paths: paths, exe: exe, fw: fw, nid: nid, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
 }
 
 func (w *proxyWiring) fetcher() *lists.Fetcher {
@@ -63,10 +65,10 @@ func (w *proxyWiring) fetcher() *lists.Fetcher {
 // fragCache adapts store.FragCache to the dialer for the current network.
 type fragCache struct{ w *proxyWiring }
 
-func (f fragCache) Has(host string) bool { return f.w.frag.Has(networkKey(), host, time.Now()) }
+func (f fragCache) Has(host string) bool { return f.w.frag.Has(f.w.nid.NetworkKey(), host, time.Now()) }
 func (f fragCache) Add(host string) {
 	days := f.w.box.Get().Proxy.Fragment.CacheDays
-	f.w.frag.Add(networkKey(), host, time.Now().Add(time.Duration(days)*24*time.Hour))
+	f.w.frag.Add(f.w.nid.NetworkKey(), host, time.Now().Add(time.Duration(days)*24*time.Hour))
 	if err := f.w.frag.Save(f.w.paths.FragCache); err != nil {
 		f.w.log.Warn("frag cache save", "err", err)
 	}
@@ -104,7 +106,7 @@ func (w *proxyWiring) selfAddrs() []netip.Addr {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if time.Since(w.selfAt) > 30*time.Second {
-		w.self = append(winutil.LocalUnicastAddrs(), netip.MustParseAddr("127.0.0.1"), netip.IPv6Loopback())
+		w.self = append(netid.LocalUnicastAddrs(), netip.MustParseAddr("127.0.0.1"), netip.IPv6Loopback())
 		w.selfAt = time.Now()
 	}
 	return w.self
@@ -189,7 +191,7 @@ func (w *proxyWiring) Stats() proxy.Stats {
 func (w *proxyWiring) lanInfo() app.LANInfo {
 	port := strconv.Itoa(w.box.Get().Proxy.Port)
 	info := app.LANInfo{Addrs: []string{}}
-	for _, a := range winutil.LocalLANAddrs() {
+	for _, a := range netid.LocalLANAddrs() {
 		host := a.String()
 		if a.Is6() {
 			host = "[" + host + "]"

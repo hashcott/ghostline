@@ -14,7 +14,7 @@ import (
 
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
-	"github.com/hashcott/ghostline/internal/winutil"
+	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/miekg/dns"
 )
 
@@ -168,7 +168,7 @@ func (e *Engine) ServeStats() ServeStats {
 // engine's main proxy (never the serve proxy's own placeholder upstream).
 func (e *Engine) serveHandle(ctx context.Context, _ *proxy.Proxy, d *proxy.DNSContext) error {
 	ip := d.Addr.Addr().Unmap()
-	if !winutil.IsPrivateOrLocal(ip) || !e.allow(ip) || isANY(d.Req) {
+	if !netid.IsPrivateOrLocal(ip) || !e.allow(ip) || isANY(d.Req) {
 		d.Res = new(dns.Msg).SetRcode(d.Req, dns.RcodeRefused)
 		return nil
 	}

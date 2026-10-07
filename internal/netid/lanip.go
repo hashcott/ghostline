@@ -1,4 +1,4 @@
-package winutil
+package netid
 
 import (
 	"net"

@@ -9,14 +9,9 @@ import (
 	"time"
 
 	"github.com/AdguardTeam/dnsproxy/upstream"
+	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/store"
 )
-
-// liveAdapter is an up adapter's current DNS servers and default gateway.
-type liveAdapter struct {
-	DNS     []string
-	Gateway string
-}
 
 var siteLocal = netip.MustParsePrefix("fec0::/10") // Windows' placeholder IPv6 DNS
 
@@ -25,7 +20,7 @@ var siteLocal = netip.MustParsePrefix("fec0::/10") // Windows' placeholder IPv6 
 // adapters' DNS. When neither gives a usable address (a DHCP adapter while
 // connected), the default gateway is offered: home routers forward DNS to
 // the ISP.
-func ispResolvers(st store.State, live []liveAdapter) []string {
+func ispResolvers(st store.State, live []netid.LiveAdapter) []string {
 	out := []string{}
 	add := func(s string) {
 		a, err := netip.ParseAddr(s)
