@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,12 +30,12 @@ func exportFrom(t *testing.T, a *toolsHarness) []byte {
 	require.Equal(t, 1, n)
 	require.NoError(t, os.WriteFile(a.paths.DPIBlacklist, []byte("youtube.com\n"), 0o644))
 	var out []byte
-	a.svc.x.SaveFile = func(name string, data []byte) error {
+	a.svc.x.SaveFile = func(_ context.Context, name string, data []byte) error {
 		require.Equal(t, backup.FileName(time.Now()), name)
 		out = data
 		return nil
 	}
-	require.NoError(t, a.svc.ExportSettings(backup.AllSections))
+	require.NoError(t, a.svc.ExportSettings(context.Background(), backup.AllSections))
 	require.NotEmpty(t, out)
 	return out
 }
@@ -42,10 +43,8 @@ func exportFrom(t *testing.T, a *toolsHarness) []byte {
 // importInto offers data through the file dialog of service b.
 func importInto(t *testing.T, b *toolsHarness, data []byte) ImportPreview {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "in.ghostline.json")
-	require.NoError(t, os.WriteFile(path, data, 0o644))
-	b.svc.x.OpenFile = func(string) (string, error) { return path, nil }
-	p, err := b.svc.PreviewImport()
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) { return "in.ghostline.json", data, nil }
+	p, err := b.svc.PreviewImport(context.Background())
 	require.NoError(t, err)
 	require.NotEmpty(t, p.Token)
 	return p
@@ -137,8 +136,8 @@ func TestApplyImport_SNIRulesNeedConfirmation(t *testing.T) {
 	a, b := newTools(t), newTools(t)
 	require.Empty(t, a.svc.SaveRulesTable([]rules.Rule{{Pattern: "f.com", Action: rules.Action{SNI: "cdn.example"}, Enabled: true}}))
 	var out []byte
-	a.svc.x.SaveFile = func(_ string, d []byte) error { out = d; return nil }
-	require.NoError(t, a.svc.ExportSettings([]string{"rules"}))
+	a.svc.x.SaveFile = func(_ context.Context, _ string, d []byte) error { out = d; return nil }
+	require.NoError(t, a.svc.ExportSettings(context.Background(), []string{"rules"}))
 	p := importInto(t, b, out)
 	require.Len(t, p.Preview.SNIRules, 1)
 	require.Equal(t, CodeImportInvalid, code(t, b.svc.ApplyImport(p.Token, backup.Choices{Sections: []string{"rules"}})))
@@ -148,17 +147,17 @@ func TestApplyImport_SNIRulesNeedConfirmation(t *testing.T) {
 
 func TestPreviewImport_Invalid(t *testing.T) {
 	b := newTools(t)
-	path := filepath.Join(t.TempDir(), "x.json")
-	require.NoError(t, os.WriteFile(path, []byte(`{"format":"ghostline-backup","formatVersion":9}`), 0o644))
-	b.svc.x.OpenFile = func(string) (string, error) { return path, nil }
-	_, err := b.svc.PreviewImport()
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) {
+		return "x.json", []byte(`{"format":"ghostline-backup","formatVersion":9}`), nil
+	}
+	_, err := b.svc.PreviewImport(context.Background())
 	var ae *AppError
 	require.ErrorAs(t, err, &ae)
 	require.Equal(t, CodeImportInvalid, ae.Code)
 	require.Equal(t, "newer", ae.Params["detail"])
 
-	b.svc.x.OpenFile = func(string) (string, error) { return "", nil } // cancelled
-	p, err := b.svc.PreviewImport()
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) { return "", nil, nil } // cancelled
+	p, err := b.svc.PreviewImport(context.Background())
 	require.NoError(t, err)
 	require.Empty(t, p.Token)
 }
@@ -201,4 +200,49 @@ func TestApplyImport_HoldsRulesLockAcrossWrite(t *testing.T) {
 	b.svc.rmu.Unlock()
 	require.NoError(t, <-done)
 	require.Equal(t, []string{"a.com"}, patternsOf(b.svc.GetRules().Rules))
+}
+
+// The GUI reads the file and hands over its contents: the daemon never opens
+// a path the user picked.
+func TestPreviewImport_ReadsContentFromOpenFile(t *testing.T) {
+	a, b := newTools(t), newTools(t)
+	data := exportFrom(t, a)
+	var title string
+	b.svc.x.OpenFile = func(_ context.Context, ttl string) (string, []byte, error) {
+		title = ttl
+		return "x.ghostline.json", data, nil
+	}
+	p, err := b.svc.PreviewImport(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, p.Token)
+	require.Equal(t, "x.ghostline.json", p.Path)
+	require.NotEmpty(t, title)
+}
+
+func TestPreviewImport_CancelledIsNoError(t *testing.T) {
+	b := newTools(t)
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) { return "", nil, nil }
+	p, err := b.svc.PreviewImport(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, ImportPreview{}, p)
+}
+
+func TestPreviewImport_TooLargeIsInvalid(t *testing.T) {
+	b := newTools(t)
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) {
+		return "big.json", make([]byte, backup.MaxSize+1), nil
+	}
+	_, err := b.svc.PreviewImport(context.Background())
+	var ae *AppError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, CodeImportInvalid, ae.Code)
+	require.Equal(t, "too_large", ae.Params["detail"])
+}
+
+func TestLANDNSClients_NilDepIsZero(t *testing.T) {
+	b := newTools(t)
+	b.svc.x.LANDNSClients = nil
+	require.Equal(t, 0, b.svc.LANDNSClients())
+	b.svc.x.LANDNSClients = func() int { return 4 }
+	require.Equal(t, 4, b.svc.LANDNSClients())
 }

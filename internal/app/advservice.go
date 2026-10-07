@@ -236,7 +236,7 @@ func (s *Service) AddScannedServers(ids []string) (int, error) {
 }
 
 // ExportAdvancedCSV saves the last scan as CSV (UTF-8 with BOM for Excel).
-func (s *Service) ExportAdvancedCSV() error {
+func (s *Service) ExportAdvancedCSV(ctx context.Context) error {
 	var b bytes.Buffer
 	b.Write([]byte{0xEF, 0xBB, 0xBF})
 	w := csv.NewWriter(&b)
@@ -252,7 +252,7 @@ func (s *Service) ExportAdvancedCSV() error {
 	}
 	w.Flush()
 	name := "ghostline-scan-" + time.Now().Format("2006-01-02") + ".csv"
-	return s.x.SaveFile(name, b.Bytes())
+	return s.x.SaveFile(ctx, name, b.Bytes())
 }
 
 // csvSafe stops spreadsheet apps from running a cell as a formula: server

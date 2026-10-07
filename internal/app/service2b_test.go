@@ -74,7 +74,7 @@ func newSvc2B(t *testing.T) *svc2B {
 		h.page = &fSetupPage{files: f, onStop: onStop}
 		return h.page
 	}
-	h.svc.x.SaveFile = func(name string, b []byte) error { h.saved[name] = b; return nil }
+	h.svc.x.SaveFile = func(_ context.Context, name string, b []byte) error { h.saved[name] = b; return nil }
 	h.svc.x.CurrentSSID = func() string { return h.ssid }
 	st := sh.box.Get()
 	st.Proxy.Enabled = true
@@ -173,7 +173,7 @@ func TestSaveDeviceFiles(t *testing.T) {
 	h := newSvc2B(t)
 	h.setSSID(t, "Home")
 	require.NoError(t, h.svc.Connect())
-	require.NoError(t, h.svc.SaveDeviceFiles())
+	require.NoError(t, h.svc.SaveDeviceFiles(context.Background()))
 	require.NotEmpty(t, h.saved["ghostline-lan-ca.crt"])
 	require.NotEmpty(t, h.saved["ghostline.mobileconfig"])
 }

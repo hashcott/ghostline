@@ -138,11 +138,11 @@ func TestExportAdvancedCSV_BOM(t *testing.T) {
 	h := newTools(t)
 	var name string
 	var data []byte
-	h.svc.x.SaveFile = func(n string, d []byte) error { name, data = n, d; return nil }
+	h.svc.x.SaveFile = func(_ context.Context, n string, d []byte) error { name, data = n, d; return nil }
 	_, err := h.svc.StartAdvancedScan(AdvScanRequest{Filter: &ServerFilter{}})
 	require.NoError(t, err)
 	waitAdvDone(t, h)
-	require.NoError(t, h.svc.ExportAdvancedCSV())
+	require.NoError(t, h.svc.ExportAdvancedCSV(context.Background()))
 	require.True(t, strings.HasSuffix(name, ".csv"))
 	require.True(t, bytes.HasPrefix(data, []byte{0xEF, 0xBB, 0xBF}))
 	recs, err := csv.NewReader(bytes.NewReader(data[3:])).ReadAll()
@@ -158,11 +158,11 @@ func TestExportAdvancedCSV_NeutralisesFormulas(t *testing.T) {
 		{ID: "ok", Name: "Plain name", Protocol: model.ProtoDoH, Address: "https://o.example/dns-query", Source: model.SourceCustom},
 	}
 	var data []byte
-	h.svc.x.SaveFile = func(_ string, d []byte) error { data = d; return nil }
+	h.svc.x.SaveFile = func(_ context.Context, _ string, d []byte) error { data = d; return nil }
 	_, err := h.svc.StartAdvancedScan(AdvScanRequest{Filter: &ServerFilter{Sources: []string{"custom"}}})
 	require.NoError(t, err)
 	waitAdvDone(t, h)
-	require.NoError(t, h.svc.ExportAdvancedCSV())
+	require.NoError(t, h.svc.ExportAdvancedCSV(context.Background()))
 	recs, err := csv.NewReader(bytes.NewReader(data[3:])).ReadAll()
 	require.NoError(t, err)
 	names := map[string]bool{}

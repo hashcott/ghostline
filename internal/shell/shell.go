@@ -5,12 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/backup"
 	"github.com/hashcott/ghostline/internal/platform"
+	"io"
 	"io/fs"
 	"log/slog"
 	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -218,6 +221,12 @@ func Run(o Options) error {
 				ui.onLanguage() // relabels the tray's proxy item
 			}
 		},
+		LANDNSClients: func() int {
+			if !orch.Snapshot().DNSServer.Running {
+				return 0
+			}
+			return eng.ServeStats().Clients10m
+		},
 		Rules:           pw.holder,
 		RulesPath:       paths.Rules,
 		Fetcher:         pw.fetcher(),
@@ -259,13 +268,21 @@ func Run(o Options) error {
 			st, _ := states.Load()
 			return ispResolvers(st, nid.LiveAdapters())
 		},
-		OpenFile: func(title string) (string, error) {
+		OpenFile: func(_ context.Context, title string) (string, []byte, error) {
 			if wapp == nil {
-				return "", errors.New("no window")
+				return "", nil, errors.New("no window")
 			}
-			return wapp.Dialog.OpenFile().SetTitle(title).AddFilter("Ghostline backup (*.json)", "*.json").PromptForSingleSelection()
+			path, err := wapp.Dialog.OpenFile().SetTitle(title).AddFilter("Ghostline backup (*.json)", "*.json").PromptForSingleSelection()
+			if err != nil || path == "" {
+				return "", nil, err // cancelled
+			}
+			data, err := readLimited(path, backup.MaxSize+1)
+			if err != nil {
+				return "", nil, err
+			}
+			return filepath.Base(path), data, nil
 		},
-		SaveFile: func(name string, data []byte) error {
+		SaveFile: func(_ context.Context, name string, data []byte) error {
 			if wapp == nil {
 				return errors.New("no window")
 			}
@@ -342,6 +359,17 @@ func Run(o Options) error {
 		return fmt.Errorf("shell: %w", err)
 	}
 	return nil
+}
+
+// readLimited reads at most limit bytes of path: a file the user picked
+// for import can be anything.
+func readLimited(path string, limit int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(io.LimitReader(f, limit))
 }
 
 // restoreNow puts DNS back from state.json, or resets loopback adapters to
