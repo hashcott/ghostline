@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/proxy"
 	"github.com/hashcott/ghostline/internal/proxy/dialer"
 	"github.com/hashcott/ghostline/internal/proxy/wire"
@@ -32,6 +33,7 @@ type proxyWiring struct {
 	eng    *engine.Engine
 	paths  store.Paths
 	exe    string
+	fw     firewall.Manager
 	bus    *app.Bus
 	holder *rules.Holder
 	frag   *store.FragCache
@@ -45,12 +47,12 @@ type proxyWiring struct {
 	selfAt time.Time
 }
 
-func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, paths store.Paths, exe string, bus *app.Bus, log *slog.Logger) *proxyWiring {
+func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, paths store.Paths, exe string, fw firewall.Manager, bus *app.Bus, log *slog.Logger) *proxyWiring {
 	fc, err := store.LoadFragCache(paths.FragCache, time.Now())
 	if err != nil {
 		log.Warn("frag cache", "err", err)
 	}
-	return &proxyWiring{box: box, eng: eng, paths: paths, exe: exe, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
+	return &proxyWiring{box: box, eng: eng, paths: paths, exe: exe, fw: fw, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
 }
 
 func (w *proxyWiring) fetcher() *lists.Fetcher {
@@ -183,14 +185,6 @@ func (w *proxyWiring) Stats() proxy.Stats {
 	return proxy.Stats{ByOutcome: map[string]uint64{}}
 }
 
-// firewall implements app.Firewall.
-type firewall struct{ exe string }
-
-func (f firewall) Add(port int) error                    { return winutil.AddFirewallRule(port, f.exe) }
-func (f firewall) Delete() error                         { return winutil.DeleteFirewallRule() }
-func (f firewall) AddNamed(r winutil.FirewallRule) error { return winutil.AddNamedRule(r, f.exe) }
-func (f firewall) DeleteNamed(name string) error         { return winutil.DeleteNamedRule(name) }
-
 // lanInfo lists the addresses other devices can use to reach the proxy.
 func (w *proxyWiring) lanInfo() app.LANInfo {
 	port := strconv.Itoa(w.box.Get().Proxy.Port)
@@ -202,7 +196,7 @@ func (w *proxyWiring) lanInfo() app.LANInfo {
 		}
 		info.Addrs = append(info.Addrs, host+":"+port)
 	}
-	if pub, err := winutil.CurrentNetworkIsPublic(); err == nil {
+	if pub, err := w.fw.IsPublicNetwork(); err == nil {
 		info.Public = pub
 	}
 	return info

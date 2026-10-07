@@ -11,7 +11,7 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/engine"
-	"github.com/hashcott/ghostline/internal/winutil"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/stretchr/testify/require"
 )
 
@@ -148,7 +148,7 @@ func (h *dnsHarness) setLAN(a ...string) {
 func TestPhaseD_StepsInOrder(t *testing.T) {
 	h := newDNSHarness(t)
 	require.NoError(t, h.o.Connect(context.Background()))
-	requireOrder(t, h.r.list(), "proxy.start", "certs.lanca", "firewall.add:"+winutil.RuleDNSTCP, "firewall.add:"+winutil.RuleDNSUDP, "dns.serve", "dns.selftest")
+	requireOrder(t, h.r.list(), "proxy.start", "certs.lanca", "firewall.add:"+firewall.RuleDNSTCP, "firewall.add:"+firewall.RuleDNSUDP, "dns.serve", "dns.selftest")
 	sc := h.srv.last()
 	require.Contains(t, sc.DoH, netip.MustParseAddrPort("127.0.0.1:443"))
 	require.Contains(t, sc.DoH, netip.MustParseAddrPort("192.168.1.5:443"))
@@ -161,14 +161,14 @@ func TestPhaseD_StepsInOrder(t *testing.T) {
 	require.Equal(t, StatusProtected, sn.Status)
 	require.True(t, sn.DNSServer.Running)
 	st, _ := h.states.Load()
-	require.Subset(t, st.Firewall.Rules, []string{winutil.RuleDNSTCP, winutil.RuleDNSUDP})
+	require.Subset(t, st.Firewall.Rules, []string{firewall.RuleDNSTCP, firewall.RuleDNSUDP})
 }
 
 func TestPhaseD_LoopbackOnlyWithoutShare(t *testing.T) {
 	h := newDNSHarness(t)
 	h.settings.DNSServer.ShareLAN = false
 	require.NoError(t, h.o.Connect(context.Background()))
-	require.NotContains(t, h.r.list(), "firewall.add:"+winutil.RuleDNSTCP)
+	require.NotContains(t, h.r.list(), "firewall.add:"+firewall.RuleDNSTCP)
 	require.Empty(t, h.srv.last().Plain)
 	require.Equal(t, StatusProtected, h.o.Snapshot().Status)
 }
@@ -190,11 +190,11 @@ func TestPhaseD_NoLoopbackBind(t *testing.T) {
 	require.Contains(t, sn.Reasons, reasonDNSServer)
 	require.Equal(t, CodeDNSServerPortInUse, sn.DNSServer.Error.Code)
 	require.False(t, sn.DNSServer.Running)
-	require.Contains(t, h.r.list(), "firewall.delete:"+winutil.RuleDNSTCP)
+	require.Contains(t, h.r.list(), "firewall.delete:"+firewall.RuleDNSTCP)
 	require.NotContains(t, h.r.list(), "dns.restore", "DNS must stay protected")
 	st, _ := h.states.Load()
 	if st.Firewall != nil {
-		require.NotContains(t, st.Firewall.Rules, winutil.RuleDNSTCP)
+		require.NotContains(t, st.Firewall.Rules, firewall.RuleDNSTCP)
 	}
 }
 
@@ -248,7 +248,7 @@ func TestDisconnect_OrderWithDNSServer(t *testing.T) {
 	require.NoError(t, h.o.Disconnect(context.Background()))
 	calls := h.r.list()
 	requireOrder(t, calls, "dns.stopserve", "proxy.stop", "dns.restore", "engine.stop")
-	require.Contains(t, calls, "firewall.delete:"+winutil.RuleDNSUDP)
+	require.Contains(t, calls, "firewall.delete:"+firewall.RuleDNSUDP)
 	st, _ := h.states.Load()
 	require.Nil(t, st.Firewall)
 	require.False(t, h.o.Snapshot().DNSServer.Running)

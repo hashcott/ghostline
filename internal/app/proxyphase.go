@@ -7,8 +7,8 @@ import (
 	"net/netip"
 	"slices"
 
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 const (
@@ -172,12 +172,12 @@ func (o *Orchestrator) startProxyPhase(ctx context.Context) error {
 				return appErr(CodeProxyFirewall, err, "detail", err.Error())
 			}
 			if err := ignoreNoChange(o.setSysProxyState(func(st *store.State) {
-				st.AddFirewallRule(winutil.FirewallRuleName)
+				st.AddFirewallRule(firewall.ProxyRule)
 			})); err != nil {
 				return appErr(CodeProxyFirewall, err, "detail", err.Error())
 			}
 			if err := o.d.Firewall.Add(port); err != nil {
-				_ = ignoreNoChange(o.setSysProxyState(func(st *store.State) { st.RemoveFirewallRule(winutil.FirewallRuleName) }))
+				_ = ignoreNoChange(o.setSysProxyState(func(st *store.State) { st.RemoveFirewallRule(firewall.ProxyRule) }))
 				return appErr(CodeProxyFirewall, err, "detail", err.Error())
 			}
 			o.px.fwSet = true
@@ -188,7 +188,7 @@ func (o *Orchestrator) startProxyPhase(ctx context.Context) error {
 			}
 			o.px.fwSet = false
 			err := o.d.Firewall.Delete()
-			return errors.Join(err, ignoreNoChange(o.setSysProxyState(func(st *store.State) { st.RemoveFirewallRule(winutil.FirewallRuleName) })))
+			return errors.Join(err, ignoreNoChange(o.setSysProxyState(func(st *store.State) { st.RemoveFirewallRule(firewall.ProxyRule) })))
 		}},
 		{name: "sysproxy.apply", do: func(context.Context) error {
 			if !wantSys || skipSys {
@@ -255,7 +255,7 @@ func (o *Orchestrator) stopProxyPhase(ctx context.Context) {
 	if px.running || px.sysSet || px.fwSet || px.snap != nil {
 		_ = o.setSysProxyState(func(st *store.State) {
 			st.SysProxy = nil
-			st.RemoveFirewallRule(winutil.FirewallRuleName)
+			st.RemoveFirewallRule(firewall.ProxyRule)
 		})
 	}
 	o.px = proxyState{}

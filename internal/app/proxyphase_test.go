@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
@@ -88,7 +89,7 @@ func (f *fFirewall) Add(int) error {
 	return f.r.add("firewall.add")
 }
 func (f *fFirewall) Delete() error { return f.r.add("firewall.delete") }
-func (f *fFirewall) AddNamed(r winutil.FirewallRule) error {
+func (f *fFirewall) AddNamed(r firewall.Rule) error {
 	st, err := f.states.Load()
 	require.NoError(f.t, err)
 	require.NotNil(f.t, st.Firewall, "firewall rule created before it was persisted")
@@ -141,7 +142,7 @@ func TestConnect_ProxyPhaseRunsAfterProtected(t *testing.T) {
 	require.Equal(t, []ProxyRun{{Listen: listenFor(8080, true, true), ShareLAN: true}}, h.proxy.runs)
 	st, _ := h.states.Load()
 	require.True(t, st.SysProxy.Set)
-	require.ElementsMatch(t, []string{winutil.FirewallRuleName, winutil.RuleBlockPublic}, st.Firewall.Rules)
+	require.ElementsMatch(t, []string{firewall.ProxyRule, firewall.RuleBlockPublic}, st.Firewall.Rules)
 }
 
 func TestProxyPhase_FailureAtEachStep(t *testing.T) {
@@ -176,7 +177,7 @@ func TestProxyPhase_FailureAtEachStep(t *testing.T) {
 			require.False(t, sn.Proxy.Running)
 			st, _ := h.states.Load()
 			require.Nil(t, st.SysProxy)
-			require.NotContains(t, firewallRules(st), winutil.FirewallRuleName, "the proxy rule is undone; only the Public block rule may stay")
+			require.NotContains(t, firewallRules(st), firewall.ProxyRule, "the proxy rule is undone; only the Public block rule may stay")
 			require.Equal(t, store.PhaseDNSSet, st.Phase)
 		})
 	}

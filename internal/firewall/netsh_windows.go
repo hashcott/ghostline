@@ -1,10 +1,16 @@
-package winutil
+package firewall
 
 import (
 	"path/filepath"
 
+	"github.com/hashcott/ghostline/internal/winutil"
 	"golang.org/x/sys/windows"
 )
+
+// NewNetsh manages rules for exe through system32\netsh.exe.
+func NewNetsh(exe string) *Netsh {
+	return &Netsh{Exe: exe, Run: netsh, Public: currentNetworkIsPublic}
+}
 
 func system32(name string) string {
 	dir, err := windows.GetSystemDirectory()
@@ -15,14 +21,14 @@ func system32(name string) string {
 }
 
 func netsh(args []string) ([]byte, error) {
-	return HiddenCmd(system32("netsh.exe"), args, "").CombinedOutput()
+	return winutil.HiddenCmd(system32("netsh.exe"), args, "").CombinedOutput()
 }
 
-// CurrentNetworkIsPublic reports whether a connected network uses the
+// currentNetworkIsPublic reports whether a connected network uses the
 // Public firewall profile (LAN devices cannot reach the proxy then).
-func CurrentNetworkIsPublic() (bool, error) {
+func currentNetworkIsPublic() (bool, error) {
 	ps := filepath.Join(system32(""), `WindowsPowerShell\v1.0\powershell.exe`)
-	out, err := HiddenCmd(ps, []string{"-NoProfile", "-NonInteractive", "-Command",
+	out, err := winutil.HiddenCmd(ps, []string{"-NoProfile", "-NonInteractive", "-Command",
 		"Get-NetConnectionProfile | ForEach-Object { $_.NetworkCategory.ToString() }"}, "").Output()
 	if err != nil {
 		return false, err

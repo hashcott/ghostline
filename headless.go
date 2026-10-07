@@ -13,6 +13,7 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/cli"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
@@ -59,7 +60,7 @@ func runHeadless(mode cli.Mode) int {
 		Log:     logger,
 
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
-		DeleteRule:      winutil.DeleteNamedRule,
+		DeleteRule:      firewall.NewNetsh(exe).DeleteNamed,
 		RemoveCert: func(t string) error {
 			// state.json is user-writable: remove only Fake SNI roots.
 			return certstore.RemoveIfPrefix(roots, t, certs.SessionPrefix)

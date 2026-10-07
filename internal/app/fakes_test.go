@@ -335,6 +335,7 @@ type fSink struct {
 
 func (s *fSink) State(sn Snapshot) { s.mu.Lock(); s.states = append(s.states, sn); s.mu.Unlock() }
 func (s *fSink) Log(e LogEvent)    { s.mu.Lock(); s.logs = append(s.logs, e); s.mu.Unlock() }
+
 // snapshots copies the states so far: background work (the post-connect
 // probe) may still be emitting.
 func (s *fSink) snapshots() []Snapshot {

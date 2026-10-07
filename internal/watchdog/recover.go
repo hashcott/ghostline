@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
@@ -44,7 +45,7 @@ type Deps struct {
 }
 
 // AllFirewallRules are the rule names a corrupt state may have left.
-var AllFirewallRules = []string{"Ghostline Proxy", "Ghostline DNS (TCP)", "Ghostline DNS (UDP)", "Ghostline Setup", "Ghostline Block Public"}
+var AllFirewallRules = firewall.AllRuleNames
 
 // Outcome says what RestoreIfOrphaned did.
 type Outcome int

@@ -9,11 +9,11 @@ import (
 
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/dnsserver"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
 	"github.com/hashcott/ghostline/internal/rules"
 	"github.com/hashcott/ghostline/internal/rules/lists"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -114,7 +114,7 @@ func TestOpenSetupPage_WritesStateFirstAndCleansUp(t *testing.T) {
 	url, err := h.svc.OpenSetupPage()
 	require.NoError(t, err)
 	require.Equal(t, "http://192.168.1.5:8053/", url)
-	require.Contains(t, h.r.list(), "firewall.add:"+winutil.RuleSetup) // fake asserts state first
+	require.Contains(t, h.r.list(), "firewall.add:"+firewall.RuleSetup) // fake asserts state first
 	require.Equal(t, []netip.AddrPort{netip.MustParseAddrPort("192.168.1.5:8053")}, h.page.addrs)
 	require.Equal(t, 10*time.Minute, h.page.life)
 	require.Equal(t, "Home", h.page.files.SSID)
@@ -128,9 +128,9 @@ func TestOpenSetupPage_WritesStateFirstAndCleansUp(t *testing.T) {
 	require.Equal(t, []string{"https://192.168.1.5/dns-query"}, info.DoHURLs)
 
 	require.NoError(t, h.svc.CloseSetupPage())
-	require.Contains(t, h.r.list(), "firewall.delete:"+winutil.RuleSetup)
+	require.Contains(t, h.r.list(), "firewall.delete:"+firewall.RuleSetup)
 	st, _ := h.states.Load()
-	require.NotContains(t, st.Firewall.Rules, winutil.RuleSetup)
+	require.NotContains(t, st.Firewall.Rules, firewall.RuleSetup)
 }
 
 func TestOpenSetupPage_NoSSIDNoProfile(t *testing.T) {
@@ -158,7 +158,7 @@ func TestDisconnect_ClosesSetupPage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, h.svc.Disconnect())
 	require.False(t, h.page.Running())
-	require.Contains(t, h.r.list(), "firewall.delete:"+winutil.RuleSetup)
+	require.Contains(t, h.r.list(), "firewall.delete:"+firewall.RuleSetup)
 }
 
 func TestGetDeviceInfo_SuggestsCurrentSSID(t *testing.T) {

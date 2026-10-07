@@ -10,6 +10,7 @@ import (
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/dpi"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
@@ -126,7 +127,7 @@ type SysProxy interface {
 type Firewall interface {
 	Add(port int) error // the proxy's LAN-sharing rule
 	Delete() error
-	AddNamed(r winutil.FirewallRule) error // DNS server and setup page rules
+	AddNamed(r firewall.Rule) error // DNS server and setup page rules
 	DeleteNamed(name string) error
 }
 

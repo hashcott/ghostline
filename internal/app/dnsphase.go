@@ -12,8 +12,8 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/dnsserver"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 const (
@@ -37,10 +37,10 @@ type dnsState struct {
 }
 
 // dnsRules are the inbound rules for sharing the DNS server on the LAN.
-func dnsRules(dohPort int) []winutil.FirewallRule {
-	return []winutil.FirewallRule{
-		{Name: winutil.RuleDNSTCP, Protocol: "TCP", Ports: []int{53, dohPort}},
-		{Name: winutil.RuleDNSUDP, Protocol: "UDP", Ports: []int{53}},
+func dnsRules(dohPort int) []firewall.Rule {
+	return []firewall.Rule{
+		{Name: firewall.RuleDNSTCP, Protocol: "TCP", Ports: []int{53, dohPort}},
+		{Name: firewall.RuleDNSUDP, Protocol: "UDP", Ports: []int{53}},
 	}
 }
 
@@ -297,11 +297,11 @@ func (o *Orchestrator) ensureBlockPublic() error {
 	if o.blockPublic || o.d.Firewall == nil {
 		return nil
 	}
-	if err := ignoreNoChange(o.setState(func(st *store.State) { st.AddFirewallRule(winutil.RuleBlockPublic) })); err != nil {
+	if err := ignoreNoChange(o.setState(func(st *store.State) { st.AddFirewallRule(firewall.RuleBlockPublic) })); err != nil {
 		return err
 	}
-	if err := o.d.Firewall.AddNamed(winutil.BlockPublicRule); err != nil {
-		_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(winutil.RuleBlockPublic) }))
+	if err := o.d.Firewall.AddNamed(firewall.BlockPublicRule); err != nil {
+		_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(firewall.RuleBlockPublic) }))
 		return err
 	}
 	o.blockPublic = true
@@ -313,10 +313,10 @@ func (o *Orchestrator) dropBlockPublic() {
 	if !o.blockPublic {
 		return
 	}
-	if err := o.d.Firewall.DeleteNamed(winutil.RuleBlockPublic); err != nil {
+	if err := o.d.Firewall.DeleteNamed(firewall.RuleBlockPublic); err != nil {
 		o.log("proxy", CodeProxyFirewall, "detail", err.Error())
 		return // stays recorded: recovery removes it
 	}
 	o.blockPublic = false
-	_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(winutil.RuleBlockPublic) }))
+	_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(firewall.RuleBlockPublic) }))
 }

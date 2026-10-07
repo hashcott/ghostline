@@ -22,6 +22,7 @@ import (
 	"github.com/hashcott/ghostline/internal/cli"
 	"github.com/hashcott/ghostline/internal/dnsserver"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
@@ -83,9 +84,10 @@ func Run(o Options) error {
 	strats := newStrategyBox(paths, serverListKey(), log)
 	dpiMgr := NewDPIManager(paths, o.GoodbyeDPIAssets, o.Zapret2Assets, strats.get)
 	roots := certstore.NewWindows(certstore.LocalMachine)
+	fw := firewall.NewNetsh(o.Executable)
 	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: winutil.ProcessAlive, Log: log,
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
-		DeleteRule:      winutil.DeleteNamedRule,
+		DeleteRule:      fw.DeleteNamed,
 		RemoveCert: func(t string) error {
 			// state.json is user-writable: remove only Fake SNI roots.
 			return certstore.RemoveIfPrefix(roots, t, certs.SessionPrefix)
@@ -142,7 +144,7 @@ func Run(o Options) error {
 		bus.Emit(app.EventScan, app.ScanProgress{Done: done, Total: total, Result: r, Running: running})
 	}
 	eng := engine.New(bus.Query)
-	pw := newProxyWiring(box, eng, paths, o.Executable, bus, log)
+	pw := newProxyWiring(box, eng, paths, o.Executable, fw, bus, log)
 	cw := newCertWiring(paths)
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
@@ -170,7 +172,7 @@ func Run(o Options) error {
 		AutoHostlistPath: paths.DPIAutoHostlist,
 		Proxy:            pw,
 		SysProxy:         sysproxy.Manager{API: sysproxy.NewWindowsAPI()},
-		Firewall:         firewall{exe: o.Executable},
+		Firewall:         fw,
 		ConfirmOverride: func(ctx context.Context, server, pac string) bool {
 			return svc != nil && app.AskOverride(ctx, svc, server, pac, 60*time.Second)
 		},
