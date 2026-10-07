@@ -59,7 +59,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
-		DNS:           sysdns.UnsupportedBackend{},
+		DNS:           sysdns.DetectLinux(paths.DataDir),
 		SysProxy:      sysproxy.Unsupported{},
 		WatchSysProxy: unwatched,
 		Certs:         certstore.Unsupported{},

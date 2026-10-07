@@ -17,6 +17,11 @@ import (
 )
 
 func TestDaemon_EndToEnd(t *testing.T) {
+	if os.Geteuid() == 0 {
+		// As root, Connect would really change this machine's DNS; the
+		// root integration tests cover that path on purpose.
+		t.Skip("runs only as a normal user")
+	}
 	dir := t.TempDir()
 	sock := filepath.Join(dir, "ctl.sock")
 	ctx, cancel := context.WithCancel(context.Background())
