@@ -356,6 +356,22 @@
     "testDomainMany": "Many domains are not recommended: {{count}} domains make every scan slower and can drop good servers. Use 1–2 (at most 5)."
   },
   "errors": {
+    "DAEMON_UNREACHABLE": {
+      "message": "Ghostline's background service is not running",
+      "action": "Start it with: sudo systemctl start ghostline"
+    },
+    "DAEMON_PROTOCOL_MISMATCH": {
+      "message": "The background service is a different version",
+      "action": "Update Ghostline so the app and the service match"
+    },
+    "NOT_AUTHORIZED": {
+      "message": "Your account may not control Ghostline",
+      "action": "Run: sudo usermod -aG ghostline $USER, then log in again"
+    },
+    "NO_UI": {
+      "message": "This needs the Ghostline window",
+      "action": "Open Ghostline and try again"
+    },
     "NOT_ADMIN": {
       "message": "Ghostline needs administrator rights to change DNS",
       "action": "Restart Ghostline as administrator"

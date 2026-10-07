@@ -4,6 +4,8 @@ import { useGhost } from "../app/store";
 import { tCode } from "../i18n";
 import { Banner, type BannerAction } from "./neon/Banner";
 
+const DAEMON_CODES = ["DAEMON_UNREACHABLE", "DAEMON_PROTOCOL_MISMATCH", "NOT_AUTHORIZED"];
+
 type Props = { onOpenServers: () => void; onOpenLogs: () => void };
 
 /** ConnectError shows the last connect error with the actions that fix it (both modes). */
@@ -21,6 +23,18 @@ export function ConnectError({ onOpenServers }: Props) {
     useGhost.getState().setSettings(next);
     void Service.Connect();
   };
+
+  // The Linux GUI cannot use its background service: retrying reloads the
+  // state (and reconnects) instead of connecting.
+  if (DAEMON_CODES.includes(code)) {
+    const reload = () => void Service.GetSnapshot().then((s) => s && useGhost.getState().setSnapshot(s));
+    return (
+      <Banner tone="err" actions={[{ label: t("common.retry"), onClick: reload }]}>
+        <div>{tCode(`errors.${code}.message`)}</div>
+        <div>{tCode(`errors.${code}.action`)}</div>
+      </Banner>
+    );
+  }
 
   const actions: BannerAction[] = [{ label: t("common.retry"), onClick: () => void Service.Connect() }];
   if (code === "NO_SERVERS" && !settings?.fragmentDns?.enabled) {
