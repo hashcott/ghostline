@@ -21,7 +21,7 @@ How Ghostline does each OS-specific job on each OS, for maintainers. Edit this t
 | DPI engine files | GoodbyeDPI and zapret2 (`assets/goodbyedpi/embed_windows.go`, `assets/zapret2/embed_windows.go`) | none yet (L4: `nfqws2`) | `assets/zapret2/embed_windows_test.go` |
 | Autostart and recovery task | Task Scheduler (`internal/startup/tasks_windows.go`) | stub (L2/L3): systemd unit and boot restore | `internal/startup/startup_test.go`, `internal/startup/xml_test.go` |
 | Watchdog | Detached `--watchdog` process (`internal/platform/platform_windows.go`) | stub (L2): systemd `ExecStopPost=--restore` | `internal/watchdog/recover_test.go` |
-| Recovery wiring | `RecoveryDeps` (`internal/shell/recovery.go`), shared by the GUI and the headless modes | same file | `internal/shell/recovery_test.go` |
+| Recovery wiring | `Deps.Recovery` (`internal/platform/recovery.go`), shared by the GUI and the headless modes | same file | `internal/platform/recovery_test.go` |
 | Secrets | DPAPI, user and machine scope (`internal/secrets/dpapi_windows.go`) | stub (L3): AES-GCM with a root-only key file | `internal/secrets/secrets_test.go`, `internal/secrets/dpapi_windows_test.go` |
 | Network key and Wi-Fi name | IP Helper, `SendARP` and WLAN API (`internal/netid/netid_windows.go`) | stub (L4): netlink and NetworkManager | `internal/netid/netid_test.go`, `internal/netid/lanip_test.go` |
 | Port owners, process liveness, service stop | Win32 and the service control manager (`internal/procs/procs_windows.go`) | stub (L3): `/proc` and systemd | `internal/procs/procs_test.go` |

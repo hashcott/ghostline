@@ -11,7 +11,6 @@ import (
 	"github.com/hashcott/ghostline/internal/cli"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/platform"
-	"github.com/hashcott/ghostline/internal/shell"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
@@ -36,7 +35,7 @@ func runHeadless(mode cli.Mode, p platform.Deps) int {
 		_, _ = fmt.Fprintln(os.Stdout, "Ghostline: settings exported to", mode.ExportPath)
 		return 0
 	}
-	d := shell.RecoveryDeps(p, store.NewStateStore(paths.State, p.Lock), stopDPI(p), logger)
+	d := p.Recovery(store.NewStateStore(paths.State, p.Lock), stopDPI(p), logger)
 	var err error
 	switch mode.Kind {
 	case cli.KindWatchdog:

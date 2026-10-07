@@ -78,7 +78,7 @@ func Run(o Options) error {
 	strats := newStrategyBox(paths, serverListKey(), log)
 	dpiMgr := NewDPIManager(paths, p, strats.get)
 	nid := p.NetID
-	recoverDeps := RecoveryDeps(p, states, dpiMgr.Stop, log)
+	recoverDeps := p.Recovery(states, dpiMgr.Stop, log)
 
 	// Safety layer 3: restore whatever a dead previous run left behind.
 	startOut, startErr := watchdog.RestoreIfOrphaned(recoverDeps)
