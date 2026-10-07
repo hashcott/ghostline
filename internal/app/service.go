@@ -132,6 +132,9 @@ type ServiceDeps struct {
 	// is the bound call's: the Linux daemon uses it to reach the GUI that
 	// asked.
 	SaveFile func(ctx context.Context, name string, data []byte) error
+	// NoFileLists refuses lists from a local file: the service runs as
+	// root for clients in other processes (the Linux daemon).
+	NoFileLists bool
 	// LANDNSClients counts LAN devices that used the DNS server in the last
 	// 10 minutes (0 while it is off).
 	LANDNSClients func() int

@@ -18,6 +18,7 @@ import (
 	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/procs"
+	"github.com/hashcott/ghostline/internal/rules/lists"
 	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/startup"
 	"github.com/hashcott/ghostline/internal/store"
@@ -153,4 +154,17 @@ func TestNew_CallsSettingsHookAfterSave(t *testing.T) {
 	s.Language = "en"
 	require.NoError(t, c.Svc.SaveSettings(s))
 	require.Equal(t, []string{"vi>en"}, got)
+}
+
+// C2: the daemon serves other users as root; it refuses lists that name a
+// file on its machine, while the Windows GUI (its own user) keeps them.
+func TestNew_RemoteRefusesFileLists(t *testing.T) {
+	file := lists.List{Name: "x", Source: "file", Path: "/etc/shadow", Format: "hosts", Action: "block"}
+	c := newCore(t, testDeps(t), Options{Remote: true})
+	_, err := c.Svc.AddList(file)
+	require.ErrorIs(t, err, lists.ErrFileListsOff)
+
+	c = newCore(t, testDeps(t), Options{})
+	_, err = c.Svc.AddList(file)
+	require.NotErrorIs(t, err, lists.ErrFileListsOff)
 }

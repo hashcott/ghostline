@@ -47,6 +47,9 @@ type Options struct {
 	Platform platform.Deps
 	Log      *slog.Logger
 	Emitter  app.Emitter // receives every UI event
+	// Remote is true when the UI runs in other processes, for other users
+	// (the Linux daemon, as root): lists may not name a local file.
+	Remote bool
 	// GUI hooks; nil in the daemon.
 	SetMode           func(mode string)
 	OnSettingsChanged func(old, n store.Settings) // after core's own handling
@@ -191,6 +194,8 @@ func New(o Options) (*Core, error) {
 		orch.AddWarning(w)
 	}
 
+	fetcher := pw.fetcher()
+	fetcher.NoFiles = o.Remote
 	update := &updateState{}
 	onUpdate := o.OnUpdate
 	if onUpdate == nil {
@@ -234,7 +239,8 @@ func New(o Options) (*Core, error) {
 		},
 		Rules:           pw.holder,
 		RulesPath:       paths.Rules,
-		Fetcher:         pw.fetcher(),
+		Fetcher:         fetcher,
+		NoFileLists:     o.Remote,
 		FragCache:       pw.frag,
 		CheckTestDomain: func(d string) error { return picker.CheckDomain(context.Background(), d) },
 		NetKey:          nid.NetworkKey,

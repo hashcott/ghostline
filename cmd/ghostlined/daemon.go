@@ -60,6 +60,7 @@ func runDaemon(ctx context.Context, a Args) error {
 
 	c, err := core.New(core.Options{
 		Platform: p, Log: log, Emitter: srv,
+		Remote: true, // GUIs of other users drive this root process
 		// The GUI relabels its tray from this; it is not a frontend event.
 		OnSettingsChanged: func(_, n store.Settings) { srv.Emit("settings", n) },
 		OpenFile: func(ctx context.Context, title string) (string, []byte, error) {
