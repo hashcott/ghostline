@@ -137,7 +137,7 @@ func TestHelloProtocolMismatch(t *testing.T) {
 		if err != nil {
 			return
 		}
-		fmt.Fprintln(c, `{"hello":{"version":"9","protocol":2}}`)
+		_, _ = fmt.Fprintln(c, `{"hello":{"version":"9","protocol":2}}`)
 		_, _ = io.Copy(io.Discard, c)
 	}()
 	_, err = Dial(context.Background(), sock, "test")
@@ -160,7 +160,7 @@ func TestLineTooLongClosesConnection(t *testing.T) {
 	r := bufio.NewReader(c)
 	_, err = r.ReadBytes('\n') // server hello
 	require.NoError(t, err)
-	fmt.Fprintf(c, `{"hello":{"version":"test","protocol":%d}}`+"\n", Protocol)
+	_, _ = fmt.Fprintf(c, `{"hello":{"version":"test","protocol":%d}}`+"\n", Protocol)
 	go func() { _, _ = c.Write(bytes.Repeat([]byte("a"), MaxLine+1)) }()
 	_ = c.SetReadDeadline(time.Now().Add(5 * time.Second))
 	_, err = io.Copy(io.Discard, r)

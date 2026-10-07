@@ -3,29 +3,16 @@ package shell
 import (
 	"image/color"
 	"log/slog"
-	"net/netip"
 	"sync"
 	"time"
 
-	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/icon"
-	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
-
-type (
-	upstreamT = upstream.Upstream
-	netipAddr = netip.Addr
-)
-
-// builderFunc adapts a function to app.Builder.
-type builderFunc func(model.Server) (upstream.Upstream, error)
-
-func (f builderFunc) Build(s model.Server) (upstream.Upstream, error) { return f(s) }
 
 // emitter forwards events to Wails and lets the shell watch state changes.
 type emitter struct {

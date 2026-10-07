@@ -1,8 +1,6 @@
 package headless
 
 import (
-	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -56,13 +54,6 @@ func testDeps(t *testing.T) platform.Deps {
 		AttachConsole: func() {},
 	}
 }
-
-// noAdapters is a system DNS with no adapters to manage.
-type noAdapters struct{ sysdns.Unsupported }
-
-func (noAdapters) Adapters() ([]sysdns.Adapter, error) { return nil, nil }
-
-func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
 func TestRun_ExportWritesFile(t *testing.T) {
 	p := testDeps(t)
