@@ -46,6 +46,20 @@ jobs:
           $v = "${{ github.ref_name }}".TrimStart("v")
           wails3 package VERSION=$v
           wails3 task windows:portable VERSION=$v
+      # Linux work must not bloat the Windows exe (spec Linux §17). Raising
+      # the limit is an explicit edit of -max here.
+      - name: Windows exe size guard
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          $prev = gh release view --json tagName -q .tagName 2>$null
+          if (-not $prev) { "No previous release: size guard skipped"; exit 0 }
+          gh release download $prev -p "*portable.zip" -D prev
+          $old = (Get-ChildItem prev -Filter *portable.zip | Select-Object -First 1).FullName
+          go run ./tools/sizecheck -old $old -new "bin/Ghostline-$v-portable.zip" -entry ghostline.exe -max 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Checksums
         shell: pwsh
         run: |
