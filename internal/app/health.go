@@ -209,7 +209,7 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 			continue
 		}
 		if err := o.d.States.Update(func(st *store.State) error {
-			st.Snapshot = append(st.Snapshot, snaps...)
+			st.DNS.Windows = append(st.DNS.Windows, snaps...)
 			return nil
 		}); err != nil {
 			continue

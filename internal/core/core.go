@@ -338,8 +338,8 @@ func (c *Core) Shutdown(ctx context.Context) error { return c.Orch.Disconnect(ct
 // DHCP when there is no usable snapshot.
 func restoreNow(states *store.StateStore, mgr *sysdns.Manager) error {
 	st, err := states.Load()
-	if err == nil && len(st.Snapshot) > 0 {
-		if errs := mgr.Restore(st.Snapshot); len(errs) > 0 {
+	if err == nil && len(st.DNS.Windows) > 0 {
+		if errs := mgr.Restore(st.DNS.Windows); len(errs) > 0 {
 			return errs[0]
 		}
 		return states.Reset()

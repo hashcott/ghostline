@@ -125,7 +125,7 @@ func RestoreIfOrphaned(d Deps) (Outcome, error) {
 		// Order: session CAs, system proxy, firewall, DNS (spec 2B 6.5).
 		cerr := removeSessionCerts(d, st)
 		perr := restoreProxy(d, st)
-		rerr := joinRestore(d.DNS.Restore(stillOurs(d.DNS, st.Snapshot)))
+		rerr := joinRestore(d.DNS.Restore(stillOurs(d.DNS, st.DNS.Windows)))
 		if st.DPI.Running && d.StopDPI != nil {
 			_ = d.StopDPI()
 		}

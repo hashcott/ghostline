@@ -318,7 +318,7 @@ func (f *fStates) Update(fn func(*store.State) error) error {
 		switch {
 		case st.Phase == store.PhaseClean:
 			return f.r.add("state.clean")
-		case before.Phase == store.PhaseDNSSet && len(st.Snapshot) > len(before.Snapshot):
+		case before.Phase == store.PhaseDNSSet && len(st.DNS.Windows) > len(before.DNS.Windows):
 			return f.r.add("state.append")
 		default:
 			return f.r.add("state.dns_set")

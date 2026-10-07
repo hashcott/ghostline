@@ -28,7 +28,7 @@ func TestConnect_HappyPathOrder(t *testing.T) {
 	st, _ := h.states.Load()
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
 	require.Equal(t, uint32(1234), st.PID)
-	require.Len(t, st.Snapshot, 1)
+	require.Len(t, st.DNS.Windows, 1)
 }
 
 func TestConnect_FailureAtEachStepRollsBack(t *testing.T) {

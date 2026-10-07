@@ -122,7 +122,7 @@ func TestLoadState_MissingIsClean(t *testing.T) {
 	st, err := store.NewStateStore(filepath.Join(t.TempDir(), "state.json"), &fakeLocker{}).Load()
 	require.NoError(t, err)
 	require.Equal(t, store.PhaseClean, st.Phase)
-	require.Equal(t, 3, st.Version)
+	require.Equal(t, 4, st.Version)
 }
 
 func TestLoadState_CorruptReturnsErrStateCorrupt(t *testing.T) {

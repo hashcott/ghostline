@@ -32,16 +32,36 @@ type DPIState struct {
 
 // State is the write-ahead record of what Ghostline changed on the system.
 type State struct {
-	Version      int                     `json:"version"`
-	Phase        Phase                   `json:"phase"`
-	PID          uint32                  `json:"pid"`
-	PIDStartTime time.Time               `json:"pidStartTime"`
-	StartedAt    time.Time               `json:"startedAt"`
-	Snapshot     []model.AdapterSnapshot `json:"snapshot"`
-	DPI          DPIState                `json:"dpi"`
-	SysProxy     *SysProxyState          `json:"sysproxy,omitempty"`
-	Firewall     *FirewallState          `json:"firewall,omitempty"`
-	Certs        *CertsState             `json:"certs,omitempty"`
+	Version      int               `json:"version"`
+	Phase        Phase             `json:"phase"`
+	PID          uint32            `json:"pid"`
+	PIDStartTime time.Time         `json:"pidStartTime"`
+	StartedAt    time.Time         `json:"startedAt"`
+	DNS          model.DNSSnapshot `json:"dns"`
+	DPI          DPIState          `json:"dpi"`
+	SysProxy     *SysProxyState    `json:"sysproxy,omitempty"`
+	Firewall     *FirewallState    `json:"firewall,omitempty"`
+	Certs        *CertsState       `json:"certs,omitempty"`
+}
+
+// UnmarshalJSON reads v4, and v3 files (v0.5), whose adapters were in
+// "snapshot": they become a "windows" DNS snapshot.
+func (s *State) UnmarshalJSON(b []byte) error {
+	type plain State
+	aux := struct {
+		*plain
+		Legacy []model.AdapterSnapshot `json:"snapshot"`
+	}{plain: (*plain)(s)}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if len(aux.Legacy) > 0 && s.DNS.Empty() {
+		s.DNS = model.DNSSnapshot{Backend: "windows", Windows: aux.Legacy}
+	}
+	if s.Version < 4 {
+		s.Version = 4
+	}
+	return nil
 }
 
 // SysProxySnapshot is the WinINET per-connection proxy configuration.
@@ -131,7 +151,7 @@ func (s *State) RemoveSessionCert(thumbprint string) {
 }
 
 // CleanState is the state with nothing to restore.
-func CleanState() State { return State{Version: 3, Phase: PhaseClean} }
+func CleanState() State { return State{Version: 4, Phase: PhaseClean} }
 
 func cleanState() State { return CleanState() }
 

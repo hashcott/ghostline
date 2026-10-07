@@ -51,7 +51,7 @@ func setup(t *testing.T, alive bool, st *store.State) (watchdog.Deps, *fakeDNS, 
 
 func dirty() *store.State {
 	return &store.State{Version: 1, Phase: store.PhaseDNSSet, PID: 42, PIDStartTime: time.Unix(100, 0),
-		Snapshot: []model.AdapterSnapshot{snap}, DPI: store.DPIState{Running: true, PID: 7}}
+		DNS: model.DNSSnapshot{Backend: "windows", Windows: []model.AdapterSnapshot{snap}}, DPI: store.DPIState{Running: true, PID: 7}}
 }
 
 func TestRestore_CleanDoesNothing(t *testing.T) {
@@ -79,7 +79,7 @@ func TestRestore_RestoresSnapshotStopsDPIMarksClean(t *testing.T) {
 	require.Equal(t, 1, *stops)
 	st, _ := d.States.Load()
 	require.Equal(t, store.PhaseClean, st.Phase)
-	require.Empty(t, st.Snapshot)
+	require.Empty(t, st.DNS.Windows)
 }
 
 func TestRestore_PIDReusedStillRestores(t *testing.T) {
@@ -140,7 +140,7 @@ func TestRestore_FailureKeepsSnapshotForLaterLayers(t *testing.T) {
 	require.Equal(t, watchdog.Restored, out)
 	st, _ := d.States.Load()
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
-	require.Len(t, st.Snapshot, 1)
+	require.Len(t, st.DNS.Windows, 1)
 }
 
 func TestRestore_CorruptStateWithFailedResetStaysUnclean(t *testing.T) {
@@ -182,7 +182,7 @@ func (*brokenLookup) LoopbackAdapters() ([]sysdns.Adapter, error) { return nil, 
 func TestRestore_SkipsAdaptersNoLongerOnLoopback(t *testing.T) {
 	other := model.AdapterSnapshot{GUID: "{B}", Alias: "Ethernet", IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}
 	st := dirty()
-	st.Snapshot = append(st.Snapshot, other)
+	st.DNS.Windows = append(st.DNS.Windows, other)
 	d, fd, _ := setup(t, false, st)
 	fd.loopback = []sysdns.Adapter{{GUID: "{B}"}} // {A} was changed by the user
 	out, err := watchdog.RestoreIfOrphaned(d)

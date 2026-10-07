@@ -401,7 +401,7 @@ func (o *Orchestrator) connectSteps() []step {
 			pid, start := o.d.System.SelfPID()
 			if err := o.d.States.Update(func(st *store.State) error {
 				st.Version, st.Phase, st.PID, st.PIDStartTime, st.StartedAt = 2, store.PhaseDNSSet, pid, start, o.d.Now()
-				st.Snapshot = snaps
+				st.DNS.Windows = snaps
 				return nil
 			}); err != nil {
 				return err

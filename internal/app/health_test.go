@@ -72,7 +72,7 @@ func TestNetworkChange_NewAdapterSnapshottedBeforeApply(t *testing.T) {
 	after := h.r.list()[n:]
 	require.Less(t, indexOf(after, "state.append"), indexOf(after, "dns.apply:{B}"), after)
 	st, _ := h.states.Load()
-	require.Len(t, st.Snapshot, 2)
+	require.Len(t, st.DNS.Windows, 2)
 	// Disconnect restores both adapters.
 	require.NoError(t, h.o.Disconnect(context.Background()))
 }
