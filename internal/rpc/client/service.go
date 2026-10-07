@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -16,6 +17,13 @@ import (
 
 // dialTimeout bounds connecting to the daemon.
 const dialTimeout = 3 * time.Second
+
+// callTimeout bounds a call: Connect may scan servers for minutes, but a
+// daemon that stops answering must not hang the GUI forever. Methods that
+// open a file dialog in the GUI get rpc.UITimeout more.
+var callTimeout = 10 * time.Minute
+
+var dialogMethods = map[string]bool{"ExportSettings": true, "PreviewImport": true, "ExportAdvancedCSV": true, "SaveDeviceFiles": true}
 
 // Conn manages the connection behind a Service: it dials on first use and
 // again after the daemon restarts. Its handlers live here, not on Service,
@@ -131,7 +139,20 @@ func (s *Service) call(ctx context.Context, method string, result any, args ...a
 	if err != nil {
 		return err
 	}
-	return cl.Call(ctx, method, result, args...)
+	if _, ok := ctx.Deadline(); !ok {
+		d := callTimeout
+		if dialogMethods[method] {
+			d += rpc.UITimeout
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, d)
+		defer cancel()
+	}
+	err = cl.Call(ctx, method, result, args...)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%s: %s got no answer: %w", rpc.CodeUnreachable, method, err)
+	}
+	return err
 }
 
 // callTuple decodes a method's several results (sent as a JSON array).

@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,4 +134,43 @@ func TestSetMode_RunsHookAfterCall(t *testing.T) {
 	defer conn.Close()
 	require.NoError(t, s.SetMode("full"))
 	require.Equal(t, "full", got)
+}
+
+// A daemon that accepts but never answers must not hang the GUI forever.
+func TestCall_TimesOutWhenDaemonStalls(t *testing.T) {
+	old := callTimeout
+	callTimeout = 200 * time.Millisecond
+	defer func() { callTimeout = old }()
+	sock := filepath.Join(t.TempDir(), "ctl.sock")
+	l, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+	block := make(chan struct{})
+	defer close(block)
+	srv := rpc.NewServer(func(context.Context, string, []json.RawMessage) (json.RawMessage, error) {
+		<-block
+		return nil, nil
+	}, "test", func(net.Conn) error { return nil }, quiet())
+	go func() { _ = srv.Serve(l) }()
+	defer srv.Close()
+	s, conn := New(sock, quiet(), nil)
+	defer conn.Close()
+	start := time.Now()
+	err = s.Connect()
+	require.Error(t, err)
+	require.True(t, strings.HasPrefix(err.Error(), rpc.CodeUnreachable), err.Error())
+	require.Less(t, time.Since(start), 3*time.Second)
+}
+
+// Only methods that open a GUI dialog take a ctx; they get the long timeout.
+func TestDialogMethods_AreTheCtxMethods(t *testing.T) {
+	at := reflect.TypeOf(&app.Service{})
+	ctxType := reflect.TypeFor[context.Context]()
+	got := map[string]bool{}
+	for i := 0; i < at.NumMethod(); i++ {
+		m := at.Method(i)
+		if m.Type.NumIn() > 1 && m.Type.In(1) == ctxType {
+			got[m.Name] = true
+		}
+	}
+	require.Equal(t, dialogMethods, got)
 }
