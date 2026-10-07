@@ -15,3 +15,13 @@ func TestViolations(t *testing.T) {
 func TestViolations_PrefixIsPathAware(t *testing.T) {
 	require.Empty(t, Violations([]string{"github.com/hashcott/ghostline/internal/rpcx"}, []string{"github.com/hashcott/ghostline/internal/rpc"}))
 }
+
+// A mistyped Pkg must fail the check, not pass it with nothing checked.
+func TestParseList_ErrorFailsTheCheck(t *testing.T) {
+	deps, err := parseList("github.com/hashcott/ghostline/internal/model\ngithub.com/hashcott/ghostline/internal/app\n")
+	require.NoError(t, err)
+	require.Equal(t, []string{"github.com/hashcott/ghostline/internal/model", "github.com/hashcott/ghostline/internal/app"}, deps)
+
+	_, err = parseList("github.com/hashcott/ghostline/cmd/ghostlined\tdirectory not found\n")
+	require.ErrorContains(t, err, "directory not found")
+}

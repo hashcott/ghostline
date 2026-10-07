@@ -31,16 +31,33 @@ func main() {
 }
 
 // listDeps lists pkg's transitive dependencies as a real build for goos
-// sees them (cgo files included).
+// sees them (cgo files included). Each line is "path" or "path<TAB>error".
 func listDeps(goos, pkg string) ([]string, error) {
-	cmd := exec.Command("go", "list", "-e", "-deps", pkg)
+	cmd := exec.Command("go", "list", "-e", "-deps", "-f", "{{.ImportPath}}{{if .Error}}\t{{.Error.Err}}{{end}}", pkg)
 	cmd.Env = append(os.Environ(), "GOOS="+goos, "CGO_ENABLED=1")
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	return strings.Fields(string(out)), nil
+	return parseList(string(out))
+}
+
+// parseList reads listDeps' output. A package go list could not load (a
+// mistyped Pkg, a missing directory) is an error: otherwise the rule would
+// pass with nothing checked.
+func parseList(out string) ([]string, error) {
+	var deps []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		path, msg, bad := strings.Cut(line, "\t")
+		if bad {
+			return nil, fmt.Errorf("%s: %s", path, msg)
+		}
+		if path != "" {
+			deps = append(deps, path)
+		}
+	}
+	return deps, nil
 }
 
 // Violations returns the deps that match a forbid entry, in deps order.
