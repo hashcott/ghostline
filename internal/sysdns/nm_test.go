@@ -73,6 +73,7 @@ func TestNM_ReconcileReappliesAndKeepsOriginal(t *testing.T) {
 
 	next, toApply, changes, err := b.Reconcile(s, Selection{})
 	require.NoError(t, err)
+	require.Equal(t, s, next)
 	require.Empty(t, changes, "still ours: nothing to do")
 	require.True(t, toApply.Empty())
 

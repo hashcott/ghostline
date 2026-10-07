@@ -62,6 +62,15 @@
 | Theo dõi | Thuộc về backend (`Backend.Watch`). `platform.WatchNetwork` bỏ |
 | Dừng service xung đột | Kiểm tra trong `app` (dùng chung): tên phải nằm trong `PortOwners(53)` hiện tại |
 
+### Quyết định khi triển khai (L3)
+
+- Kiểu dữ liệu snapshot (`DNSSnapshot`, `LinuxDNS`…) nằm trong `internal/model`, để `store` và `sysdns` cùng dùng mà không import lẫn nhau; `sysdns.Snapshot` là alias.
+- `Backend.StillOurs(s)` trả phần snapshot mà Ghostline vẫn đang giữ; watchdog chỉ khôi phục phần đó (thay cho `watchdog.stillOurs` riêng của Windows).
+- `Backend.Reconcile(s, sel)` chỉ ghi nhận, không áp dụng: trả `(next, toApply, changes)`. Orchestrator lưu `next` vào `state.json` trước rồi mới `Apply(toApply)`, giữ thứ tự write-ahead. `sel` là lựa chọn adapter auto/manual (Windows cần, Linux bỏ qua).
+- `Change{Target, Added}` báo adapter mới (`ADAPTER_ADDED`) hoặc cấu hình bị ghi đè và đã áp lại (`DNS_REAPPLIED`).
+- `Info.Adapters` thay cho `ListAdapters` riêng; `Info.AdapterPick` cho Settings biết có hiện bộ chọn adapter hay không.
+- Daemon giữ `flock` trên `daemon.lock` trước mọi việc khác, nên chỉ một `ghostlined` chạy.
+
 ## 4. Interface
 
 ```go
