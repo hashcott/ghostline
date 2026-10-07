@@ -53,6 +53,7 @@ func ClientSocket() string {
 
 func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
+	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
 	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
 	return Deps{
 		Paths:  paths,
@@ -75,8 +76,8 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 			return nil, errUnsupported
 		},
 
-		UserSecrets:    secrets.Unsupported{},
-		MachineSecrets: secrets.Unsupported{},
+		UserSecrets:    secretKey,
+		MachineSecrets: secretKey,
 
 		NetID:         netid.Unsupported{},
 		Procs:         procs.NewLinux(),
