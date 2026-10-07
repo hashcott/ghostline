@@ -58,3 +58,47 @@ jobs:
         run: npm test
       - name: Build
         run: wails3 build
+
+  # Linux (spec Linux §17): the GTK4 build, every test, a Windows type-check
+  # so Linux-side work cannot break the Windows build unnoticed, and the
+  # dependency guard that keeps each OS's code out of the other's binary.
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: GTK4 and WebKitGTK
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.27
+      - name: Frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Generate bindings
+        run: wails3 generate bindings -clean=true -ts -i
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+      - name: Go tests
+        run: go test ./...
+      - name: Go race tests (rules, proxy, app)
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./internal/rules/... ./internal/proxy/... ./internal/app/...
+      - name: Windows type-check
+        env:
+          GOOS: windows
+        run: go vet ./...
+      - name: Dependency guard
+        run: go run ./tools/depcheck
+      - name: Build
+        run: go build -o /dev/null .
