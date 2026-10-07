@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AdguardTeam/dnsproxy/upstream"
@@ -283,31 +284,45 @@ func New(o Options) (*Core, error) {
 		p: p, paths: paths, log: log, eng: eng, pw: pw, cat: cat, strats: strats, checker: checker}, nil
 }
 
-// Run watches the network and the system proxy and runs the background
-// loops (stats, list refreshes, update checks) until ctx is done.
-func (c *Core) Run(ctx context.Context) {
-	if stopProxyWatch, err := c.p.WatchSysProxy(c.Orch.OnSysProxyChanged); err != nil {
+// Start watches the network and the system proxy (in place when Start
+// returns) and runs the background loops (stats, list refreshes, update
+// checks) until ctx is done. wait returns once every loop has stopped and
+// the watches are removed.
+func (c *Core) Start(ctx context.Context) (wait func()) {
+	var stops []func()
+	if stop, err := c.p.WatchSysProxy(c.Orch.OnSysProxyChanged); err != nil {
 		c.log.Warn("system proxy watch", "err", err)
-	} else {
-		defer stopProxyWatch()
+	} else if stop != nil {
+		stops = append(stops, stop)
 	}
-	if stopWatch, err := c.p.WatchNetwork(func() { c.Orch.OnNetworkChange(context.Background()) }); err != nil {
+	if stop, err := c.p.WatchNetwork(func() { c.Orch.OnNetworkChange(context.Background()) }); err != nil {
 		c.log.Warn("network watch", "err", err)
-	} else {
-		defer stopWatch()
+	} else if stop != nil {
+		stops = append(stops, stop)
 	}
-	statTick := time.NewTicker(time.Second)
-	defer statTick.Stop()
-	go app.RunStats(c.Svc, ctx, statTick.C)
-	proxyTick := time.NewTicker(time.Second)
-	defer proxyTick.Stop()
-	go runProxyStats(ctx, c.pw, proxyTick.C)
-	dnsTick := time.NewTicker(time.Second)
-	defer dnsTick.Stop()
-	go runDNSServerStats(ctx, c.eng, c.Orch, c.Bus, dnsTick.C)
-	go runLists(ctx, c.Svc)
-	go runUpdates(ctx, c.paths, c.Settings, c.cat, c.strats, c.checker, c.log)
-	<-ctx.Done()
+	var wg sync.WaitGroup
+	loop := func(f func()) {
+		wg.Add(1)
+		go func() { defer wg.Done(); f() }()
+	}
+	tick := func(f func(<-chan time.Time)) {
+		loop(func() {
+			t := time.NewTicker(time.Second)
+			defer t.Stop()
+			f(t.C)
+		})
+	}
+	tick(func(ticks <-chan time.Time) { app.RunStats(c.Svc, ctx, ticks) })
+	tick(func(ticks <-chan time.Time) { runProxyStats(ctx, c.pw, ticks) })
+	tick(func(ticks <-chan time.Time) { runDNSServerStats(ctx, c.eng, c.Orch, c.Bus, ticks) })
+	loop(func() { runLists(ctx, c.Svc) })
+	loop(func() { runUpdates(ctx, c.paths, c.Settings, c.cat, c.strats, c.checker, c.log) })
+	return func() {
+		wg.Wait()
+		for _, stop := range stops {
+			stop()
+		}
+	}
 }
 
 // Shutdown disconnects cleanly, putting the system back as it was.

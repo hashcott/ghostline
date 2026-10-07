@@ -107,17 +107,43 @@ func TestNew_RestoresOrphanedStateFirst(t *testing.T) {
 	require.Contains(t, codes, app.CodeStateReset)
 }
 
-func TestRun_ReturnsWhenCancelled(t *testing.T) {
+func TestStart_WaitReturnsWhenCancelled(t *testing.T) {
 	c := newCore(t, testDeps(t), Options{})
 	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
 	done := make(chan struct{})
-	go func() { c.Run(ctx); close(done) }()
+	go func() { wait(); close(done) }()
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("Run did not return after cancel")
+	case <-time.After(5 * time.Second):
+		t.Fatal("background loops did not stop after cancel")
 	}
+}
+
+// The watches are in place when Start returns (the Windows autostart
+// connect runs right after it), and stopped once wait returns.
+func TestStart_WatchesRegisteredBeforeReturn(t *testing.T) {
+	p := testDeps(t)
+	var mu sync.Mutex
+	registered, stopped := 0, 0
+	p.WatchNetwork = func(func()) (func(), error) {
+		mu.Lock()
+		registered++
+		mu.Unlock()
+		return func() { mu.Lock(); stopped++; mu.Unlock() }, nil
+	}
+	c := newCore(t, p, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
+	mu.Lock()
+	require.Equal(t, 1, registered)
+	mu.Unlock()
+	cancel()
+	wait()
+	mu.Lock()
+	require.Equal(t, 1, stopped)
+	mu.Unlock()
 }
 
 func TestNew_CallsSettingsHookAfterSave(t *testing.T) {

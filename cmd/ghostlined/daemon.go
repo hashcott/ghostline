@@ -86,8 +86,8 @@ func runDaemon(ctx context.Context, a Args) error {
 		return err
 	}
 	runCtx, stopRun := context.WithCancel(context.Background())
-	defer stopRun()
-	go c.Run(runCtx)
+	wait := c.Start(runCtx)
+	defer func() { stopRun(); wait() }() // every loop is done before we return
 	go func() { _ = srv.Serve(l) }()
 	if s := c.Settings.Get(); s.StartWithWindows && s.AutoConnect {
 		go func() { _ = c.Orch.Connect(context.Background()) }()

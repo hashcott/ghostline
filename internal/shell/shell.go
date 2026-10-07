@@ -125,8 +125,8 @@ func Run(o Options) error {
 	em.onState = ui.onState
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go c.Run(ctx)
+	wait := c.Start(ctx)
+	defer func() { cancel(); wait() }()
 
 	if o.Mode.Kind == cli.KindAutostart && c.Settings.Get().AutoConnect {
 		go func() { _ = c.Orch.Connect(context.Background()) }()
