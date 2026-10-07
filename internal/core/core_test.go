@@ -181,3 +181,22 @@ func TestNew_RemoteRefusesFileLists(t *testing.T) {
 	require.Error(t, err)
 	require.NotErrorIs(t, err, lists.ErrFileListsOff)
 }
+
+// After sleep the engine is re-checked (Linux: logind's PrepareForSleep).
+func TestStart_RegistersResumeWatch(t *testing.T) {
+	p := testDeps(t)
+	var onResume func()
+	stopped := 0
+	p.WatchResume = func(f func()) (func(), error) {
+		onResume = f
+		return func() { stopped++ }, nil
+	}
+	c := newCore(t, p, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
+	require.NotNil(t, onResume)
+	onResume() // disconnected: nothing to re-check, must not panic
+	cancel()
+	wait()
+	require.Equal(t, 1, stopped)
+}

@@ -37,6 +37,10 @@ type Deps struct {
 	// DPIEngines lists the engines this OS can run, with their files.
 	DPIEngines func(list func() strategies.List) []dpi.Installed
 
+	// WatchResume reports the machine waking from sleep; nil where the GUI
+	// sees it itself (Windows: WM_POWERBROADCAST).
+	WatchResume func(onResume func()) (stop func(), err error)
+
 	Startup       startup.Manager
 	StartWatchdog func(pid uint32, start time.Time) (stop func() error, err error)
 

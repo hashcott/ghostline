@@ -306,6 +306,13 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 	} else if stop != nil {
 		stops = append(stops, stop)
 	}
+	if c.p.WatchResume != nil {
+		if stop, err := c.p.WatchResume(func() { go c.Orch.OnResume(context.Background()) }); err != nil {
+			c.log.Warn("resume watch", "err", err)
+		} else if stop != nil {
+			stops = append(stops, stop)
+		}
+	}
 	var wg sync.WaitGroup
 	loop := func(f func()) {
 		wg.Add(1)

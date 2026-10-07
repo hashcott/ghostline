@@ -60,6 +60,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
 		DNS:           sysdns.DetectLinux(paths.DataDir),
+		WatchResume:   watchResume,
 		SysProxy:      sysproxy.Unsupported{},
 		WatchSysProxy: unwatched,
 		Certs:         certstore.Unsupported{},
