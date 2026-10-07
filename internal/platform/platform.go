@@ -23,6 +23,8 @@ import (
 type Deps struct {
 	Paths store.Paths
 	Lock  store.Locker // serialises state.json across processes
+	// Socket is the daemon's control socket ("" where there is no daemon).
+	Socket string
 
 	DNS           sysdns.API
 	WatchNetwork  func(onChange func()) (stop func(), err error)

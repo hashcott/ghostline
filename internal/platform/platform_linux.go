@@ -22,19 +22,42 @@ import (
 
 var errUnsupported = fmt.Errorf("platform: %w", errors.ErrUnsupported)
 
-// New wires Linux. Until the daemon (L2) and the Linux backends (L3, L4)
-// exist, every system change is a stub: the GUI runs for development and
-// refuses to connect. Data lives under the user's config directory for now.
+// Default directories of the Linux daemon (systemd StateDirectory,
+// LogsDirectory and RuntimeDirectory).
+const (
+	daemonDataDir = "/var/lib/ghostline/data"
+	daemonLogDir  = "/var/log/ghostline"
+	daemonRunDir  = "/run/ghostline"
+)
+
+// New wires the Linux daemon. The system backends are stubs until L3/L4:
+// connecting fails before anything changes.
 func New(exe string) (Deps, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return Deps{}, err
+	return newLinux(daemonDataDir, daemonLogDir, daemonRunDir)
+}
+
+// NewDev lays the daemon out under dir, for development and tests that
+// run without root.
+func NewDev(dir string) (Deps, error) {
+	return newLinux(filepath.Join(dir, "data"), filepath.Join(dir, "log"), filepath.Join(dir, "run"))
+}
+
+// ClientSocket is the socket the GUI connects to: $GHOSTLINE_SOCKET for
+// development, otherwise the daemon's.
+func ClientSocket() string {
+	if s := os.Getenv("GHOSTLINE_SOCKET"); s != "" {
+		return s
 	}
-	paths := store.ResolvePaths(exe, base)
+	return filepath.Join(daemonRunDir, "ctl.sock")
+}
+
+func newLinux(dataDir, logDir, runDir string) (Deps, error) {
+	paths := store.PathsIn(dataDir, logDir)
 	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
 	return Deps{
-		Paths: paths,
-		Lock:  newFileLock(filepath.Join(paths.DataDir, "state.lock")),
+		Paths:  paths,
+		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
+		Socket: filepath.Join(runDir, "ctl.sock"),
 
 		DNS:           sysdns.Unsupported{},
 		WatchNetwork:  unwatched,
@@ -56,7 +79,8 @@ func New(exe string) (Deps, error) {
 		MachineSecrets: secrets.Unsupported{},
 
 		NetID:         netid.Unsupported{},
-		Procs:         procs.Unsupported{},
+		Procs:         procs.NewLinux(),
 		AttachConsole: func() {},
+		UsesDaemon:    true,
 	}, nil
 }

@@ -42,13 +42,21 @@ type Paths struct {
 // marker sits next to the executable, otherwise %APPDATA%\Ghostline.
 func ResolvePaths(exePath, appData string) Paths {
 	exeDir := filepath.Dir(exePath)
-	p := Paths{}
+	dataDir, portable := filepath.Join(appData, brand.AppName), false
 	if _, err := os.Stat(filepath.Join(exeDir, "portable")); err == nil {
-		p.Portable = true
-		p.DataDir = filepath.Join(exeDir, "data")
-	} else {
-		p.DataDir = filepath.Join(appData, brand.AppName)
+		dataDir, portable = filepath.Join(exeDir, "data"), true
 	}
+	p := PathsIn(dataDir, filepath.Join(dataDir, "logs"))
+	p.MachineDir = "" // set by WithMachineDir
+	p.Portable = portable
+	return p
+}
+
+// PathsIn lays every file out under dataDir, with the logs in logDir. The
+// LAN CA stays in dataDir (MachineDir): the Linux daemon's data directory
+// is root-only.
+func PathsIn(dataDir, logDir string) Paths {
+	p := Paths{DataDir: dataDir, MachineDir: dataDir}
 	j := func(name string) string { return filepath.Join(p.DataDir, name) }
 	p.Settings = j("settings.json")
 	p.State = j("state.json")
@@ -66,7 +74,7 @@ func ResolvePaths(exePath, appData string) Paths {
 	p.DPIStrategies = j("dpi-strategies.json")
 	p.DPIStrategiesSig = j("dpi-strategies.json.sig")
 	p.DPIAutoHostlist = j("dpi-autohostlist.txt")
-	p.LogDir = j("logs")
+	p.LogDir = logDir
 	p.BinDir = j("bin")
 	p.Rules = j("rules.json")
 	p.FragCache = j("frag-cache.json")
