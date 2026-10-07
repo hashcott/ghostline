@@ -82,3 +82,35 @@ func TestDaemon_EndToEnd(t *testing.T) {
 	_, err := os.Stat(sock)
 	require.True(t, os.IsNotExist(err), "socket removed on shutdown")
 }
+
+// A second daemon on the same directories stops before doing anything:
+// no startup restore, no log rotation.
+func TestRunDaemon_SecondInstanceDoesNothing(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("runs only as a normal user")
+	}
+	dir := t.TempDir()
+	data := filepath.Join(dir, "d")
+	sock := filepath.Join(dir, "ctl.sock")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- runDaemon(ctx, Args{Command: "daemon", DataDir: data, Socket: sock, AllowUID: os.Getuid()})
+	}()
+	require.Eventually(t, func() bool { _, err := os.Stat(sock); return err == nil }, 5*time.Second, 20*time.Millisecond)
+
+	logFile := filepath.Join(data, "log", "ghostline.log")
+	before, err := os.Stat(logFile)
+	require.NoError(t, err)
+	err = runDaemon(context.Background(), Args{Command: "daemon", DataDir: data, Socket: filepath.Join(dir, "other.sock"), AllowUID: os.Getuid()})
+	require.ErrorContains(t, err, "another ghostlined is running")
+	after, err := os.Stat(logFile)
+	require.NoError(t, err)
+	require.Equal(t, before.Size(), after.Size(), "the second instance wrote nothing")
+	_, err = os.Stat(filepath.Join(dir, "other.sock"))
+	require.True(t, os.IsNotExist(err))
+
+	cancel()
+	require.NoError(t, <-done)
+}
