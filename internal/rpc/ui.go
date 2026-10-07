@@ -38,7 +38,7 @@ func CallUI(ctx context.Context, kind string, result any, args ...any) error {
 		delete(sc.waiting, uid)
 		sc.mu.Unlock()
 	}
-	if err := sc.w.write(Msg{UID: uid, UI: kind, Args: raw}); err != nil {
+	if err := sc.send(Msg{UID: uid, UI: kind, Args: raw}); err != nil {
 		forget()
 		return fmt.Errorf("%w: %v", ErrNoUI, err)
 	}

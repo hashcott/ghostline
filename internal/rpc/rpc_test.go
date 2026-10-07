@@ -205,3 +205,31 @@ func TestEventHandlerMayCall(t *testing.T) {
 		t.Fatal("the handler's own call never returned")
 	}
 }
+
+// A GUI that stops reading (stuck, or suspended with Ctrl+Z) must not stall
+// the daemon: Emit runs under the orchestrator's lock and on the DNS path.
+func TestEmitDoesNotBlockOnStuckClient(t *testing.T) {
+	s, sock := serve(t, echo, acceptAll)
+	c, err := net.Dial("unix", sock)
+	require.NoError(t, err)
+	defer c.Close()
+	r := bufio.NewReader(c)
+	_, err = r.ReadBytes('\n') // server hello
+	require.NoError(t, err)
+	_, _ = fmt.Fprintf(c, `{"hello":{"version":"test","protocol":%d}}`+"\n", Protocol)
+	time.Sleep(50 * time.Millisecond) // registered; from now on this client never reads
+
+	payload := strings.Repeat("x", 1024)
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 20000; i++ { // ~20 MB, far past any socket buffer
+			s.Emit("stats", payload)
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Emit blocked on a client that does not read")
+	}
+}

@@ -47,15 +47,23 @@ func (w *wire) read() (Msg, error) {
 	return m, nil
 }
 
-func (w *wire) write(m Msg) error {
+// encode turns m into one line.
+func encode(m Msg) ([]byte, error) {
 	b, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > MaxLine {
+		return nil, ErrLineTooLong
+	}
+	return append(b, '\n'), nil
+}
+
+func (w *wire) write(m Msg) error {
+	b, err := encode(m)
 	if err != nil {
 		return err
 	}
-	if len(b) > MaxLine {
-		return ErrLineTooLong
-	}
-	b = append(b, '\n')
 	w.wmu.Lock()
 	defer w.wmu.Unlock()
 	_, err = w.c.Write(b)

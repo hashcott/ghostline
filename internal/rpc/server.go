@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Handler runs one call: method with its JSON arguments, returning the
@@ -58,14 +59,19 @@ func (s *Server) Serve(l net.Listener) error {
 	}
 }
 
-// Emit sends an event to every connected client (app.Emitter).
+// Emit sends an event to every connected client (app.Emitter). It never
+// waits: a client whose queue is full is disconnected.
 func (s *Server) Emit(name string, data any) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		s.log.Warn("rpc: event", "name", name, "err", err)
 		return
 	}
-	m := Msg{Event: name, Data: b}
+	line, err := encode(Msg{Event: name, Data: b})
+	if err != nil {
+		s.log.Warn("rpc: event", "name", name, "err", err)
+		return
+	}
 	s.mu.Lock()
 	conns := make([]*sconn, 0, len(s.conns))
 	for c := range s.conns {
@@ -73,7 +79,10 @@ func (s *Server) Emit(name string, data any) {
 	}
 	s.mu.Unlock()
 	for _, c := range conns {
-		_ = c.w.write(m)
+		if !c.trySend(line) {
+			s.log.Warn("rpc: client does not keep up; disconnecting")
+			c.drop()
+		}
 	}
 }
 
@@ -93,9 +102,18 @@ func (s *Server) Close() error {
 	return nil
 }
 
-// sconn is one client connection on the server side.
+// sendQueue bounds what waits to be written to one client.
+const sendQueue = 1024
+
+// writeTimeout bounds one write to a client.
+const writeTimeout = 30 * time.Second
+
+// sconn is one client connection on the server side. After the hello,
+// only its writer goroutine writes to the connection.
 type sconn struct {
-	w *wire
+	w         *wire
+	out       chan []byte
+	closeOnce sync.Once
 
 	mu      sync.Mutex
 	nextUID uint64
@@ -125,7 +143,7 @@ func (s *Server) handle(c net.Conn) {
 		_ = w.write(Msg{Error: &Error{Message: fmt.Sprintf("%s: daemon %d, client %d", CodeProtocol, Protocol, first.Hello.Protocol)}})
 		return
 	}
-	sc := &sconn{w: w, waiting: map[uint64]chan Msg{}, gone: make(chan struct{})}
+	sc := &sconn{w: w, out: make(chan []byte, sendQueue), waiting: map[uint64]chan Msg{}, gone: make(chan struct{})}
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
@@ -139,6 +157,7 @@ func (s *Server) handle(c net.Conn) {
 		s.mu.Unlock()
 		close(sc.gone)
 	}()
+	go sc.writer()
 	for {
 		m, err := w.read()
 		if err != nil {
@@ -162,6 +181,48 @@ func (s *Server) handle(c net.Conn) {
 	}
 }
 
+// send queues m, waiting for room unless the client is gone.
+func (sc *sconn) send(m Msg) error {
+	b, err := encode(m)
+	if err != nil {
+		return err
+	}
+	select {
+	case sc.out <- b:
+		return nil
+	case <-sc.gone:
+		return net.ErrClosed
+	}
+}
+
+// trySend queues a line without waiting.
+func (sc *sconn) trySend(b []byte) bool {
+	select {
+	case sc.out <- b:
+		return true
+	default:
+		return false
+	}
+}
+
+// drop closes the connection; the read loop then cleans up.
+func (sc *sconn) drop() { sc.closeOnce.Do(func() { _ = sc.w.c.Close() }) }
+
+func (sc *sconn) writer() {
+	for {
+		select {
+		case b := <-sc.out:
+			_ = sc.w.c.SetWriteDeadline(time.Now().Add(writeTimeout))
+			if _, err := sc.w.c.Write(b); err != nil {
+				sc.drop()
+				return
+			}
+		case <-sc.gone:
+			return
+		}
+	}
+}
+
 type connKey struct{}
 
 func (s *Server) call(sc *sconn, m Msg) {
@@ -176,7 +237,7 @@ func (s *Server) call(sc *sconn, m Msg) {
 		}
 		out.Result = res
 	}
-	if werr := sc.w.write(out); werr != nil {
+	if werr := sc.send(out); werr != nil {
 		s.log.Warn("rpc: reply", "call", m.Call, "err", werr)
 	}
 }
