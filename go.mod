@@ -5,6 +5,7 @@ go 1.26.8
 require (
 	github.com/AdguardTeam/dnsproxy v0.86.0
 	github.com/ameshkov/dnsstamps v1.0.3
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/jedisct1/go-minisign v0.0.0-20260527172527-a09352b57a22
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/miekg/dns v1.1.72
@@ -24,7 +25,6 @@ require (
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
