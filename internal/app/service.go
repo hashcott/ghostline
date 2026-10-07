@@ -686,9 +686,21 @@ func (s *Service) RestoreDNSNow() error {
 	return s.o.RestoreNow(context.Background(), s.x.RestoreNow)
 }
 
-// StopConflictingService stops a Windows service holding port 53. The UI
-// calls it only after the user confirmed in-page.
-func (s *Service) StopConflictingService(name string) error { return s.x.StopService(name) }
+// StopConflictingService stops the service holding port 53. The UI calls
+// it only after the user confirmed in-page; the name must be one of the
+// port's current owners, so the call cannot stop anything else.
+func (s *Service) StopConflictingService(name string) error {
+	owners, err := s.o.d.System.PortOwners(53)
+	if err != nil {
+		return err
+	}
+	for _, o := range owners {
+		if name != "" && o.Service == name {
+			return s.x.StopService(name)
+		}
+	}
+	return appErr(CodePort53NotOwner, nil, "name", name)
+}
 
 // DNSInfo describes how Ghostline changes this system's DNS (Settings
 // shows the adapter choice, or the backend chain).

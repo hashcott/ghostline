@@ -16,6 +16,7 @@ const (
 	// Log code: the system changed DNS and Ghostline set it again (Linux).
 	CodeDNSReapplied      = "DNS_REAPPLIED"
 	CodePort53Busy        = "PORT53_BUSY"
+	CodePort53NotOwner    = "PORT53_NOT_OWNER"
 	CodeNoServers         = "NO_SERVERS"
 	CodeEngineSelfTest    = "ENGINE_SELFTEST_FAILED"
 	CodeSetDNSFailed      = "SET_DNS_FAILED"

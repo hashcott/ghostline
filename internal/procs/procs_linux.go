@@ -17,15 +17,95 @@ const clockTicks = 100
 
 type linuxInspector struct{}
 
-// NewLinux inspects processes through /proc. Port owners and stopping a
-// service come with the Linux DNS backends (L3).
+// NewLinux inspects processes through /proc and stops services through
+// systemd.
 func NewLinux() Inspector { return linuxInspector{} }
 
 func (linuxInspector) IsAdmin() bool { return os.Geteuid() == 0 }
 
-func (linuxInspector) PortOwners(uint16) ([]PortOwner, error) { return nil, errUnsupported }
+// PortOwners lists the processes with a socket on local port: listening
+// TCP, or any UDP, over IPv4 and IPv6.
+func (linuxInspector) PortOwners(port uint16) ([]PortOwner, error) {
+	proto := map[uint64]string{}
+	for _, t := range []struct {
+		file, proto string
+		tcp         bool
+	}{{"/proc/net/tcp", "tcp", true}, {"/proc/net/tcp6", "tcp", true}, {"/proc/net/udp", "udp", false}, {"/proc/net/udp6", "udp", false}} {
+		data, err := os.ReadFile(t.file)
+		if err != nil {
+			continue // no IPv6, for instance
+		}
+		for _, ino := range parseProcNet(data, port, t.tcp) {
+			proto[ino] = t.proto
+		}
+	}
+	if len(proto) == 0 {
+		return nil, nil
+	}
+	pids, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	var out []PortOwner
+	for _, d := range pids {
+		pid, err := strconv.ParseUint(d.Name(), 10, 32)
+		if err != nil {
+			continue
+		}
+		fds, err := os.ReadDir(fmt.Sprintf("/proc/%d/fd", pid))
+		if err != nil {
+			continue // another user's process, or gone
+		}
+		for _, fd := range fds {
+			link, err := os.Readlink(fmt.Sprintf("/proc/%d/fd/%s", pid, fd.Name()))
+			if err != nil || !strings.HasPrefix(link, "socket:[") {
+				continue
+			}
+			ino, err := strconv.ParseUint(strings.TrimSuffix(strings.TrimPrefix(link, "socket:["), "]"), 10, 64)
+			if err != nil {
+				continue
+			}
+			p, ok := proto[ino]
+			key := fmt.Sprintf("%d/%s", pid, p)
+			if !ok || seen[key] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, PortOwner{PID: uint32(pid), Name: procName(uint32(pid)), Service: procUnit(uint32(pid)), Proto: p})
+		}
+	}
+	return out, nil
+}
 
-func (linuxInspector) StopService(string, time.Duration) error { return errUnsupported }
+func procName(pid uint32) string {
+	b, _ := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+	return strings.TrimSpace(string(b))
+}
+
+// procUnit is the systemd service a process runs in (from its cgroup).
+func procUnit(pid uint32) string {
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		_, path, ok := strings.Cut(line, "::")
+		if !ok {
+			continue
+		}
+		segs := strings.Split(path, "/")
+		for i := len(segs) - 1; i >= 0; i-- {
+			if strings.HasSuffix(segs[i], ".service") {
+				return segs[i]
+			}
+		}
+	}
+	return ""
+}
+
+// StopService stops a systemd unit and waits for it.
+func (linuxInspector) StopService(name string, wait time.Duration) error { return stopUnit(name, wait) }
 
 // StartTime is when pid started: boot time plus field 22 of /proc/<pid>/stat.
 func (linuxInspector) StartTime(pid uint32) (time.Time, error) {
