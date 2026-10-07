@@ -5,31 +5,20 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
-	"github.com/hashcott/ghostline/internal/certs"
-	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/cli"
-	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
-	"github.com/hashcott/ghostline/internal/procs"
+	"github.com/hashcott/ghostline/internal/platform"
+	"github.com/hashcott/ghostline/internal/shell"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/sysdns"
-	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 // runHeadless handles --watchdog, --restore, --remove-certs and --export. It never touches Wails.
-func runHeadless(mode cli.Mode) int {
-	exe, err := os.Executable()
-	if err != nil {
-		return 1
-	}
-	paths := store.WithMachineDir(store.ResolvePaths(exe, os.Getenv("APPDATA")), filepath.Join(os.Getenv("ProgramData"), brand.AppName))
+func runHeadless(mode cli.Mode, p platform.Deps) int {
+	paths := p.Paths
 	logger := slog.Default()
 	if w, err := logx.NewRotating(paths.LogDir, "ghostline", 5<<20, 3); err == nil {
 		defer w.Close()
@@ -38,7 +27,7 @@ func runHeadless(mode cli.Mode) int {
 	if mode.Kind == cli.KindExport {
 		// Read-only: no state lock, no recovery. A GUI exe has no console of
 		// its own: borrow the caller's so the result can be read.
-		winutil.AttachParentConsole()
+		p.AttachConsole()
 		if err := app.ExportTo(paths, mode.ExportPath, brand.Version); err != nil {
 			logger.Error("export failed", "err", err)
 			fmt.Fprintln(os.Stderr, "Ghostline: export failed:", err)
@@ -47,34 +36,15 @@ func runHeadless(mode cli.Mode) int {
 		_, _ = fmt.Fprintln(os.Stdout, "Ghostline: settings exported to", mode.ExportPath)
 		return 0
 	}
-	lock, err := winutil.NewNamedMutex(brand.StateMutex)
-	if err != nil {
-		logger.Error("state mutex", "err", err)
-		return 1
-	}
-	roots := certstore.NewWindows(certstore.LocalMachine)
-	d := watchdog.Deps{
-		States:  store.NewStateStore(paths.State, lock),
-		DNS:     sysdns.NewManager(sysdns.NewWindowsAPI(), time.Sleep),
-		StopDPI: stopDPI(paths),
-		Alive:   procs.NewWindows().Alive,
-		Log:     logger,
-
-		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
-		DeleteRule:      firewall.NewNetsh(exe).DeleteNamed,
-		RemoveCert: func(t string) error {
-			// state.json is user-writable: remove only Fake SNI roots.
-			return certstore.RemoveIfPrefix(roots, t, certs.SessionPrefix)
-		},
-		SweepSession: sweepSession(roots),
-	}
+	d := shell.RecoveryDeps(p, store.NewStateStore(paths.State, p.Lock), stopDPI(p), logger)
+	var err error
 	switch mode.Kind {
 	case cli.KindWatchdog:
-		err = watchdog.RunWatchdog(mode.ParentPID, mode.ParentStart, procs.NewWindows().WaitForExit, d)
+		err = watchdog.RunWatchdog(mode.ParentPID, mode.ParentStart, p.Procs.WaitForExit, d)
 	case cli.KindRemoveCerts:
 		// The uninstaller: undo whatever a run left, then remove every
 		// Ghostline root and the LAN CA files.
-		err = errors.Join(watchdog.RunRestore(d), watchdog.RemoveAllCerts(roots, paths.LANCACert, paths.LANCAKey))
+		err = errors.Join(watchdog.RunRestore(d), watchdog.RemoveAllCerts(p.Certs, paths.LANCACert, paths.LANCAKey))
 	default:
 		err = watchdog.RunRestore(d)
 	}
@@ -99,12 +69,4 @@ func modeName(k cli.Kind) string {
 		return "export"
 	}
 	return "ui"
-}
-
-// sweepSession removes Fake SNI roots not in keep.
-func sweepSession(s certstore.Store) func(keep []string) error {
-	return func(keep []string) error {
-		_, err := certstore.Sweep(s, certs.SessionPrefix, keep)
-		return err
-	}
 }

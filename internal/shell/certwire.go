@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/platform"
 	"io/fs"
 	"os"
 	"sync"
@@ -14,9 +15,7 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
-	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 // certWiring implements app.Certs over the Windows Root store and the LAN
@@ -36,10 +35,10 @@ type certWiring struct {
 	lan *certs.CA
 }
 
-func newCertWiring(paths store.Paths) *certWiring {
-	return &certWiring{paths: paths, store: certstore.NewWindows(certstore.LocalMachine), prot: secrets.NewMachineDPAPI(),
+func newCertWiring(p platform.Deps) *certWiring {
+	return &certWiring{paths: p.Paths, store: p.Certs, prot: p.MachineSecrets,
 		host: func() string { h, _ := os.Hostname(); return h }, now: time.Now,
-		secure: winutil.SecureDir, owned: winutil.OwnedByAdmins}
+		secure: p.SecureDir, owned: p.OwnedByAdmins}
 }
 
 // loadLocked returns the LAN CA from memory or disk; nil when none exists.

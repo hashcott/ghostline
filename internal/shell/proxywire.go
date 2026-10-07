@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/platform"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -33,9 +34,9 @@ type proxyWiring struct {
 	box    *app.SettingsBox
 	eng    *engine.Engine
 	paths  store.Paths
-	exe    string
 	fw     firewall.Manager
 	nid    netid.Source
+	secret secrets.Protector // upstream proxy passwords
 	bus    *app.Bus
 	holder *rules.Holder
 	frag   *store.FragCache
@@ -49,12 +50,13 @@ type proxyWiring struct {
 	selfAt time.Time
 }
 
-func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, paths store.Paths, exe string, fw firewall.Manager, nid netid.Source, bus *app.Bus, log *slog.Logger) *proxyWiring {
+func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, p platform.Deps, bus *app.Bus, log *slog.Logger) *proxyWiring {
+	paths := p.Paths
 	fc, err := store.LoadFragCache(paths.FragCache, time.Now())
 	if err != nil {
 		log.Warn("frag cache", "err", err)
 	}
-	return &proxyWiring{box: box, eng: eng, paths: paths, exe: exe, fw: fw, nid: nid, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
+	return &proxyWiring{box: box, eng: eng, paths: paths, fw: p.Firewall, nid: p.NetID, secret: p.UserSecrets, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
 }
 
 func (w *proxyWiring) fetcher() *lists.Fetcher {
@@ -88,7 +90,7 @@ func (w *proxyWiring) upstream(id string) (dialer.Upstream, bool) {
 		}
 		out := dialer.Upstream{ID: u.ID, Type: u.Type, Addr: u.Addr, User: u.User}
 		if u.PassEnc != "" {
-			pass, err := secrets.DecodeString(secrets.NewUserDPAPI(), u.PassEnc)
+			pass, err := secrets.DecodeString(w.secret, u.PassEnc)
 			if err != nil {
 				w.bus.Log(app.LogEvent{Time: time.Now(), Source: "proxy", Code: app.CodeUpstreamProxy, Params: map[string]any{"id": id}})
 				return dialer.Upstream{}, false

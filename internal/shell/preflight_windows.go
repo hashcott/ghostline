@@ -1,28 +1,21 @@
 package shell
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
-	"time"
 
-	"github.com/hashcott/ghostline/internal/winutil"
+	"github.com/hashcott/ghostline/internal/brand"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
-// detachedWatchdog starts exe --watchdog for the given parent.
-func detachedWatchdog(exe string) func(pid uint32, start time.Time) (func() error, error) {
-	return func(pid uint32, start time.Time) (func() error, error) {
-		// Deliberately not in our job object, and broken away from any job we
-		// inherited from a terminal or IDE: it must outlive us.
-		cmd, err := winutil.StartDetached(exe, []string{"--watchdog", "--parent", strconv.FormatUint(uint64(pid), 10),
-			"--parent-start", strconv.FormatInt(start.UnixNano(), 10)})
-		if err != nil {
-			return nil, err
-		}
-		go func() { _ = cmd.Wait() }()
-		return func() error { return cmd.Process.Kill() }, nil
+// preflight checks what the window needs before anything else runs.
+func preflight() error {
+	if !webView2Installed() {
+		messageBox(brand.AppName, "Ghostline cần Microsoft Edge WebView2 Runtime.\nGhostline needs the Microsoft Edge WebView2 Runtime.\n\nhttps://go.microsoft.com/fwlink/p/?LinkId=2124703")
+		return errors.New("webview2 missing")
 	}
+	return nil
 }
 
 const webView2ClientKey = `SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`

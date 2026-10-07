@@ -5,58 +5,54 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/platform"
 	"io/fs"
 	"log/slog"
 	"math/rand"
 	"net"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
-	"github.com/hashcott/ghostline/internal/certs"
-	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/cli"
 	"github.com/hashcott/ghostline/internal/dnsserver"
 	"github.com/hashcott/ghostline/internal/engine"
-	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/probe"
-	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/scanner"
 	"github.com/hashcott/ghostline/internal/secrets"
-	"github.com/hashcott/ghostline/internal/startup"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/upstreams"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Options carries what main provides.
 type Options struct {
-	Mode   cli.Mode
-	Assets fs.FS
-	// GoodbyeDPIAssets and Zapret2Assets hold the embedded engine files.
-	GoodbyeDPIAssets fs.FS
-	Zapret2Assets    fs.FS
-	Executable       string
+	Mode       cli.Mode
+	Assets     fs.FS
+	Executable string
+	// Platform is this OS's wiring (platform.New).
+	Platform platform.Deps
 }
+
+// Fatal reports an error that stops Ghostline before its window exists.
+func Fatal(err error) { fatalBox(err) }
 
 // Run starts the UI process.
 func Run(o Options) error {
-	if !webView2Installed() {
-		messageBox(brand.AppName, "Ghostline cần Microsoft Edge WebView2 Runtime.\nGhostline needs the Microsoft Edge WebView2 Runtime.\n\nhttps://go.microsoft.com/fwlink/p/?LinkId=2124703")
-		return errors.New("webview2 missing")
+	if err := preflight(); err != nil {
+		return err
 	}
-	paths := store.WithMachineDir(store.ResolvePaths(o.Executable, os.Getenv("APPDATA")), filepath.Join(os.Getenv("ProgramData"), brand.AppName))
+	p := o.Platform
+	paths := p.Paths
 	if err := os.MkdirAll(paths.DataDir, 0o755); err != nil {
 		fatalBox(err)
 		return err
@@ -77,32 +73,12 @@ func Run(o Options) error {
 	}
 	box := app.NewSettingsBox(paths.Settings, initial)
 
-	lock, err := winutil.NewNamedMutex(brand.StateMutex)
-	if err != nil {
-		fatalBox(err)
-		return err
-	}
-	states := store.NewStateStore(paths.State, lock)
-	dnsMgr := sysdns.NewManager(sysdns.NewWindowsAPI(), time.Sleep)
+	states := store.NewStateStore(paths.State, p.Lock)
+	dnsMgr := sysdns.NewManager(p.DNS, time.Sleep)
 	strats := newStrategyBox(paths, serverListKey(), log)
-	dpiMgr := NewDPIManager(paths, o.GoodbyeDPIAssets, o.Zapret2Assets, strats.get)
-	roots := certstore.NewWindows(certstore.LocalMachine)
-	fw := firewall.NewNetsh(o.Executable)
-	nid := netid.NewWindows()
-	pr := procs.NewWindows()
-	startups := startup.NewTaskScheduler(o.Executable)
-	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: pr.Alive, Log: log,
-		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
-		DeleteRule:      fw.DeleteNamed,
-		RemoveCert: func(t string) error {
-			// state.json is user-writable: remove only Fake SNI roots.
-			return certstore.RemoveIfPrefix(roots, t, certs.SessionPrefix)
-		},
-		SweepSession: func(keep []string) error {
-			_, err := certstore.Sweep(roots, certs.SessionPrefix, keep)
-			return err
-		},
-	}
+	dpiMgr := NewDPIManager(paths, p, strats.get)
+	nid := p.NetID
+	recoverDeps := RecoveryDeps(p, states, dpiMgr.Stop, log)
 
 	// Safety layer 3: restore whatever a dead previous run left behind.
 	startOut, startErr := watchdog.RestoreIfOrphaned(recoverDeps)
@@ -150,12 +126,12 @@ func Run(o Options) error {
 		bus.Emit(app.EventScan, app.ScanProgress{Done: done, Total: total, Result: r, Running: running})
 	}
 	eng := engine.New(bus.Query)
-	pw := newProxyWiring(box, eng, paths, o.Executable, fw, nid, bus, log)
-	cw := newCertWiring(paths)
+	pw := newProxyWiring(box, eng, p, bus, log)
+	cw := newCertWiring(p)
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
 	orch := app.New(app.Deps{
-		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{startup: startups, startWatchdog: detachedWatchdog(o.Executable)}, System: system{procs: pr},
+		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{startup: p.Startup, startWatchdog: p.StartWatchdog}, System: system{procs: p.Procs},
 		Picker: picker, Scans: picker, Builder: build, Resolver: net.DefaultResolver,
 		Prober: probe.Prober{
 			Resolve: func(ctx context.Context, host string) ([]netipAddr, error) {
@@ -177,8 +153,8 @@ func Run(o Options) error {
 		BlacklistPath:    paths.DPIBlacklist,
 		AutoHostlistPath: paths.DPIAutoHostlist,
 		Proxy:            pw,
-		SysProxy:         sysproxy.Manager{API: sysproxy.NewWindowsAPI()},
-		Firewall:         fw,
+		SysProxy:         sysproxy.Manager{API: p.SysProxy},
+		Firewall:         p.Firewall,
 		ConfirmOverride: func(ctx context.Context, server, pac string) bool {
 			return svc != nil && app.AskOverride(ctx, svc, server, pac, 60*time.Second)
 		},
@@ -217,8 +193,8 @@ func Run(o Options) error {
 	svc = app.NewService(orch, app.ServiceDeps{
 		Bus: bus, Paths: paths, Settings: box, Catalog: cat.get,
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
-		ListAdapters: func() ([]sysdns.Adapter, error) { return sysdns.NewWindowsAPI().Adapters() },
-		StopService:  func(name string) error { return pr.StopService(name, 10*time.Second) },
+		ListAdapters: p.DNS.Adapters,
+		StopService:  func(name string) error { return p.Procs.StopService(name, 10*time.Second) },
 		SetMode:      ui.setMode,
 		RestoreNow:   func() error { return restoreNow(states, dnsMgr) },
 		Info: func() app.AppInfo {
@@ -227,7 +203,7 @@ func Run(o Options) error {
 		},
 		OnSettingsChanged: func(old, n store.Settings) {
 			if old.StartWithWindows != n.StartWithWindows {
-				err := startups.SetAutostart(n.StartWithWindows)
+				err := p.Startup.SetAutostart(n.StartWithWindows)
 				if err != nil {
 					log.Error("autostart task", "err", err)
 				}
@@ -250,7 +226,7 @@ func Run(o Options) error {
 		NetKey:          nid.NetworkKey,
 		Proxy:           pw,
 		LANInfo:         pw.lanInfo,
-		Protect:         func(v string) (string, error) { return secrets.EncodeString(secrets.NewUserDPAPI(), v) },
+		Protect:         func(v string) (string, error) { return secrets.EncodeString(p.UserSecrets, v) },
 		TestUpstream:    pw.testUpstream,
 		CheckUpdate:     checker.checkNow,
 		CheckServer: func(ctx context.Context, id string) error {
@@ -306,7 +282,7 @@ func Run(o Options) error {
 		orch.AddWarning(app.AppError{Code: app.CodeRulesParse, Params: map[string]any{"line": 0}})
 	}
 
-	wapp = application.New(application.Options{
+	opts := application.Options{
 		Name:        brand.AppName,
 		Description: "Secure DNS client",
 		Services:    []application.Service{application.NewService(svc)},
@@ -315,29 +291,14 @@ func Run(o Options) error {
 			UniqueID:               brand.SingleInstanceID,
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) { ui.show() },
 		},
-		Windows: application.WindowsOptions{
-			DisableQuitOnLastWindowClosed: true,
-			WndProcInterceptor: func(hwnd uintptr, msg uint32, wParam, lParam uintptr) (uintptr, bool) {
-				switch classify(msg, wParam) {
-				case wmEndSession:
-					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-					_ = orch.Disconnect(ctx)
-					cancel()
-					if msg == wmQueryEndSession {
-						return 1, true
-					}
-				case wmResume:
-					go orch.OnResume(context.Background())
-				}
-				return 0, false
-			},
-		},
 		OnShutdown: func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			_ = orch.Disconnect(ctx)
 		},
-	})
+	}
+	applyPlatformOptions(&opts, orch)
+	wapp = application.New(opts)
 	em.app = wapp
 	ui.app = wapp
 	if o.Mode.Kind != cli.KindAutostart {
@@ -348,12 +309,12 @@ func Run(o Options) error {
 	ui.createTray()
 	em.onState = ui.onState
 
-	if stopProxyWatch, err := sysproxy.Watch(orch.OnSysProxyChanged); err != nil {
+	if stopProxyWatch, err := p.WatchSysProxy(orch.OnSysProxyChanged); err != nil {
 		log.Warn("system proxy watch", "err", err)
 	} else {
 		defer stopProxyWatch()
 	}
-	stopWatch, err := sysdns.Watch(func() { orch.OnNetworkChange(context.Background()) })
+	stopWatch, err := p.WatchNetwork(func() { orch.OnNetworkChange(context.Background()) })
 	if err != nil {
 		log.Warn("network watch", "err", err)
 	} else {

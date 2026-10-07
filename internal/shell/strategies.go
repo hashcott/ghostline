@@ -2,7 +2,7 @@ package shell
 
 import (
 	"crypto/ed25519"
-	"io/fs"
+	"github.com/hashcott/ghostline/internal/platform"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,7 +12,6 @@ import (
 	builtinStrategies "github.com/hashcott/ghostline/assets/strategies"
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/dpi"
-	"github.com/hashcott/ghostline/internal/dpi/goodbyedpi"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2/strategies"
 	"github.com/hashcott/ghostline/internal/store"
@@ -55,16 +54,13 @@ func (b *strategyBox) get() strategies.List {
 	return b.cur
 }
 
-// NewDPIManager wires both engines, extracted under paths.BinDir. list may
-// be nil (the built-in strategies), e.g. for the headless --restore path
-// that only stops the engine.
-func NewDPIManager(paths store.Paths, goodbyedpiFS, zapret2FS fs.FS, list func() strategies.List) *dpi.Manager {
+// NewDPIManager wires the engines this OS has, extracted under
+// paths.BinDir. list may be nil (the built-in strategies), e.g. for the
+// headless --restore path that only stops the engine.
+func NewDPIManager(paths store.Paths, p platform.Deps, list func() strategies.List) *dpi.Manager {
 	if list == nil {
 		l, _ := strategies.Parse(builtinStrategies.BuiltinJSON, zapret2.ValidateArgs)
 		list = func() strategies.List { return l }
 	}
-	return dpi.NewManager(filepath.Clean(paths.BinDir), []dpi.Installed{
-		{Engine: goodbyedpi.New(), Assets: goodbyedpiFS},
-		{Engine: zapret2.New(list), Assets: zapret2FS},
-	}, dpi.NewWindowsRunner(), dpi.NewWindowsServices(), time.Sleep)
+	return dpi.NewManager(filepath.Clean(paths.BinDir), p.DPIEngines(list), p.DPIRunner, p.DPIServices, time.Sleep)
 }

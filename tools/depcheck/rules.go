@@ -24,4 +24,6 @@ var Rules = []Rule{
 	{GOOS: "windows", Pkg: ".", Forbid: []string{"github.com/google/nftables", "github.com/godbus/dbus",
 		mod + "/internal/rpc", mod + "/internal/daemon", mod + "/internal/sessionagent"},
 		Why: "Linux-only code must not reach the Windows exe"},
+	{GOOS: "linux", Pkg: ".", Forbid: []string{mod + "/internal/winutil", mod + "/assets/goodbyedpi", "golang.org/x/sys/windows"},
+		Why: "Windows-only code must not reach the Linux binary"},
 }
