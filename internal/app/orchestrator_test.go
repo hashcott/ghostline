@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -174,7 +174,7 @@ func TestConnect_NotAdmin(t *testing.T) {
 func TestConnect_Port53Busy(t *testing.T) {
 	h := newHarness(t)
 	h.sys.listenErr = errors.New("bind: access denied")
-	h.sys.owners = []winutil.PortOwner{{PID: 1234, Name: "svchost.exe", Service: "SharedAccess", Proto: "udp"}}
+	h.sys.owners = []procs.PortOwner{{PID: 1234, Name: "svchost.exe", Service: "SharedAccess", Proto: "udp"}}
 	require.Error(t, h.o.Connect(context.Background()))
 	e := h.o.Snapshot().Error
 	require.Equal(t, CodePort53Busy, e.Code)
@@ -187,7 +187,7 @@ func TestConnect_Port53Busy(t *testing.T) {
 // binds and gets every loopback query: an owner alone is no conflict.
 func TestConnect_Port53OwnerButLoopbackFree(t *testing.T) {
 	h := newHarness(t)
-	h.sys.owners = []winutil.PortOwner{{PID: 1892, Name: "svchost.exe", Service: "SharedAccess", Proto: "udp"}}
+	h.sys.owners = []procs.PortOwner{{PID: 1892, Name: "svchost.exe", Service: "SharedAccess", Proto: "udp"}}
 	require.NoError(t, h.o.Connect(context.Background()))
 	require.Equal(t, happy, h.r.list())
 }

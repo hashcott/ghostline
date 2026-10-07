@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/hashcott/ghostline/internal/firewall"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -186,7 +186,7 @@ func TestProxyPhase_FailureAtEachStep(t *testing.T) {
 func TestProxyPhase_PortBusy(t *testing.T) {
 	h := newProxyHarness(t, true)
 	h.proxy.startE = errBoom
-	h.sys.proxyOwners = []winutil.PortOwner{{PID: 4242, Name: "nginx.exe"}}
+	h.sys.proxyOwners = []procs.PortOwner{{PID: 4242, Name: "nginx.exe"}}
 	require.NoError(t, h.o.Connect(context.Background()))
 	e := h.o.Snapshot().Proxy.Error
 	require.Equal(t, CodeProxyPortBusy, e.Code)

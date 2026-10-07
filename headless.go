@@ -15,6 +15,7 @@ import (
 	"github.com/hashcott/ghostline/internal/cli"
 	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/logx"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/sysproxy"
@@ -56,7 +57,7 @@ func runHeadless(mode cli.Mode) int {
 		States:  store.NewStateStore(paths.State, lock),
 		DNS:     sysdns.NewManager(sysdns.NewWindowsAPI(), time.Sleep),
 		StopDPI: stopDPI(paths),
-		Alive:   winutil.ProcessAlive,
+		Alive:   procs.NewWindows().Alive,
 		Log:     logger,
 
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
@@ -69,7 +70,7 @@ func runHeadless(mode cli.Mode) int {
 	}
 	switch mode.Kind {
 	case cli.KindWatchdog:
-		err = watchdog.RunWatchdog(mode.ParentPID, mode.ParentStart, winutil.WaitForExit, d)
+		err = watchdog.RunWatchdog(mode.ParentPID, mode.ParentStart, procs.NewWindows().WaitForExit, d)
 	case cli.KindRemoveCerts:
 		// The uninstaller: undo whatever a run left, then remove every
 		// Ghostline root and the LAN CA files.

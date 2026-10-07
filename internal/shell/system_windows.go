@@ -2,9 +2,6 @@ package shell
 
 import (
 	"fmt"
-	"net"
-	"net/netip"
-	"os"
 	"strconv"
 	"time"
 
@@ -13,47 +10,6 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
-
-// system implements app.System.
-type system struct{}
-
-func (system) IsAdmin() bool { return winutil.IsAdmin() }
-func (system) PortOwners(p uint16) ([]winutil.PortOwner, error) {
-	return winutil.PortOwners(p)
-}
-func (system) SelfPID() (uint32, time.Time) {
-	pid := uint32(os.Getpid())
-	start, _ := winutil.ProcessStartTime(pid)
-	return pid, start
-}
-
-// ListenFree binds UDP and TCP on each address the way the DNS engine will,
-// then releases them.
-func (system) ListenFree(addrs []netip.AddrPort) error {
-	for _, a := range addrs {
-		u, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(a))
-		if err != nil {
-			return err
-		}
-		t, err := net.ListenTCP("tcp", net.TCPAddrFromAddrPort(a))
-		u.Close()
-		if err != nil {
-			return err
-		}
-		t.Close()
-	}
-	return nil
-}
-
-// IPv6Available reports whether [::1] can be bound (IPv6 may be disabled).
-func (system) IPv6Available() bool {
-	c, err := net.ListenPacket("udp6", "[::1]:0")
-	if err != nil {
-		return false
-	}
-	c.Close()
-	return true
-}
 
 // safety implements app.Safety.
 type safety struct{ exe string }

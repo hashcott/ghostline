@@ -18,10 +18,10 @@ import (
 	"github.com/hashcott/ghostline/internal/engine"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/miekg/dns"
 )
 
@@ -231,15 +231,15 @@ func (s *fSafety) DeleteRecoveryTask() error { return s.r.add("safety.task.delet
 type fSystem struct {
 	r           *rec
 	admin       bool
-	owners      []winutil.PortOwner // port 53
-	proxyOwners []winutil.PortOwner // any other port
+	owners      []procs.PortOwner // port 53
+	proxyOwners []procs.PortOwner // any other port
 	noV6        bool
 	listenErr   error            // returned by ListenFree
 	probed      []netip.AddrPort // what ListenFree was asked to bind
 }
 
 func (s *fSystem) IsAdmin() bool { _ = s.r.add("sys.admin"); return s.admin }
-func (s *fSystem) PortOwners(port uint16) ([]winutil.PortOwner, error) {
+func (s *fSystem) PortOwners(port uint16) ([]procs.PortOwner, error) {
 	if port != 53 {
 		return s.proxyOwners, nil
 	}

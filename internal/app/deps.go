@@ -13,12 +13,12 @@ import (
 	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
 	"github.com/hashcott/ghostline/internal/rules"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 // Engine is the loopback DNS server.
@@ -61,7 +61,7 @@ type Safety interface {
 // System answers questions about the machine.
 type System interface {
 	IsAdmin() bool
-	PortOwners(uint16) ([]winutil.PortOwner, error)
+	PortOwners(uint16) ([]procs.PortOwner, error)
 	// ListenFree binds UDP and TCP on each address, then releases them.
 	ListenFree([]netip.AddrPort) error
 	SelfPID() (uint32, time.Time)

@@ -27,6 +27,7 @@ import (
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/probe"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/scanner"
 	"github.com/hashcott/ghostline/internal/startup"
 	"github.com/hashcott/ghostline/internal/store"
@@ -87,7 +88,8 @@ func Run(o Options) error {
 	roots := certstore.NewWindows(certstore.LocalMachine)
 	fw := firewall.NewNetsh(o.Executable)
 	nid := netid.NewWindows()
-	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: winutil.ProcessAlive, Log: log,
+	pr := procs.NewWindows()
+	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: pr.Alive, Log: log,
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
 		DeleteRule:      fw.DeleteNamed,
 		RemoveCert: func(t string) error {
@@ -151,7 +153,7 @@ func Run(o Options) error {
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
 	orch := app.New(app.Deps{
-		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{exe: o.Executable}, System: system{},
+		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{exe: o.Executable}, System: system{procs: pr},
 		Picker: picker, Scans: picker, Builder: build, Resolver: net.DefaultResolver,
 		Prober: probe.Prober{
 			Resolve: func(ctx context.Context, host string) ([]netipAddr, error) {
@@ -214,7 +216,7 @@ func Run(o Options) error {
 		Bus: bus, Paths: paths, Settings: box, Catalog: cat.get,
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
 		ListAdapters: func() ([]sysdns.Adapter, error) { return sysdns.NewWindowsAPI().Adapters() },
-		StopService:  func(name string) error { return winutil.StopService(name, 10*time.Second) },
+		StopService:  func(name string) error { return pr.StopService(name, 10*time.Second) },
 		SetMode:      ui.setMode,
 		RestoreNow:   func() error { return restoreNow(states, dnsMgr) },
 		Info: func() app.AppInfo {
