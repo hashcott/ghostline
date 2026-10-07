@@ -35,6 +35,7 @@ const svc = vi.hoisted(() => ({
   GetSettings: vi.fn(),
   SaveSettings: vi.fn(() => Promise.resolve()),
   ListAdapters: vi.fn(() => Promise.resolve([])),
+  DNSInfo: vi.fn(() => Promise.resolve({ backend: "windows", chain: "Windows", interfaces: [], adapterPick: true, adapters: [] })),
   GetProxyStats: vi.fn(() => Promise.resolve(null)),
   Connect: vi.fn(() => Promise.resolve()),
   Disconnect: vi.fn(() => Promise.resolve()),

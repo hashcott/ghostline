@@ -19,6 +19,7 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [adapters, setAdapters] = useState<Adapter[]>([]);
+  const [dnsInfo, setDnsInfo] = useState<{ chain: string; adapterPick: boolean } | null>(null);
   const [bootstrap, setBootstrap] = useState((settings?.bootstrap ?? []).join("\n"));
   const [testDomain, setTestDomain] = useState(settings?.testDomain ?? "");
   const domainCount = new Set(testDomain.toLowerCase().split(/[\s,]+/).filter(Boolean)).size;
@@ -54,6 +55,7 @@ export function Settings() {
 
   useEffect(() => {
     void Service.ListAdapters().then((a) => setAdapters(a ?? []));
+    void Service.DNSInfo().then((i) => setDnsInfo(i ?? null));
   }, []);
 
   if (!settings) return null;
@@ -109,26 +111,36 @@ export function Settings() {
         {toggleRow(t("settings.startWithWindows"), settings.startWithWindows, (v) => (s) => ({ ...s, startWithWindows: v }))}
         {toggleRow(t("settings.autoConnect"), settings.autoConnect, (v) => (s) => ({ ...s, autoConnect: v }))}
         {toggleRow(t("settings.closeToTray"), settings.closeToTray, (v) => (s) => ({ ...s, closeToTray: v }))}
-        <div className={css.setting}>
-          <span>{t("settings.adapters")}</span>
-          <span className={css.row}>
-            <Chip active={!manual} onClick={() => void save((s) => ({ ...s, adapters: "auto" }))}>{t("common.auto")}</Chip>
-            <Chip active={manual} onClick={() => void save((s) => ({ ...s, adapters: "manual" }))}>{t("settings.adaptersManual")}</Chip>
-          </span>
-        </div>
-        {manual &&
-          adapters.map((a) => (
-            <div key={a.guid} className={css.setting}>
-              <span>{a.alias}</span>
-              <Toggle
-                label={a.alias}
-                checked={guids.includes(a.guid)}
-                onChange={(v) =>
-                  void save((s) => ({ ...s, adapterGuids: v ? [...guids, a.guid] : guids.filter((g) => g !== a.guid) }))
-                }
-              />
-            </div>
-          ))}
+        {dnsInfo && !dnsInfo.adapterPick && (
+          <div className={css.setting}>
+            <span>{t("settings.dnsBackend")}</span>
+            <span>{dnsInfo.chain}</span>
+          </div>
+        )}
+        {dnsInfo?.adapterPick && (
+          <>
+          <div className={css.setting}>
+            <span>{t("settings.adapters")}</span>
+            <span className={css.row}>
+              <Chip active={!manual} onClick={() => void save((s) => ({ ...s, adapters: "auto" }))}>{t("common.auto")}</Chip>
+              <Chip active={manual} onClick={() => void save((s) => ({ ...s, adapters: "manual" }))}>{t("settings.adaptersManual")}</Chip>
+            </span>
+          </div>
+          {manual &&
+            adapters.map((a) => (
+              <div key={a.guid} className={css.setting}>
+                <span>{a.alias}</span>
+                <Toggle
+                  label={a.alias}
+                  checked={guids.includes(a.guid)}
+                  onChange={(v) =>
+                    void save((s) => ({ ...s, adapterGuids: v ? [...guids, a.guid] : guids.filter((g) => g !== a.guid) }))
+                  }
+                />
+              </div>
+            ))}
+          </>
+        )}
         <div className={css.setting}>
           <span>{t("settings.testDomain")}</span>
           <textarea

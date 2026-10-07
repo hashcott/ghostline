@@ -265,6 +265,7 @@
     "SWAPPED": "đã chuyển sang {{servers}} máy chủ mới",
     "SWAP_FAILED": "không đổi được máy chủ",
     "ADAPTER_ADDED": "đã bảo vệ card mạng mới: {{adapter}}",
+    "DNS_REAPPLIED": "hệ thống đã đổi DNS; đặt lại ({{adapter}})",
     "SITES_BLOCKED": "{{count}} trang mẫu bị chặn ở tầng TLS",
     "DPI_STARTED": "{{engine}} đã chạy (preset {{preset}})",
     "DPI_STOPPED": "đã tắt vượt DPI",
@@ -288,6 +289,7 @@
     "closeToTray": "đóng → thu xuống khay",
     "adapters": "card mạng",
     "adaptersManual": "chọn tay",
+    "dnsBackend": "DNS hệ thống",
     "testDomain": "tên miền thử",
     "bootstrap": "bootstrap (ip:port, mỗi dòng một)",
     "maxUpstreams": "số máy chủ tối đa",
@@ -356,6 +358,10 @@
     "testDomainMany": "Không nên dùng nhiều tên miền: {{count}} tên miền làm mỗi lượt quét lâu hơn và dễ loại nhầm máy chủ tốt. Nên dùng 1–2 (tối đa 5)."
   },
   "errors": {
+    "PORT53_NOT_OWNER": {
+      "message": "{{name}} không giữ cổng 53",
+      "action": "Tải lại rồi chọn đúng dịch vụ đang hiện"
+    },
     "DAEMON_UNREACHABLE": {
       "message": "Dịch vụ nền của Ghostline chưa chạy",
       "action": "Khởi động bằng lệnh: sudo systemctl start ghostline"

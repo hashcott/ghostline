@@ -8,6 +8,7 @@ const svc = vi.hoisted(() => ({
   ListCerts: vi.fn(() => Promise.resolve([])),
   CheckUpdateNow: vi.fn(),
   ListAdapters: vi.fn(() => Promise.resolve([])),
+  DNSInfo: vi.fn(() => Promise.resolve({ backend: "windows", chain: "Windows", interfaces: [], adapterPick: true, adapters: [] })),
   SaveSettings: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("../../../app/api", () => ({ Service: svc }));
