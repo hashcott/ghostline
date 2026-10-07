@@ -26,4 +26,10 @@ var Rules = []Rule{
 		Why: "Linux-only code must not reach the Windows exe"},
 	{GOOS: "linux", Pkg: ".", Forbid: []string{mod + "/internal/winutil", mod + "/assets/goodbyedpi", "golang.org/x/sys/windows"},
 		Why: "Windows-only code must not reach the Linux binary"},
+	{GOOS: "windows", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
+	{GOOS: "windows", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./cmd/ghostlined", Forbid: append(wails, "golang.org/x/sys/windows", mod+"/internal/winutil", mod+"/assets/goodbyedpi"),
+		Why: "the daemon runs without a GUI toolkit and without Windows code"},
 }

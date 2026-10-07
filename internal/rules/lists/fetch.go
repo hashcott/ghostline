@@ -29,6 +29,11 @@ var ErrTooLarge = errors.New("rules: list too large")
 
 var errNotModified = errors.New("not modified")
 
+// ErrFileListsOff means lists from local files are disabled: Ghostline
+// runs as root for other users (the Linux daemon) and never reads a path a
+// client named.
+var ErrFileListsOff = errors.New("lists: lists from a local file are not available here")
+
 // Fetcher downloads lists and keeps their cache in Dir.
 type Fetcher struct {
 	Client    *http.Client
@@ -40,6 +45,8 @@ type Fetcher struct {
 	// Fallback returns a built-in copy (and its signature) of a signed
 	// list by URL, used before the first successful download.
 	Fallback func(url string) (data, sig []byte, ok bool)
+	// NoFiles refuses lists whose Source is "file" (ErrFileListsOff).
+	NoFiles bool
 }
 
 var safeName = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
@@ -84,6 +91,9 @@ type httpMeta struct{ etag, lastModified string }
 
 func (f *Fetcher) fetch(ctx context.Context, l *List) (Result, httpMeta, error) {
 	if l.Source == "file" {
+		if f.NoFiles {
+			return Result{}, httpMeta{}, ErrFileListsOff
+		}
 		data, err := readLimited(l.Path)
 		if err != nil {
 			return Result{}, httpMeta{}, err

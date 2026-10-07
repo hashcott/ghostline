@@ -356,6 +356,22 @@
     "testDomainMany": "Không nên dùng nhiều tên miền: {{count}} tên miền làm mỗi lượt quét lâu hơn và dễ loại nhầm máy chủ tốt. Nên dùng 1–2 (tối đa 5)."
   },
   "errors": {
+    "DAEMON_UNREACHABLE": {
+      "message": "Dịch vụ nền của Ghostline chưa chạy",
+      "action": "Khởi động bằng lệnh: sudo systemctl start ghostline"
+    },
+    "DAEMON_PROTOCOL_MISMATCH": {
+      "message": "Dịch vụ nền khác phiên bản với ứng dụng",
+      "action": "Cập nhật Ghostline để ứng dụng và dịch vụ cùng phiên bản"
+    },
+    "NOT_AUTHORIZED": {
+      "message": "Tài khoản của bạn không có quyền điều khiển Ghostline",
+      "action": "Chạy: sudo usermod -aG ghostline $USER rồi đăng nhập lại"
+    },
+    "NO_UI": {
+      "message": "Thao tác này cần cửa sổ Ghostline",
+      "action": "Mở Ghostline rồi thử lại"
+    },
     "NOT_ADMIN": {
       "message": "Ghostline cần quyền quản trị (admin) để đổi DNS",
       "action": "Mở lại Ghostline bằng quyền admin"

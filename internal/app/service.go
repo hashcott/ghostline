@@ -128,15 +128,26 @@ type ServiceDeps struct {
 	CurrentSSID  func() string
 	// WifiNames lists Wi-Fi networks this PC knows (saved and in range).
 	WifiNames func() []string
-	// SaveFile asks where to save data (native dialog) and writes it.
-	SaveFile func(name string, data []byte) error
+	// SaveFile asks where to save data (native dialog) and writes it. ctx
+	// is the bound call's: the Linux daemon uses it to reach the GUI that
+	// asked.
+	SaveFile func(ctx context.Context, name string, data []byte) error
+	// NoFileLists refuses lists from a local file: the service runs as
+	// root for clients in other processes (the Linux daemon).
+	NoFileLists bool
+	// LANDNSClients counts LAN devices that used the DNS server in the last
+	// 10 minutes (0 while it is off).
+	LANDNSClients func() int
 
 	// Phase 3 tools.
 	BuildUpstream func(model.Server) (upstream.Upstream, error)
 	PlainUpstream func(ip string) (upstream.Upstream, error)                        // plain UDP 53: Ghostline's own engine and the ISP lookup source only
 	DialDirect    func(ctx context.Context, network, addr string) (net.Conn, error) // clean-IP scan: straight out, not via the proxy
-	OpenFile      func(title string) (string, error)                                // native open dialog; "" when cancelled
-	ISPResolvers  func() []string                                                   // this PC's DNS before Ghostline took over
+	// OpenFile asks for a file (native dialog) and returns its name and
+	// contents, read by the GUI; name "" when cancelled. Ghostline never
+	// opens a path the user picked with its own privileges.
+	OpenFile     func(ctx context.Context, title string) (name string, data []byte, err error)
+	ISPResolvers func() []string // this PC's DNS before Ghostline took over
 }
 
 // Service is bound to the frontend by Wails; its exported methods are the
@@ -682,6 +693,15 @@ func (s *Service) StopConflictingService(name string) error { return s.x.StopSer
 func (s *Service) ListAdapters() []sysdns.Adapter {
 	ads, _ := s.x.ListAdapters()
 	return ads
+}
+
+// LANDNSClients counts LAN devices that used the DNS server in the last 10
+// minutes (the tray asks before cutting them off).
+func (s *Service) LANDNSClients() int {
+	if s.x.LANDNSClients == nil {
+		return 0
+	}
+	return s.x.LANDNSClients()
 }
 
 // CheckUpdateNow checks for a newer release right away, ignoring the

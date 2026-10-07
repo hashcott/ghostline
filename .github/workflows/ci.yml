@@ -102,3 +102,11 @@ jobs:
         run: go run ./tools/depcheck
       - name: Build
         run: go build -o /dev/null .
+      - name: Generated code is current
+        run: go generate ./...
+      - name: No diff after generate
+        run: git diff --exit-code
+      - name: Daemon builds without cgo
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o /dev/null ./cmd/ghostlined

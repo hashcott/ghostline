@@ -1,0 +1,19 @@
+[Unit]
+Description=Ghostline encrypted DNS and DPI bypass
+After=network.target NetworkManager.service systemd-resolved.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/ghostline/ghostlined --daemon
+ExecStopPost=/usr/lib/ghostline/ghostlined --restore
+Restart=on-failure
+RestartSec=2
+StateDirectory=ghostline
+StateDirectoryMode=0755
+LogsDirectory=ghostline
+RuntimeDirectory=ghostline
+RuntimeDirectoryMode=0755
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

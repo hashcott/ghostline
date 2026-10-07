@@ -212,6 +212,9 @@ func (s *Service) validateList(l lists.List) error {
 			return err
 		}
 	case "file":
+		if s.x.NoFileLists {
+			return lists.ErrFileListsOff
+		}
 		if l.Path == "" {
 			return errors.New("lists: file path is empty")
 		}

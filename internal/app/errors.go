@@ -7,7 +7,12 @@ import (
 
 // Error and warning codes (spec §10). The UI translates them.
 const (
-	CodeNotAdmin          = "NOT_ADMIN"
+	CodeNotAdmin = "NOT_ADMIN"
+	// Linux GUI ↔ daemon (the same strings as in internal/rpc).
+	CodeDaemonUnreachable = "DAEMON_UNREACHABLE"
+	CodeDaemonProtocol    = "DAEMON_PROTOCOL_MISMATCH"
+	CodeNotAuthorized     = "NOT_AUTHORIZED"
+	CodeNoUI              = "NO_UI"
 	CodePort53Busy        = "PORT53_BUSY"
 	CodeNoServers         = "NO_SERVERS"
 	CodeEngineSelfTest    = "ENGINE_SELFTEST_FAILED"
