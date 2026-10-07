@@ -138,11 +138,14 @@ func (s *Service) PreviewImport(ctx context.Context) (ImportPreview, error) {
 	if s.x.OpenFile == nil {
 		return ImportPreview{}, errors.New("no file dialog")
 	}
-	name, b, err := s.x.OpenFile(ctx, brand.AppName)
-	if err != nil || name == "" {
-		return ImportPreview{}, err // cancelled
-	}
 	invalid := func(detail string, cause error) error { return appErr(CodeImportInvalid, cause, "detail", detail) }
+	name, b, err := s.x.OpenFile(ctx, brand.AppName)
+	if err != nil {
+		return ImportPreview{}, invalid(err.Error(), err) // could not read it
+	}
+	if name == "" {
+		return ImportPreview{}, nil // cancelled
+	}
 	if len(b) > backup.MaxSize {
 		return ImportPreview{}, invalid("too_large", nil)
 	}

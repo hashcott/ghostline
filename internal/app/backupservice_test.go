@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"context"
 	"os"
 	"path/filepath"
@@ -245,4 +246,17 @@ func TestLANDNSClients_NilDepIsZero(t *testing.T) {
 	require.Equal(t, 0, b.svc.LANDNSClients())
 	b.svc.x.LANDNSClients = func() int { return 4 }
 	require.Equal(t, 4, b.svc.LANDNSClients())
+}
+
+// The file could not be read (Windows: locked, gone): IMPORT_INVALID as
+// before, so the UI shows a translated message.
+func TestPreviewImport_ReadErrorIsInvalid(t *testing.T) {
+	b := newTools(t)
+	b.svc.x.OpenFile = func(context.Context, string) (string, []byte, error) {
+		return "", nil, errors.New("open C:\\x.json: The process cannot access the file")
+	}
+	_, err := b.svc.PreviewImport(context.Background())
+	var ae *AppError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, CodeImportInvalid, ae.Code)
 }
