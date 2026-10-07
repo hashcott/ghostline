@@ -28,4 +28,6 @@ var Rules = []Rule{
 		Why: "Windows-only code must not reach the Linux binary"},
 	{GOOS: "windows", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
 	{GOOS: "linux", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
+	{GOOS: "windows", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
 }

@@ -1,4 +1,7 @@
-package main
+// Package headless runs Ghostline's modes without a window: --restore,
+// --watchdog, --remove-certs and --export. Both the Windows exe and the
+// Linux daemon use it.
+package headless
 
 import (
 	"errors"
@@ -9,14 +12,16 @@ import (
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/cli"
+	"github.com/hashcott/ghostline/internal/core"
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
 
-// runHeadless handles --watchdog, --restore, --remove-certs and --export. It never touches Wails.
-func runHeadless(mode cli.Mode, p platform.Deps) int {
+// Run handles --watchdog, --restore, --remove-certs and --export and
+// returns the exit code. It never touches Wails.
+func Run(mode cli.Mode, p platform.Deps) int {
 	paths := p.Paths
 	logger := slog.Default()
 	if w, err := logx.NewRotating(paths.LogDir, "ghostline", 5<<20, 3); err == nil {
@@ -68,4 +73,11 @@ func modeName(k cli.Kind) string {
 		return "export"
 	}
 	return "ui"
+}
+
+// stopDPI stops what a dead Ghostline's DPI engine left behind (on Windows,
+// the WinDivert services). The engine process itself is already gone: it
+// lived in a kill-on-close job.
+func stopDPI(p platform.Deps) func() error {
+	return core.NewDPIManager(p.Paths, p, nil).Stop
 }

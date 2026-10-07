@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hashcott/ghostline/internal/cli"
+	"github.com/hashcott/ghostline/internal/headless"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/shell"
 )
@@ -34,7 +35,7 @@ func main() {
 	}
 	switch mode.Kind {
 	case cli.KindWatchdog, cli.KindRestore, cli.KindRemoveCerts, cli.KindExport:
-		os.Exit(runHeadless(mode, p))
+		os.Exit(headless.Run(mode, p))
 	}
 	if err := shell.Run(shell.Options{Mode: mode, Assets: assets, Executable: exe, Platform: p}); err != nil {
 		os.Exit(1)
