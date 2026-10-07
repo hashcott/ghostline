@@ -1,4 +1,4 @@
-package winutil
+package secrets
 
 import (
 	"testing"
@@ -7,26 +7,28 @@ import (
 )
 
 func TestDPAPI_RoundTrip(t *testing.T) {
-	enc, err := ProtectString("s3cret ✓")
+	p := NewUserDPAPI()
+	enc, err := EncodeString(p, "s3cret ✓")
 	require.NoError(t, err)
 	require.NotContains(t, enc, "s3cret")
-	got, err := UnprotectString(enc)
+	got, err := DecodeString(p, enc)
 	require.NoError(t, err)
 	require.Equal(t, "s3cret ✓", got)
 
-	_, err = UnprotectString("not base64 !!")
+	_, err = DecodeString(p, "not base64 !!")
 	require.Error(t, err)
-	_, err = UnprotectString("aGVsbG8=") // valid base64, not a DPAPI blob
+	_, err = DecodeString(p, "aGVsbG8=") // valid base64, not a DPAPI blob
 	require.Error(t, err)
 }
 
 func TestProtectMachine_RoundTrip(t *testing.T) {
-	enc, err := ProtectMachine([]byte("key bytes"))
+	p := NewMachineDPAPI()
+	enc, err := p.Protect([]byte("key bytes"))
 	require.NoError(t, err)
 	require.NotContains(t, string(enc), "key bytes")
-	got, err := UnprotectMachine(enc)
+	got, err := p.Unprotect(enc)
 	require.NoError(t, err)
 	require.Equal(t, []byte("key bytes"), got)
-	_, err = UnprotectMachine([]byte("junk"))
+	_, err = p.Unprotect([]byte("junk"))
 	require.Error(t, err)
 }

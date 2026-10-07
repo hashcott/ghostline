@@ -29,6 +29,7 @@ import (
 	"github.com/hashcott/ghostline/internal/probe"
 	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/scanner"
+	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/startup"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
@@ -253,7 +254,7 @@ func Run(o Options) error {
 		NetKey:          nid.NetworkKey,
 		Proxy:           pw,
 		LANInfo:         pw.lanInfo,
-		Protect:         winutil.ProtectString,
+		Protect:         func(v string) (string, error) { return secrets.EncodeString(secrets.NewUserDPAPI(), v) },
 		TestUpstream:    pw.testUpstream,
 		CheckUpdate:     checker.checkNow,
 		CheckServer: func(ctx context.Context, id string) error {

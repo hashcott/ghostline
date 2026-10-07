@@ -1,58 +1,58 @@
-package winutil
+package secrets
 
 import (
-	"encoding/base64"
 	"fmt"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-// ProtectString encrypts s with DPAPI for the current user and returns it
-// base64-encoded (for upstream proxy passwords in settings.json).
-func ProtectString(s string) (string, error) {
-	in := []byte(s)
+type userDPAPI struct{}
+
+// NewUserDPAPI encrypts with DPAPI for the current user (upstream proxy
+// passwords). Empty input is allowed, as it always was for passwords.
+func NewUserDPAPI() Protector { return userDPAPI{} }
+
+func (userDPAPI) Protect(in []byte) ([]byte, error) {
 	var inBlob windows.DataBlob
 	if len(in) > 0 {
 		inBlob = windows.DataBlob{Size: uint32(len(in)), Data: &in[0]}
 	}
 	var out windows.DataBlob
 	if err := windows.CryptProtectData(&inBlob, nil, nil, 0, nil, windows.CRYPTPROTECT_UI_FORBIDDEN, &out); err != nil {
-		return "", fmt.Errorf("dpapi: protect: %w", err)
+		return nil, fmt.Errorf("dpapi: protect: %w", err)
 	}
 	defer func() { _, _ = windows.LocalFree(windows.Handle(unsafe.Pointer(out.Data))) }()
-	return base64.StdEncoding.EncodeToString(unsafe.Slice(out.Data, out.Size)), nil
+	return append([]byte(nil), unsafe.Slice(out.Data, out.Size)...), nil
 }
 
-// UnprotectString reverses ProtectString. It fails for data protected by
-// another user or machine.
-func UnprotectString(b64 string) (string, error) {
-	in, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil {
-		return "", fmt.Errorf("dpapi: %w", err)
-	}
+// Unprotect fails for data protected by another user or machine.
+func (userDPAPI) Unprotect(in []byte) ([]byte, error) {
 	if len(in) == 0 {
-		return "", fmt.Errorf("dpapi: empty blob")
+		return nil, fmt.Errorf("dpapi: empty blob")
 	}
 	inBlob := windows.DataBlob{Size: uint32(len(in)), Data: &in[0]}
 	var out windows.DataBlob
 	if err := windows.CryptUnprotectData(&inBlob, nil, nil, 0, nil, windows.CRYPTPROTECT_UI_FORBIDDEN, &out); err != nil {
-		return "", fmt.Errorf("dpapi: unprotect: %w", err)
+		return nil, fmt.Errorf("dpapi: unprotect: %w", err)
 	}
 	defer func() { _, _ = windows.LocalFree(windows.Handle(unsafe.Pointer(out.Data))) }()
-	return string(unsafe.Slice(out.Data, out.Size)), nil
+	return append([]byte(nil), unsafe.Slice(out.Data, out.Size)...), nil
 }
 
-// ProtectMachine encrypts b with DPAPI for this computer (any account on
-// it can decrypt, so files holding the result must be ACL-protected).
+type machineDPAPI struct{}
+
+// NewMachineDPAPI encrypts with DPAPI for this computer (any account on it
+// can decrypt, so files holding the result must be ACL-protected).
 // Ghostline runs elevated, possibly as another admin than the one logged
 // on, so per-user DPAPI would not survive a change of elevating account.
-func ProtectMachine(b []byte) ([]byte, error) {
+func NewMachineDPAPI() Protector { return machineDPAPI{} }
+
+func (machineDPAPI) Protect(b []byte) ([]byte, error) {
 	return dpapi(b, true, windows.CRYPTPROTECT_UI_FORBIDDEN|windows.CRYPTPROTECT_LOCAL_MACHINE)
 }
 
-// UnprotectMachine reverses ProtectMachine.
-func UnprotectMachine(b []byte) ([]byte, error) {
+func (machineDPAPI) Unprotect(b []byte) ([]byte, error) {
 	return dpapi(b, false, windows.CRYPTPROTECT_UI_FORBIDDEN)
 }
 

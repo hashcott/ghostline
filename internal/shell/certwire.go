@@ -14,6 +14,7 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
+	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/winutil"
 )
@@ -35,14 +36,8 @@ type certWiring struct {
 	lan *certs.CA
 }
 
-// machineProtector is DPAPI with machine scope (winutil.ProtectMachine).
-type machineProtector struct{}
-
-func (machineProtector) Protect(b []byte) ([]byte, error)   { return winutil.ProtectMachine(b) }
-func (machineProtector) Unprotect(b []byte) ([]byte, error) { return winutil.UnprotectMachine(b) }
-
 func newCertWiring(paths store.Paths) *certWiring {
-	return &certWiring{paths: paths, store: certstore.NewWindows(certstore.LocalMachine), prot: machineProtector{},
+	return &certWiring{paths: paths, store: certstore.NewWindows(certstore.LocalMachine), prot: secrets.NewMachineDPAPI(),
 		host: func() string { h, _ := os.Hostname(); return h }, now: time.Now,
 		secure: winutil.SecureDir, owned: winutil.OwnedByAdmins}
 }

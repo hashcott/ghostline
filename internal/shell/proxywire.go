@@ -21,9 +21,9 @@ import (
 	"github.com/hashcott/ghostline/internal/proxy/wire"
 	"github.com/hashcott/ghostline/internal/rules"
 	"github.com/hashcott/ghostline/internal/rules/lists"
+	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/tlsfrag"
-	"github.com/hashcott/ghostline/internal/winutil"
 	builtinLists "github.com/hashcott/ghostline/lists"
 )
 
@@ -88,7 +88,7 @@ func (w *proxyWiring) upstream(id string) (dialer.Upstream, bool) {
 		}
 		out := dialer.Upstream{ID: u.ID, Type: u.Type, Addr: u.Addr, User: u.User}
 		if u.PassEnc != "" {
-			pass, err := winutil.UnprotectString(u.PassEnc)
+			pass, err := secrets.DecodeString(secrets.NewUserDPAPI(), u.PassEnc)
 			if err != nil {
 				w.bus.Log(app.LogEvent{Time: time.Now(), Source: "proxy", Code: app.CodeUpstreamProxy, Params: map[string]any{"id": id}})
 				return dialer.Upstream{}, false
