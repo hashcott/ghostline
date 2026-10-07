@@ -24,12 +24,12 @@ export function ConnectError({ onOpenServers }: Props) {
     void Service.Connect();
   };
 
-  // The Linux GUI cannot use its background service: retrying reloads the
-  // state (and reconnects) instead of connecting.
+  // The Linux GUI cannot use its background service. Everything loaded at
+  // start (settings, logs, app info) came back empty too, so retrying
+  // reloads the window, which reconnects and loads it all again.
   if (DAEMON_CODES.includes(code)) {
-    const reload = () => void Service.GetSnapshot().then((s) => s && useGhost.getState().setSnapshot(s));
     return (
-      <Banner tone="err" actions={[{ label: t("common.retry"), onClick: reload }]}>
+      <Banner tone="err" actions={[{ label: t("common.retry"), onClick: () => window.location.reload() }]}>
         <div>{tCode(`errors.${code}.message`)}</div>
         <div>{tCode(`errors.${code}.action`)}</div>
       </Banner>

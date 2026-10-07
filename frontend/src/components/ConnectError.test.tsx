@@ -31,9 +31,18 @@ test("daemon unreachable shows its message and how to start the service", () => 
   expect(screen.getByText("Khởi động bằng lệnh: sudo systemctl start ghostline")).toBeTruthy();
 });
 
-test("retry reloads the snapshot instead of connecting", () => {
-  render(<ConnectError onOpenServers={() => {}} onOpenLogs={() => {}} />);
-  fireEvent.click(screen.getByRole("button", { name: "thử lại" }));
-  expect(svc.GetSnapshot).toHaveBeenCalledTimes(1);
-  expect(svc.Connect).not.toHaveBeenCalled();
+// Everything the window loaded at start (settings, logs, app info) came
+// from an unreachable daemon too: retry reloads the whole window.
+test("retry reloads the window instead of connecting", () => {
+  const reload = vi.fn();
+  const real = window.location;
+  Object.defineProperty(window, "location", { configurable: true, value: { ...real, reload } });
+  try {
+    render(<ConnectError onOpenServers={() => {}} onOpenLogs={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "thử lại" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(svc.Connect).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, "location", { configurable: true, value: real });
+  }
 });
