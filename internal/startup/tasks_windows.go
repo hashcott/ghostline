@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/winutil"
 )
 
@@ -47,3 +48,18 @@ func Delete(name string) error {
 func Exists(name string) bool {
 	return winutil.HiddenCmd("schtasks", []string{"/Query", "/TN", name}, "").Run() == nil
 }
+
+type taskScheduler struct{ exe string }
+
+// NewTaskScheduler registers exe's logon tasks with Task Scheduler.
+func NewTaskScheduler(exe string) Manager { return taskScheduler{exe: exe} }
+
+func (t taskScheduler) SetAutostart(on bool) error {
+	if on {
+		return Create(AutostartTask(t.exe))
+	}
+	return Delete(brand.TaskAutostart)
+}
+
+func (t taskScheduler) CreateRecovery() error { return Create(RecoveryTask(t.exe)) }
+func (t taskScheduler) DeleteRecovery() error { return Delete(RecoveryTask(t.exe).Name) }

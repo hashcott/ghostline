@@ -90,6 +90,7 @@ func Run(o Options) error {
 	fw := firewall.NewNetsh(o.Executable)
 	nid := netid.NewWindows()
 	pr := procs.NewWindows()
+	startups := startup.NewTaskScheduler(o.Executable)
 	recoverDeps := watchdog.Deps{States: states, DNS: dnsMgr, StopDPI: dpiMgr.Stop, Alive: pr.Alive, Log: log,
 		RestoreSysProxy: sysproxy.Manager{API: sysproxy.NewWindowsAPI()}.RestoreIfOurs,
 		DeleteRule:      fw.DeleteNamed,
@@ -154,7 +155,7 @@ func Run(o Options) error {
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
 	orch := app.New(app.Deps{
-		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{exe: o.Executable}, System: system{procs: pr},
+		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{startup: startups, startWatchdog: detachedWatchdog(o.Executable)}, System: system{procs: pr},
 		Picker: picker, Scans: picker, Builder: build, Resolver: net.DefaultResolver,
 		Prober: probe.Prober{
 			Resolve: func(ctx context.Context, host string) ([]netipAddr, error) {
@@ -226,12 +227,7 @@ func Run(o Options) error {
 		},
 		OnSettingsChanged: func(old, n store.Settings) {
 			if old.StartWithWindows != n.StartWithWindows {
-				var err error
-				if n.StartWithWindows {
-					err = startup.Create(startup.AutostartTask(o.Executable))
-				} else {
-					err = startup.Delete(brand.TaskAutostart)
-				}
+				err := startups.SetAutostart(n.StartWithWindows)
 				if err != nil {
 					log.Error("autostart task", "err", err)
 				}
