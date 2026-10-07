@@ -2,6 +2,7 @@ package platform
 
 import (
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,4 +27,25 @@ func TestFileLock_Exclusive(t *testing.T) {
 		t.Fatal("second lock never acquired")
 	}
 	require.NoError(t, b.Unlock())
+}
+
+// One fileLock shared by goroutines (state.json writers in one process)
+// must serialise them without a data race.
+func TestFileLock_SharedAcrossGoroutines(t *testing.T) {
+	l := newFileLock(filepath.Join(t.TempDir(), "state.lock"))
+	var wg sync.WaitGroup
+	counter := 0
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				require.NoError(t, l.Lock())
+				counter++
+				require.NoError(t, l.Unlock())
+			}
+		}()
+	}
+	wg.Wait()
+	require.Equal(t, 160, counter)
 }

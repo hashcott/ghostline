@@ -42,7 +42,7 @@ type recProxy struct {
 }
 
 func (p *recProxy) Query() (store.SysProxySnapshot, error) { return p.cur, nil }
-func (p *recProxy) Set(s store.SysProxySnapshot) error   { p.set = append(p.set, s); return nil }
+func (p *recProxy) Set(s store.SysProxySnapshot) error     { p.set = append(p.set, s); return nil }
 
 func selfSigned(t *testing.T, cn string) []byte {
 	t.Helper()
