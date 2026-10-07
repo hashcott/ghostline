@@ -83,29 +83,23 @@ func procName(pid uint32) string {
 	return strings.TrimSpace(string(b))
 }
 
-// procUnit is the systemd service a process runs in (from its cgroup).
+// procUnit is the system service a process runs in (from its cgroup).
 func procUnit(pid uint32) string {
 	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
 	if err != nil {
 		return ""
 	}
-	for _, line := range strings.Split(string(b), "\n") {
-		_, path, ok := strings.Cut(line, "::")
-		if !ok {
-			continue
-		}
-		segs := strings.Split(path, "/")
-		for i := len(segs) - 1; i >= 0; i-- {
-			if strings.HasSuffix(segs[i], ".service") {
-				return segs[i]
-			}
-		}
-	}
-	return ""
+	return unitFromCgroup(string(b))
 }
 
-// StopService stops a systemd unit and waits for it.
-func (linuxInspector) StopService(name string, wait time.Duration) error { return stopUnit(name, wait) }
+// StopService stops a systemd unit and waits for it; never DNS itself or
+// Ghostline (stoppable).
+func (linuxInspector) StopService(name string, wait time.Duration) error {
+	if err := stoppable(name); err != nil {
+		return err
+	}
+	return stopUnit(name, wait)
+}
 
 // StartTime is when pid started: boot time plus field 22 of /proc/<pid>/stat.
 func (linuxInspector) StartTime(pid uint32) (time.Time, error) {

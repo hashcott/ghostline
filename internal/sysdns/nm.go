@@ -34,6 +34,11 @@ func (b *nmBackend) Snapshot(Selection) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
+	if ours(g) {
+		// Ghostline's own, left by a run whose state.json is gone: the
+		// original is unknown, and NM's default is no global configuration.
+		g = model.NMGlobalDNS{}
+	}
 	servers, _ := b.api.DNSServers()
 	return Snapshot{Backend: b.Name(), Linux: &model.LinuxDNS{NMGlobal: &g, Servers: notLoopback(servers)}}, nil
 }
@@ -114,8 +119,12 @@ func (b *nmBackend) Restore(s Snapshot) []RestoreError {
 	return nil
 }
 
-// RestoreDefault clears the global configuration only if it is Ghostline's.
+// RestoreDefault clears the global configuration only if it is Ghostline's
+// (nothing to do while NM is not running).
 func (b *nmBackend) RestoreDefault() error {
+	if !b.api.Running() {
+		return nil
+	}
 	cur, err := b.api.GlobalDNS()
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/netwatch"
 )
 
 const (
@@ -50,11 +51,22 @@ func hasOwner(conn *dbus.Conn, name string) bool {
 	return ok
 }
 
-// watchProps reports PropertiesChanged on the given paths of name.
-func watchProps(conn *dbus.Conn, paths []dbus.ObjectPath, onChange func()) (func(), error) {
+// nameOwner is the unique connection name that owns name ("" if none).
+func nameOwner(conn *dbus.Conn, name string) string {
+	var owner string
+	_ = conn.BusObject().Call("org.freedesktop.DBus.GetNameOwner", 0, name).Store(&owner)
+	return owner
+}
+
+// watchProps reports PropertiesChanged on the given paths of name, once
+// delay after a burst settles. Any user may send signals on the system
+// bus, so only those from the name's current owner count: the match rule
+// filters broadcasts, and the sender check also drops signals sent
+// straight to this connection.
+func watchProps(conn *dbus.Conn, name string, paths []dbus.ObjectPath, delay time.Duration, onChange func()) (func(), error) {
 	var opts [][]dbus.MatchOption
 	for _, p := range paths {
-		o := []dbus.MatchOption{dbus.WithMatchObjectPath(p), dbus.WithMatchInterface("org.freedesktop.DBus.Properties"), dbus.WithMatchMember("PropertiesChanged")}
+		o := []dbus.MatchOption{dbus.WithMatchSender(name), dbus.WithMatchObjectPath(p), dbus.WithMatchInterface("org.freedesktop.DBus.Properties"), dbus.WithMatchMember("PropertiesChanged")}
 		if err := conn.AddMatchSignal(o...); err != nil {
 			return nil, err
 		}
@@ -66,13 +78,14 @@ func watchProps(conn *dbus.Conn, paths []dbus.ObjectPath, onChange func()) (func
 	for _, p := range paths {
 		want[p] = true
 	}
+	trigger, cancel := netwatch.Debounce(delay, onChange)
 	done := make(chan struct{})
 	go func() {
 		for {
 			select {
 			case s := <-ch:
-				if s != nil && want[s.Path] && s.Name == "org.freedesktop.DBus.Properties.PropertiesChanged" {
-					onChange()
+				if s != nil && want[s.Path] && s.Name == "org.freedesktop.DBus.Properties.PropertiesChanged" && s.Sender != "" && s.Sender == nameOwner(conn, name) {
+					trigger()
 				}
 			case <-done:
 				return
@@ -85,6 +98,7 @@ func watchProps(conn *dbus.Conn, paths []dbus.ObjectPath, onChange func()) (func
 			_ = conn.RemoveMatchSignal(o...)
 		}
 		close(done)
+		cancel()
 	}, nil
 }
 
@@ -132,7 +146,7 @@ func (n *dbusNM) DNSServers() ([]string, error) {
 }
 
 func (n *dbusNM) Watch(onChange func()) (func(), error) {
-	return watchProps(n.conn, []dbus.ObjectPath{nmPath, nmDNSPath}, onChange)
+	return watchProps(n.conn, nmName, []dbus.ObjectPath{nmPath, nmDNSPath}, netwatch.Delay, onChange)
 }
 
 // globalToVariant writes GlobalDnsConfiguration: {"searches": as,
@@ -254,13 +268,18 @@ func (r *dbusResolved) Links() ([]model.ResolvedLink, error) {
 }
 
 func (r *dbusResolved) SetDefaultRoute(ifindex int, on bool) error {
-	return r.mgr().Call(resolvedMgr+".SetLinkDefaultRoute", 0, int32(ifindex), on).Err
+	err := r.mgr().Call(resolvedMgr+".SetLinkDefaultRoute", 0, int32(ifindex), on).Err
+	var de dbus.Error
+	if errors.As(err, &de) && de.Name == "org.freedesktop.resolve1.NoSuchLink" {
+		return errNoSuchLink
+	}
+	return err
 }
 
 func (r *dbusResolved) FlushCaches() error { return r.mgr().Call(resolvedMgr+".FlushCaches", 0).Err }
 
 func (r *dbusResolved) Watch(onChange func()) (func(), error) {
-	return watchProps(r.conn, []dbus.ObjectPath{resolvedPath}, onChange)
+	return watchProps(r.conn, resolvedName, []dbus.ObjectPath{resolvedPath}, netwatch.Delay, onChange)
 }
 
 // --- systemd ---
@@ -309,4 +328,13 @@ func (u *dbusUnits) Stop(unit string, wait time.Duration) error {
 		return err
 	}
 	return u.waitState(unit, wait, func(s string) bool { return s == "inactive" || s == "failed" })
+}
+
+func (n *dbusNM) RcManager() (string, error) {
+	v, err := n.conn.Object(nmName, nmDNSPath).GetProperty(nmDNSIfc + ".RcManager")
+	if err != nil {
+		return "", err
+	}
+	s, _ := v.Value().(string)
+	return s, nil
 }

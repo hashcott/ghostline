@@ -38,6 +38,12 @@ func (b *resolvedBackend) Snapshot(Selection) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
+	if b.haveDropIn() {
+		// Ghostline turned DefaultRoute off; resolved's own default is on.
+		for i := range links {
+			links[i].DefaultRoute = true
+		}
+	}
 	servers := []string{}
 	for _, l := range links {
 		for _, s := range l.Servers {
@@ -70,7 +76,9 @@ func (b *resolvedBackend) Apply(s Snapshot, v6 bool) error {
 	var errs []error
 	if s.Linux != nil {
 		for _, l := range s.Linux.ResolvedLinks {
-			errs = append(errs, b.api.SetDefaultRoute(l.IfIndex, false))
+			if err := b.api.SetDefaultRoute(l.IfIndex, false); !errors.Is(err, errNoSuchLink) {
+				errs = append(errs, err)
+			}
 		}
 	}
 	return errors.Join(errs...)
@@ -131,7 +139,8 @@ func (b *resolvedBackend) Restore(s Snapshot) []RestoreError {
 	}
 	if s.Linux != nil {
 		for _, l := range s.Linux.ResolvedLinks {
-			if err := b.api.SetDefaultRoute(l.IfIndex, l.DefaultRoute); err != nil {
+			// A link that went away has nothing left to restore.
+			if err := b.api.SetDefaultRoute(l.IfIndex, l.DefaultRoute); err != nil && !errors.Is(err, errNoSuchLink) {
 				out = append(out, RestoreError{Target: l.Name, Err: err})
 			}
 		}

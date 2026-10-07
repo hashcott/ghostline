@@ -2,6 +2,8 @@ package platform
 
 import "github.com/godbus/dbus/v5"
 
+const logindName = "org.freedesktop.login1"
+
 // watchResume calls onResume when logind reports the end of a sleep
 // (PrepareForSleep(false)).
 func watchResume(onResume func()) (func(), error) {
@@ -9,9 +11,19 @@ func watchResume(onResume func()) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	match := []dbus.MatchOption{dbus.WithMatchInterface("org.freedesktop.login1.Manager"), dbus.WithMatchMember("PrepareForSleep")}
-	if err := conn.AddMatchSignal(match...); err != nil {
+	stop, err := watchResumeOn(conn, onResume)
+	if err != nil {
 		conn.Close()
+		return nil, err
+	}
+	return func() { stop(); conn.Close() }, nil
+}
+
+// watchResumeOn listens on conn. Any user may send signals on the system
+// bus: only those from logind's current owner count.
+func watchResumeOn(conn *dbus.Conn, onResume func()) (func(), error) {
+	match := []dbus.MatchOption{dbus.WithMatchSender(logindName), dbus.WithMatchInterface("org.freedesktop.login1.Manager"), dbus.WithMatchMember("PrepareForSleep")}
+	if err := conn.AddMatchSignal(match...); err != nil {
 		return nil, err
 	}
 	ch := make(chan *dbus.Signal, 4)
@@ -21,7 +33,7 @@ func watchResume(onResume func()) (func(), error) {
 		for {
 			select {
 			case s := <-ch:
-				if s == nil || s.Name != "org.freedesktop.login1.Manager.PrepareForSleep" || len(s.Body) != 1 {
+				if s == nil || s.Name != "org.freedesktop.login1.Manager.PrepareForSleep" || len(s.Body) != 1 || !fromOwner(conn, s.Sender, logindName) {
 					continue
 				}
 				if sleeping, ok := s.Body[0].(bool); ok && !sleeping {
@@ -36,6 +48,14 @@ func watchResume(onResume func()) (func(), error) {
 		close(done)
 		conn.RemoveSignal(ch)
 		_ = conn.RemoveMatchSignal(match...)
-		conn.Close()
 	}, nil
+}
+
+// fromOwner reports whether sender is the unique name that owns name now.
+func fromOwner(conn *dbus.Conn, sender, name string) bool {
+	var owner string
+	if err := conn.BusObject().Call("org.freedesktop.DBus.GetNameOwner", 0, name).Store(&owner); err != nil {
+		return false
+	}
+	return sender != "" && sender == owner
 }

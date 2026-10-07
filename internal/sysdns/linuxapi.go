@@ -1,6 +1,7 @@
 package sysdns
 
 import (
+	"errors"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/model"
@@ -13,6 +14,7 @@ import (
 type nmAPI interface {
 	Running() bool
 	DNSMode() (string, error)              // DnsManager.Mode: "none" means NM leaves DNS alone
+	RcManager() (string, error)            // DnsManager.RcManager: "unmanaged" means NM does not write resolv.conf
 	GlobalDNS() (model.NMGlobalDNS, error) // GlobalDnsConfiguration
 	SetGlobalDNS(model.NMGlobalDNS) error
 	DNSServers() ([]string, error) // DnsManager.Configuration[].nameservers, in order
@@ -27,6 +29,10 @@ type resolvedAPI interface {
 	FlushCaches() error
 	Watch(onChange func()) (stop func(), err error)
 }
+
+// errNoSuchLink is SetDefaultRoute on a link resolved no longer knows (a
+// VPN that went down): there is nothing left to restore on it.
+var errNoSuchLink = errors.New("resolved: no such link")
 
 // unitAPI is systemd.
 type unitAPI interface {

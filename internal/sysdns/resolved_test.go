@@ -12,6 +12,7 @@ import (
 
 type fakeResolved struct {
 	links   []model.ResolvedLink
+	gone    map[int]bool // links resolved no longer knows
 	flushes int
 }
 
@@ -20,6 +21,9 @@ func (f *fakeResolved) Links() ([]model.ResolvedLink, error) {
 	return append([]model.ResolvedLink(nil), f.links...), nil
 }
 func (f *fakeResolved) SetDefaultRoute(ifindex int, on bool) error {
+	if f.gone[ifindex] {
+		return errNoSuchLink
+	}
 	for i := range f.links {
 		if f.links[i].IfIndex == ifindex {
 			f.links[i].DefaultRoute = on
@@ -113,4 +117,35 @@ func TestResolved_RestoreDefaultRemovesOnlyOurDropIn(t *testing.T) {
 	_, err = os.Stat(foreign)
 	require.NoError(t, err)
 	require.Len(t, u.reloads, 1)
+}
+
+// Review I1: a link that went away (VPN down, tether unplugged) is not a
+// restore failure, and does not stop Ghostline's configuration going back.
+func TestResolved_VanishedLinkIsNotAnError(t *testing.T) {
+	dir := t.TempDir()
+	vpn := model.ResolvedLink{IfIndex: 7, Name: "tun0", DefaultRoute: true, Servers: []string{"10.8.0.1"}}
+	r := &fakeResolved{links: []model.ResolvedLink{eth0(), vpn}}
+	b := newResolved(r, &fakeUnits{}, dir, nil)
+	s, err := b.Snapshot(Selection{})
+	require.NoError(t, err)
+	require.NoError(t, b.Apply(s, false))
+	r.gone = map[int]bool{7: true}
+	r.links = r.links[:1]
+	require.NoError(t, b.Apply(s, false), "re-apply skips the vanished link")
+	require.Empty(t, b.Restore(s))
+	require.True(t, r.links[0].DefaultRoute)
+}
+
+// Review I4: with Ghostline's drop-in still in place, links whose
+// DefaultRoute is off were turned off by Ghostline; the original is on.
+func TestResolved_SnapshotNeverRecordsOwnDefaultRoute(t *testing.T) {
+	dir := t.TempDir()
+	r := &fakeResolved{links: []model.ResolvedLink{eth0()}}
+	b := newResolved(r, &fakeUnits{}, dir, nil)
+	s, err := b.Snapshot(Selection{})
+	require.NoError(t, err)
+	require.NoError(t, b.Apply(s, false))
+	again, err := b.Snapshot(Selection{})
+	require.NoError(t, err)
+	require.True(t, again.Linux.ResolvedLinks[0].DefaultRoute)
 }

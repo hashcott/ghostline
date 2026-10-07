@@ -19,6 +19,7 @@ type fakeNM struct {
 
 func (f *fakeNM) Running() bool                         { return true }
 func (f *fakeNM) DNSMode() (string, error)              { return "systemd-resolved", nil }
+func (f *fakeNM) RcManager() (string, error)            { return "symlink", nil }
 func (f *fakeNM) GlobalDNS() (model.NMGlobalDNS, error) { return f.global, nil }
 func (f *fakeNM) SetGlobalDNS(g model.NMGlobalDNS) error {
 	f.sets++
@@ -109,4 +110,13 @@ func TestNM_RestoreDefaultClearsOnlyOurs(t *testing.T) {
 	require.NoError(t, newTestNM(f).RestoreDefault())
 	require.Equal(t, other, f.global)
 	require.Zero(t, f.sets)
+}
+
+// Review I4: Connect over Ghostline's own leftover (state.json lost) must
+// not record loopback as the original.
+func TestNM_SnapshotNeverRecordsLoopback(t *testing.T) {
+	f := &fakeNM{global: model.NMGlobalDNS{Domains: map[string]model.NMDomain{"*": {Servers: []string{"127.0.0.1"}}}}}
+	s, err := newTestNM(f).Snapshot(Selection{})
+	require.NoError(t, err)
+	require.Equal(t, &model.NMGlobalDNS{}, s.Linux.NMGlobal)
 }

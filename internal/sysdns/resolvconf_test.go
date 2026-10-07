@@ -100,3 +100,21 @@ func TestResolvConf_RestoreDefault(t *testing.T) {
 	require.NoError(t, os.Remove(filepath.Join(data, "resolv.conf.orig")))
 	require.Error(t, b.RestoreDefault(), "ours but no saved copy: no guessing")
 }
+
+// Review I4: Connect over Ghostline's own file takes the saved original,
+// or refuses when there is none, instead of recording loopback.
+func TestResolvConf_SnapshotNeverRecordsOwnFile(t *testing.T) {
+	b, path, data := newTestResolvConf(t)
+	require.NoError(t, os.WriteFile(path, []byte(ispConf), 0o644))
+	s, err := b.Snapshot(Selection{})
+	require.NoError(t, err)
+	require.NoError(t, b.Apply(s, false))
+	again, err := b.Snapshot(Selection{})
+	require.NoError(t, err)
+	require.Equal(t, s.Linux.ResolvConf, again.Linux.ResolvConf)
+	require.Equal(t, []string{"192.168.1.1", "192.168.1.2"}, again.Servers())
+
+	require.NoError(t, os.Remove(filepath.Join(data, "resolv.conf.orig")))
+	_, err = b.Snapshot(Selection{})
+	require.Error(t, err)
+}

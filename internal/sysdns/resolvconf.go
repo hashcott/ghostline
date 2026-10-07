@@ -64,7 +64,16 @@ func nameservers(content []byte) []string {
 	return notLoopback(out)
 }
 
+// Snapshot records the file as it is, or, when it is still Ghostline's
+// (a run whose state.json is gone), the original saved by Apply.
 func (b *resolvConfBackend) Snapshot(Selection) (Snapshot, error) {
+	if b.ours() {
+		rf, err := b.saved()
+		if err != nil {
+			return Snapshot{}, err
+		}
+		return Snapshot{Backend: b.Name(), Linux: &model.LinuxDNS{ResolvConf: rf, Servers: nameservers(rf.Content)}}, nil
+	}
 	rf, servers, err := b.current()
 	if err != nil {
 		return Snapshot{}, err
@@ -157,19 +166,28 @@ func (b *resolvConfBackend) RestoreDefault() error {
 	if !b.ours() {
 		return nil
 	}
-	saved, err := os.ReadFile(b.backup)
+	rf, err := b.saved()
 	if err != nil {
-		return fmt.Errorf("resolvconf: no saved copy of %s: %w", b.path, err)
-	}
-	var rf model.ResolvConfFile
-	if err := json.Unmarshal(saved, &rf); err != nil {
 		return err
 	}
-	if err := b.put(&rf); err != nil {
+	if err := b.put(rf); err != nil {
 		return err
 	}
 	_ = os.Remove(b.backup)
 	return nil
+}
+
+// saved reads the original Apply kept in the data directory.
+func (b *resolvConfBackend) saved() (*model.ResolvConfFile, error) {
+	data, err := os.ReadFile(b.backup)
+	if err != nil {
+		return nil, fmt.Errorf("resolvconf: no saved copy of %s: %w", b.path, err)
+	}
+	var rf model.ResolvConfFile
+	if err := json.Unmarshal(data, &rf); err != nil {
+		return nil, err
+	}
+	return &rf, nil
 }
 
 func (b *resolvConfBackend) Flush() error { return b.flush() }
