@@ -30,4 +30,6 @@ var Rules = []Rule{
 	{GOOS: "linux", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
 	{GOOS: "windows", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
 	{GOOS: "linux", Pkg: "./internal/headless", Forbid: wails, Why: "headless modes are shared by the Windows exe and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./cmd/ghostlined", Forbid: append(wails, "golang.org/x/sys/windows", mod+"/internal/winutil", mod+"/assets/goodbyedpi"),
+		Why: "the daemon runs without a GUI toolkit and without Windows code"},
 }
