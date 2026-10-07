@@ -96,6 +96,11 @@ func Run(o Options) error {
 		return err
 	}
 	ui.b = c.Svc
+	ui.saveFullWindow = func(w, h int) { // straight to settings.json, as before validation existed
+		s := c.Settings.Get()
+		s.FullWindow.Width, s.FullWindow.Height = w, h
+		_ = c.Settings.Save(s)
+	}
 
 	opts := application.Options{
 		Name:        brand.AppName,

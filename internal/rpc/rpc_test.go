@@ -176,3 +176,32 @@ func TestLargeMessageWithinMaxLine(t *testing.T) {
 	require.NoError(t, c.Call(context.Background(), "Echo", &got, big))
 	require.Equal(t, big, got)
 }
+
+// C1: an event handler may call the daemon (the GUI's tray reads settings
+// on a "settings" event that arrives before the reply to the save).
+func TestEventHandlerMayCall(t *testing.T) {
+	var srv *Server
+	srv, sock := serve(t, func(_ context.Context, method string, _ []json.RawMessage) (json.RawMessage, error) {
+		if method == "Save" {
+			srv.Emit("settings", map[string]string{"language": "en"})
+		}
+		return json.RawMessage(`"ok"`), nil
+	}, acceptAll)
+	c := dial(t, sock)
+	inner := make(chan error, 1)
+	c.OnEvent(func(string, json.RawMessage) { inner <- c.Call(context.Background(), "Get", nil) })
+	done := make(chan error, 1)
+	go func() { done <- c.Call(context.Background(), "Save", nil) }()
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("DEADLOCK: Save never returned")
+	}
+	select {
+	case err := <-inner:
+		require.NoError(t, err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("the handler's own call never returned")
+	}
+}

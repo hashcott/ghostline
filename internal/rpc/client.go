@@ -20,7 +20,14 @@ type Client struct {
 	onUI    func(ctx context.Context, kind string, args []json.RawMessage) (any, error)
 	done    chan struct{}
 	err     error
+	// events are handed to onEvent in order on their own goroutine: a
+	// handler may call the daemon, whose reply the read loop must deliver.
+	events chan Msg
 }
+
+// eventQueue bounds events waiting for a slow handler; past it they are
+// dropped (the next state event brings the UI up to date).
+const eventQueue = 4096
 
 // Dial connects to the daemon and exchanges hellos. A refused peer gives
 // an error starting with CodeNotAuthorized, a different protocol one
@@ -53,8 +60,9 @@ func Dial(ctx context.Context, socket, version string) (*Client, error) {
 		c.Close()
 		return nil, fmt.Errorf("%s: %w", CodeUnreachable, err)
 	}
-	cl := &Client{w: w, pending: map[uint64]chan Msg{}, done: make(chan struct{})}
+	cl := &Client{w: w, pending: map[uint64]chan Msg{}, done: make(chan struct{}), events: make(chan Msg, eventQueue)}
 	go cl.loop()
+	go cl.dispatch()
 	return cl, nil
 }
 
@@ -143,11 +151,9 @@ func (c *Client) loop() {
 		}
 		switch {
 		case m.Event != "":
-			c.mu.Lock()
-			fn := c.onEvent
-			c.mu.Unlock()
-			if fn != nil {
-				fn(m.Event, m.Data)
+			select {
+			case c.events <- m:
+			default: // the handler is stuck; never stall the replies behind it
 			}
 		case m.UI != "":
 			go c.answerUI(m)
@@ -159,6 +165,24 @@ func (c *Client) loop() {
 			if ch != nil {
 				ch <- m
 			}
+		}
+	}
+}
+
+// dispatch runs the event handler for queued events, in order, until the
+// connection ends.
+func (c *Client) dispatch() {
+	for {
+		select {
+		case m := <-c.events:
+			c.mu.Lock()
+			fn := c.onEvent
+			c.mu.Unlock()
+			if fn != nil {
+				fn(m.Event, m.Data)
+			}
+		case <-c.done:
+			return
 		}
 	}
 }

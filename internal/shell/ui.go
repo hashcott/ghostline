@@ -49,6 +49,9 @@ type ui struct {
 	app *application.App
 	b   trayBackend
 	log *slog.Logger
+	// saveFullWindow remembers the full interface's size. It runs on the
+	// main thread, so it must not wait for the daemon.
+	saveFullWindow func(w, h int)
 
 	mu sync.Mutex
 	// win is the open window, nil while Ghostline sits in the tray. Only
@@ -135,8 +138,7 @@ func (u *ui) resize(mode string) {
 		u.win.SetMinSize(minFullW, minFullH)
 	} else {
 		if w0 >= minFullW { // remember the full-interface size
-			s.FullWindow.Width, s.FullWindow.Height = w0, h0
-			_ = u.b.SaveSettings(s)
+			u.saveFullWindow(w0, h0)
 		}
 		u.win.SetMinSize(simpleW, simpleH)
 		u.win.SetResizable(false)

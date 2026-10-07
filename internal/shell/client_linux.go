@@ -15,6 +15,7 @@ import (
 	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/rpc/client"
+	"github.com/hashcott/ghostline/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -30,13 +31,25 @@ func runClient(o Options) error {
 	ui := &ui{log: log}
 	svc, conn := client.New(platform.ClientSocket(), log, ui.setMode)
 	defer conn.Close()
-	ui.b = svc
+	settings := newSettingsCache(svc)
+	ui.b = settings
+	ui.saveFullWindow = func(w, h int) {
+		go func() {
+			s := settings.GetSettings()
+			s.FullWindow.Width, s.FullWindow.Height = w, h
+			_ = settings.SaveSettings(s)
+		}()
+	}
 
 	var wapp *application.App
 	em := &emitter{}
 	conn.OnEvent(func(name string, data json.RawMessage) {
 		switch name {
 		case "settings": // language or proxy changed: relabel the tray
+			var n store.Settings
+			if json.Unmarshal(data, &n) == nil {
+				settings.set(n)
+			}
 			ui.onLanguage()
 			return
 		case app.EventUpdate:
