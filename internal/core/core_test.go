@@ -164,7 +164,12 @@ func TestNew_RemoteRefusesFileLists(t *testing.T) {
 	_, err := c.Svc.AddList(file)
 	require.ErrorIs(t, err, lists.ErrFileListsOff)
 
+	// Not remote: file lists pass the gate and reach the usual checks. An
+	// empty path fails there, synchronously, so no background fetch
+	// outlives the test (Windows cannot remove a directory still in use).
+	file.Path = ""
 	c = newCore(t, testDeps(t), Options{})
 	_, err = c.Svc.AddList(file)
+	require.Error(t, err)
 	require.NotErrorIs(t, err, lists.ErrFileListsOff)
 }
