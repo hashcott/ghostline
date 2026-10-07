@@ -74,7 +74,6 @@ type ui struct {
 	dpiItem     *application.MenuItem
 	proxyItem   *application.MenuItem
 	checkItem   *application.MenuItem
-	checker     *updateChecker
 	svc         *app.Service
 	openItem    *application.MenuItem
 	quitItem    *application.MenuItem
@@ -286,12 +285,10 @@ func (u *ui) onUpdate(tag, url string) {
 // checkUpdate is the tray's "Check for updates": a newer release shows up
 // through onUpdate (menu item + tooltip); otherwise the tooltip says so.
 func (u *ui) checkUpdate() {
-	if u.checker == nil || u.tray == nil {
+	if u.svc == nil || u.tray == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	r, err := u.checker.checkNow(ctx)
+	r, err := u.svc.CheckUpdateNow()
 	if err == nil && r.Newer {
 		return
 	}

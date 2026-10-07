@@ -1,4 +1,4 @@
-package shell
+package core
 
 import (
 	"crypto/ed25519"

@@ -26,4 +26,6 @@ var Rules = []Rule{
 		Why: "Linux-only code must not reach the Windows exe"},
 	{GOOS: "linux", Pkg: ".", Forbid: []string{mod + "/internal/winutil", mod + "/assets/goodbyedpi", "golang.org/x/sys/windows"},
 		Why: "Windows-only code must not reach the Linux binary"},
+	{GOOS: "windows", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
+	{GOOS: "linux", Pkg: "./internal/core", Forbid: wails, Why: "core is shared by the Windows GUI and the Linux daemon"},
 }
