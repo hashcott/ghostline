@@ -103,7 +103,7 @@ func TestService_ReconnectsAfterDaemonRestart(t *testing.T) {
 
 	require.NoError(t, srv.Close())
 	_ = os.Remove(sock) // Go removes a listener's socket file on Close
-	select { // the drop shows as an unreachable state
+	select {            // the drop shows as an unreachable state
 	case n := <-events:
 		require.Equal(t, app.EventState, n)
 	case <-time.After(2 * time.Second):

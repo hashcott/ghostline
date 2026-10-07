@@ -35,6 +35,9 @@ func Fatal(err error) { fatalBox(err) }
 
 // Run starts the UI process.
 func Run(o Options) error {
+	if o.Platform.UsesDaemon {
+		return runClient(o)
+	}
 	if err := preflight(); err != nil {
 		return err
 	}
