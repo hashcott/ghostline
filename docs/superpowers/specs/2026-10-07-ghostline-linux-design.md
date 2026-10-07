@@ -120,7 +120,7 @@ type Deps struct {
 | `internal/firewall` | Tách từ `winutil/firewall*.go`: interface + netsh / firewalld / ufw | Sửa luôn lỗi `firewall.go:100` gọi `netsh` không có build tag |
 | `internal/secrets` | Interface `Protector` + DPAPI / AES-GCM với khoá file | |
 | `internal/netid` | Gateway, MAC gateway, SSID, Wi-Fi đã lưu → `scanner.NetworkKey` | Chuyển `networkKey`/`gatewayMAC` khỏi `shell/system_windows.go` |
-| `internal/netwatch` | Báo thay đổi mạng | Windows: `NotifyIpInterfaceChange`. Linux: netlink + tín hiệu D-Bus + inotify |
+| `internal/netwatch` | Báo thay đổi mạng | Windows: `NotifyIpInterfaceChange`. Linux: netlink + tín hiệu D-Bus + inotify. **Làm ở L3**; trong L1 hàm theo dõi là trường `WatchNetwork`/`WatchSysProxy` của `platform.Deps` |
 | `internal/procs` | Tiến trình còn sống, thời điểm khởi động, ai giữ cổng | Windows: code hiện có trong `winutil`. Linux: `/proc` |
 | `cmd/ghostlined` | `main` của daemon | Chỉ build cho Linux (sau này thêm macOS) |
 
@@ -531,9 +531,9 @@ Mỗi sub-spec có spec ngắn (chỉ ghi phần chi tiết thêm so với spec 
 
 | # | Sub-spec | Nội dung | Spike đầu tiên | Xong khi |
 |---|---|---|---|---|
-| **L1** | Nền tảng đa nền tảng | `internal/platform`, `procs`, `secrets`, `firewall`, `netid`, `netwatch`, `startup.Manager`; `sysdns.Backend`; `app` phát event qua `Sink` và dùng `UI`; build tag cho mọi file Windows; embed DPI tách theo tag; `state.json` v4; ma trận CI + rào chắn | `ghostlined` build được với `CGO_ENABLED=0` khi `internal/app` không còn import `wails/application` | `GOOS=linux` build/vet/test xanh (backend Linux là stub trả `…_UNSUPPORTED`); Windows không đổi hành vi; rào chắn CI chạy |
+| **L1** | Nền tảng đa nền tảng | `internal/platform`, `procs`, `secrets`, `firewall`, `netid`, `startup.Manager`; `app` không còn phụ thuộc Wails (đăng ký event chuyển sang `shell`); build tag cho mọi file Windows; embed DPI tách theo tag; ma trận CI + rào chắn (`tools/depcheck`, `tools/sizecheck`). GUI Linux tạm chạy trong một tiến trình với stub (chỉ cho dev) | `ghostlined` build được với `CGO_ENABLED=0` khi `internal/app` không còn import `wails/application` | `GOOS=linux` build/vet/test xanh (backend Linux là stub trả `…_UNSUPPORTED`); Windows không đổi hành vi; rào chắn CI chạy |
 | **L2** | Daemon + GUI client | `internal/rpc`, `tools/genrpc`, `internal/daemon`, `internal/sessionagent`, `cmd/ghostlined`, unit systemd tạm cho dev, trang lỗi GUI, `hello` | ID binding Wails với proxy ở package khác (mục 5.3) | GUI user điều khiển daemon root đủ mọi method/event; đóng GUI vẫn chạy; peer không được phép bị từ chối |
-| **L3** | DNS + khôi phục | 3 backend DNS, `netwatch` Linux, flush, cổng 53, mục 7, `PrepareForSleep` | NM `GlobalDnsConfiguration` trên Fedora 41 và Ubuntu 24.04: đẩy đúng xuống resolved, sống qua kết nối lại | Tiêu chí 1, 2 |
+| **L3** | DNS + khôi phục | `sysdns.Backend` (mục 6.1), `state.json` v4 (mục 15), `internal/netwatch`, 3 backend DNS, flush, cổng 53, mục 7, `PrepareForSleep`. Chuyển từ L1 sang vì trường snapshot Linux phụ thuộc spike NetworkManager | NM `GlobalDnsConfiguration` trên Fedora 41 và Ubuntu 24.04: đẩy đúng xuống resolved, sống qua kết nối lại | Tiêu chí 1, 2 |
 | **L4** | DPI + tích hợp | Mục 8–13 | Cờ fwmark và hạ quyền của `nfqws2` bản pin; luật nft tối thiểu chạy được | Tiêu chí 3; proxy GNOME/KDE, chứng chỉ, firewall, SSID hoạt động |
 | **L5** | Đóng gói + phát hành | Mục 16–17, tài liệu, checklist | SteamOS (mục 16.4) | Tiêu chí 4, 6, 7; phát hành v0.6.0 |
 
