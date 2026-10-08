@@ -46,6 +46,10 @@ func TestFirefox_CreatesAndDeletesOwnFile(t *testing.T) {
 	require.NoFileExists(t, policy, "Ghostline created it and nothing else is in it")
 	require.NoFileExists(t, cert)
 	require.NoFileExists(t, sidecar)
+	// Root run: an empty /etc/firefox/policies was left behind.
+	require.NoDirExists(t, filepath.Dir(policy), "directories Ghostline created go too")
+	require.NoDirExists(t, filepath.Dir(filepath.Dir(policy)))
+	require.DirExists(t, filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(policy)))), "but nothing that was there before")
 }
 
 // Review Focus 3: the admin's policies and certificates stay as they were.
