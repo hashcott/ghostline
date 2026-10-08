@@ -14,6 +14,7 @@ type fakeResolved struct {
 	links   []model.ResolvedLink
 	gone    map[int]bool // links resolved no longer knows
 	flushes int
+	onSet   func() // called on every SetDefaultRoute
 }
 
 func (f *fakeResolved) Running() bool { return true }
@@ -21,6 +22,9 @@ func (f *fakeResolved) Links() ([]model.ResolvedLink, error) {
 	return append([]model.ResolvedLink(nil), f.links...), nil
 }
 func (f *fakeResolved) SetDefaultRoute(ifindex int, on bool) error {
+	if f.onSet != nil {
+		f.onSet()
+	}
 	if f.gone[ifindex] {
 		return errNoSuchLink
 	}
@@ -73,6 +77,23 @@ func TestResolved_RestorePutsBackDefaultRoute(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 	require.True(t, r.links[0].DefaultRoute)
 	require.Len(t, u.reloads, 2)
+}
+
+// The links take queries back before the drop-in goes: the other order
+// leaves resolved with no DNS route for a moment.
+func TestResolved_RestoreResetsDefaultRouteBeforeDropIn(t *testing.T) {
+	dir := t.TempDir()
+	r, u := &fakeResolved{links: []model.ResolvedLink{eth0()}}, &fakeUnits{}
+	b := newResolved(r, u, dir, nil)
+	s, _ := b.Snapshot(Selection{})
+	require.NoError(t, b.Apply(s, false))
+	var dropInThere []bool
+	r.onSet = func() {
+		_, err := os.Stat(filepath.Join(dir, "ghostline.conf"))
+		dropInThere = append(dropInThere, err == nil)
+	}
+	require.Empty(t, b.Restore(s))
+	require.Equal(t, []bool{true}, dropInThere)
 }
 
 func TestResolved_ReconcileHandlesNewAndReset(t *testing.T) {

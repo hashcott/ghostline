@@ -137,9 +137,8 @@ func (b *resolvedBackend) StillOurs(s Snapshot) Snapshot {
 
 func (b *resolvedBackend) Restore(s Snapshot) []RestoreError {
 	var out []RestoreError
-	if err := b.removeDropIn(); err != nil {
-		out = append(out, RestoreError{Target: "systemd-resolved", Err: err})
-	}
+	// The links first: with the drop-in gone and DefaultRoute still off,
+	// resolved would have no DNS route until they are back.
 	if s.Linux != nil {
 		for _, l := range s.Linux.ResolvedLinks {
 			// A link that went away has nothing left to restore.
@@ -147,6 +146,9 @@ func (b *resolvedBackend) Restore(s Snapshot) []RestoreError {
 				out = append(out, RestoreError{Target: l.Name, Err: err})
 			}
 		}
+	}
+	if err := b.removeDropIn(); err != nil {
+		out = append(out, RestoreError{Target: "systemd-resolved", Err: err})
 	}
 	return out
 }
