@@ -1,6 +1,7 @@
 package certstore
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,6 +25,13 @@ func (e *PartialError) Error() string {
 	return fmt.Sprintf("certstore: not in %s: %v", strings.Join(e.Targets, ", "), e.Err)
 }
 func (e *PartialError) Unwrap() error { return e.Err }
+
+// RootsSource reads the system's trusted roots afresh (Linux), for checks
+// that must see a root added a moment ago. A nil pool means "use the
+// system default".
+type RootsSource interface {
+	Roots() (*x509.CertPool, error)
+}
 
 type composite struct {
 	required Target
@@ -69,6 +77,14 @@ func (c composite) Remove(thumbprint string) error {
 		return errors.Join(append(errs, err)...)
 	}
 	return partial(names, errs)
+}
+
+// Roots comes from the required target when it can read them afresh.
+func (c composite) Roots() (*x509.CertPool, error) {
+	if rs, ok := c.required.(RootsSource); ok {
+		return rs.Roots()
+	}
+	return nil, nil
 }
 
 // List is every target's certificates, once each.

@@ -1,6 +1,7 @@
 package certstore
 
 import (
+	"crypto/x509"
 	"errors"
 	"testing"
 
@@ -56,4 +57,25 @@ func TestLinuxStore_ListIsTheUnionAndRemoveReachesAll(t *testing.T) {
 	require.Len(t, l, 2)
 	require.NoError(t, s.Remove(Thumbprint(b)))
 	require.False(t, ff.Has(Thumbprint(b)))
+}
+
+type rootsTarget struct {
+	failTarget
+	pool *x509.CertPool
+}
+
+func (r rootsTarget) Roots() (*x509.CertPool, error) { return r.pool, nil }
+
+func TestLinuxStore_RootsFromRequired(t *testing.T) {
+	pool := x509.NewCertPool()
+	s := NewLinux(rootsTarget{failTarget{Fake: NewFake(), name: "system"}, pool})
+	rs, ok := s.(RootsSource)
+	require.True(t, ok)
+	got, err := rs.Roots()
+	require.NoError(t, err)
+	require.Same(t, pool, got)
+
+	got, err = NewLinux(failTarget{Fake: NewFake(), name: "system"}).(RootsSource).Roots()
+	require.NoError(t, err)
+	require.Nil(t, got, "no fresh source: the caller uses the system default")
 }

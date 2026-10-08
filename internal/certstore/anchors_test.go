@@ -1,6 +1,7 @@
 package certstore
 
 import (
+	"crypto/x509"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -72,4 +73,28 @@ func TestAnchorsFor(t *testing.T) {
 	require.Equal(t, "/etc/ca-certificates/trust-source/anchors", dir)
 	_, _, ok = anchorsFor(has(), func(string) bool { return false })
 	require.False(t, ok)
+}
+
+// Root run: Go reads the system roots once per process, so a CA added by
+// update-ca-trust after the daemon started was "not trusted". Roots reads
+// the bundle again on every call.
+func TestAnchors_RootsReadsTheBundleAfresh(t *testing.T) {
+	dir := t.TempDir()
+	bundle := filepath.Join(dir, "ca-certificates.crt")
+	a := anchors{dir: dir, tool: "true", run: func(string, ...string) ([]byte, error) { return nil, nil },
+		bundles: []string{filepath.Join(dir, "missing.pem"), bundle}}
+	der := testCA(t, "Ghostline Fake SNI 8")
+	cert, err := x509.ParseCertificate(der)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(bundle, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o644))
+	pool, err := a.Roots()
+	require.NoError(t, err)
+	_, err = cert.Verify(x509.VerifyOptions{Roots: pool})
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(bundle, nil, 0o644)) // the CA was removed
+	pool, err = a.Roots()
+	require.NoError(t, err)
+	_, err = cert.Verify(x509.VerifyOptions{Roots: pool})
+	require.Error(t, err)
 }

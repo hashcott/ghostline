@@ -1,6 +1,7 @@
 package certstore
 
 import (
+	"crypto/x509"
 	"errors"
 	"os"
 	"os/exec"
@@ -11,10 +12,38 @@ import (
 type anchors struct {
 	dir, tool string
 	run       runner
+	bundles   []string // the extracted trust bundle, first one found
+}
+
+// systemBundles are where distributions put the extracted trust bundle
+// (the files Go's crypto/x509 reads on Linux).
+var systemBundles = []string{
+	"/etc/ssl/certs/ca-certificates.crt",                // Debian, Ubuntu, Arch, SteamOS
+	"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora
+	"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // Fedora
+	"/etc/ssl/cert.pem",
 }
 
 // NewAnchors keeps roots in dir and runs tool after each change.
-func NewAnchors(dir, tool string, run runner) Target { return anchors{dir: dir, tool: tool, run: run} }
+func NewAnchors(dir, tool string, run runner) Target {
+	return anchors{dir: dir, tool: tool, run: run, bundles: systemBundles}
+}
+
+// Roots reads the system trust bundle now. Go's x509.SystemCertPool is
+// read once per process, so a CA added since the daemon started would
+// look untrusted.
+func (a anchors) Roots() (*x509.CertPool, error) {
+	for _, p := range a.bundles {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(b)
+		return pool, nil
+	}
+	return nil, errors.New("certstore: no system trust bundle")
+}
 
 // anchorsFor picks the distribution's anchors directory by its tool:
 // Debian/Ubuntu's update-ca-certificates, else update-ca-trust (Fedora's
