@@ -10,14 +10,15 @@ import (
 
 // Args is ghostlined's command line.
 type Args struct {
-	Command    string // daemon | restore | remove-certs | export | status | connect | disconnect
+	Command    string // daemon | restore | remove-certs | export | install-system | uninstall-system | status | connect | disconnect
 	Socket     string // --socket; "" = the platform's
 	DataDir    string // --data-dir: development/test layout (platform.NewDev)
 	AllowUID   int    // --allow-uid; -1 when unset (development/tests)
 	ExportPath string
+	Purge      bool // --purge with --uninstall-system: also the data and logs
 }
 
-const usage = "usage: ghostlined --daemon | --restore | --remove-certs | --export <file> | --session-agent | status | connect | disconnect [--socket <path>] [--data-dir <dir>] [--allow-uid <uid>]"
+const usage = "usage: ghostlined --daemon | --restore | --remove-certs | --export <file> | --install-system | --uninstall-system [--purge] | --session-agent | status | connect | disconnect [--socket <path>] [--data-dir <dir>] [--allow-uid <uid>]"
 
 func parseArgs(argv []string) (Args, error) {
 	a := Args{AllowUID: -1}
@@ -46,6 +47,12 @@ func parseArgs(argv []string) (Args, error) {
 			err = set("remove-certs")
 		case "--session-agent":
 			err = set("session-agent")
+		case "--install-system":
+			err = set("install-system")
+		case "--uninstall-system":
+			err = set("uninstall-system")
+		case "--purge":
+			a.Purge = true
 		case "--export":
 			if err = set("export"); err == nil {
 				a.ExportPath, err = value(&i, arg)
@@ -67,6 +74,9 @@ func parseArgs(argv []string) (Args, error) {
 		if err != nil {
 			return Args{}, err
 		}
+	}
+	if a.Purge && a.Command != "uninstall-system" {
+		return Args{}, errors.New("--purge needs --uninstall-system")
 	}
 	if a.Command == "" {
 		return Args{}, errors.New("no command")
