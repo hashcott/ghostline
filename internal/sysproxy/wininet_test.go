@@ -36,7 +36,7 @@ func TestWinINET_SnapshotAndInfo(t *testing.T) {
 	s, err := b.Snapshot("127.0.0.1:9")
 	require.NoError(t, err)
 	require.Equal(t, win(cur), s)
-	require.Equal(t, sysproxy.Info{Desktop: "Windows", Supported: true}, b.Info())
+	require.Equal(t, sysproxy.Info{Supported: true}, b.Info(), "no desktop to name on Windows")
 }
 
 func TestApply_SetsAndReadsBack(t *testing.T) {

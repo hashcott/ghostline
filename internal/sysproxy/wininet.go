@@ -113,4 +113,4 @@ func (m winINET) Watch(onChange func()) (func(), error) {
 	return m.watch(onChange)
 }
 
-func (winINET) Info() Info { return Info{Desktop: "Windows", Supported: true} }
+func (winINET) Info() Info { return Info{Supported: true} }

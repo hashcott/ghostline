@@ -199,3 +199,22 @@ func TestStart_RegistersResumeWatch(t *testing.T) {
 	wait()
 	require.Equal(t, 1, stopped)
 }
+
+// A login runs the proxy work that waited for a desktop session.
+func TestStart_RegistersSessionWatch(t *testing.T) {
+	p := testDeps(t)
+	var onNew func()
+	stopped := 0
+	p.WatchSessions = func(f func()) (func(), error) {
+		onNew = f
+		return func() { stopped++ }, nil
+	}
+	c := newCore(t, p, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
+	require.NotNil(t, onNew)
+	onNew() // not connected: nothing to reapply, must not panic
+	cancel()
+	wait()
+	require.Equal(t, 1, stopped)
+}

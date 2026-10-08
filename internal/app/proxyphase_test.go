@@ -46,6 +46,7 @@ type fSysProxy struct {
 	r        *rec
 	states   *fStates
 	existing model.WinINETProxy
+	snapErr  error // Snapshot fails with it (no session, unsupported desktop)
 	ours     bool
 	t        *testing.T
 }
@@ -53,6 +54,9 @@ type fSysProxy struct {
 // Snapshot follows the Backend contract: Ghostline's own leftover address
 // comes back as the default ("direct").
 func (s *fSysProxy) Snapshot(ours string) (sysproxy.Snapshot, error) {
+	if s.snapErr != nil {
+		return sysproxy.Snapshot{}, s.snapErr
+	}
 	w := s.existing
 	if w.Server == ours {
 		w = model.WinINETProxy{Flags: 1}
@@ -64,7 +68,7 @@ func (s *fSysProxy) Existing(snap sysproxy.Snapshot) (string, string, bool) {
 	return w.Server, w.AutoconfigURL, w.Server != "" || w.AutoconfigURL != ""
 }
 func (s *fSysProxy) Watch(func()) (func(), error) { return func() {}, nil }
-func (s *fSysProxy) Info() sysproxy.Info          { return sysproxy.Info{Desktop: "Windows", Supported: true} }
+func (s *fSysProxy) Info() sysproxy.Info          { return sysproxy.Info{Supported: true} }
 func (s *fSysProxy) Apply(addr string) error {
 	// Write-ahead invariant: the snapshot is in state.json before any change.
 	st, err := s.states.Load()

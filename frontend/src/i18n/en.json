@@ -629,6 +629,14 @@
     "DPI_KERNEL_UNSUPPORTED": {
       "message": "This Linux kernel cannot pass packets to the DPI engine (nfnetlink_queue or nft_queue is missing)",
       "action": "Install your distribution's netfilter queue modules, or turn on the proxy: its fragmentation does not need them"
+    },
+    "SESSION_PENDING": {
+      "message": "The system proxy will be set when you log in to your desktop",
+      "action": "Nothing to do: protection is already on"
+    },
+    "PROXY_DESKTOP_UNSUPPORTED": {
+      "message": "Ghostline cannot change this desktop's proxy settings",
+      "action": "Set an HTTP proxy to the address on the Proxy page by hand"
     }
   },
   "tray": {
@@ -703,7 +711,9 @@
     },
     "hint": {
       "goodbyedpi": "{{count}} connections were blocked even fragmented — try the DPI bypass on the DPI page"
-    }
+    },
+    "systemProxyDesktop": "Sets the proxy in {{desktop}}'s settings",
+    "systemProxyManual": "Ghostline cannot change {{desktop}}'s proxy settings: set an HTTP proxy to {{addr}} by hand"
   },
   "rules": {
     "title": "RULES",

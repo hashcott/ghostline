@@ -1,9 +1,12 @@
 package platform
 
 import (
+	"encoding/json"
+	"fmt"
 	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2"
 	"github.com/hashcott/ghostline/internal/session"
+	"github.com/hashcott/ghostline/internal/sysproxy/desktop"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -55,10 +58,30 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
 	paths.BinDir = filepath.Join(filepath.Dir(dataDir), "bin") // outside data/ (0700): nfqws2 runs as nobody
 	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
+	// Desktop-session work (system proxy, a user's NSS) runs through the
+	// session agent; what waits for a login sits in the queue.
+	queue := session.NewQueue(filepath.Join(paths.DataDir, "session-queue.json"))
+	var sysProxy sysproxy.Backend = sysproxy.Unsupported{}
 	var watchSessions func(func()) (func(), error)
 	if sessions, err := session.NewLinux(slog.Default()); err == nil {
+		sysProxy = desktop.NewBackend(sessions, queue)
+		handlers := map[string]func(string, json.RawMessage) error{
+			"proxy.restore": desktop.QueueHandler(sessions),
+		}
+		drain := func(u session.User) {
+			_ = queue.Drain(u, func(task string, args json.RawMessage) error {
+				h, ok := handlers[task]
+				if !ok {
+					return fmt.Errorf("platform: no handler for queued %s", task)
+				}
+				return h(task, args)
+			})
+		}
 		watchSessions = func(onNew func()) (func(), error) {
-			return sessions.WatchNew(func(session.User) { onNew() })
+			if u, ok := sessions.Active(); ok {
+				go drain(u) // logged in before the daemon started
+			}
+			return sessions.WatchNew(func(u session.User) { drain(u); onNew() })
 		}
 	}
 	return Deps{
@@ -69,7 +92,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		DNS:           sysdns.DetectLinux(paths.DataDir),
 		WatchResume:   watchResume,
 		WatchSessions: watchSessions,
-		SysProxy:      sysproxy.Unsupported{},
+		SysProxy:      sysProxy,
 		Certs:         certstore.Unsupported{},
 		Firewall:      firewall.Unsupported{},
 

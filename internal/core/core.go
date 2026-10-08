@@ -210,6 +210,7 @@ func New(o Options) (*Core, error) {
 		ListAdapters: func() ([]sysdns.Adapter, error) { return p.DNS.Info().Adapters, nil },
 		DNSInfo:      p.DNS.Info,
 		DPIInfo:      func() app.DPIInfo { return dpiInfo(dpiMgr.Engines(), dpiMgr.Info()) },
+		SysProxyInfo: p.SysProxy.Info,
 		StopService:  func(name string) error { return p.Procs.StopService(name, 10*time.Second) },
 		SetMode:      setMode,
 		RestoreNow:   func() error { return restoreNow(states, p.DNS) },
@@ -309,6 +310,13 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 	if c.p.WatchResume != nil {
 		if stop, err := c.p.WatchResume(func() { go c.Orch.OnResume(context.Background()) }); err != nil {
 			c.log.Warn("resume watch", "err", err)
+		} else if stop != nil {
+			stops = append(stops, stop)
+		}
+	}
+	if c.p.WatchSessions != nil {
+		if stop, err := c.p.WatchSessions(func() { go c.Orch.OnSessionNew(context.Background()) }); err != nil {
+			c.log.Warn("session watch", "err", err)
 		} else if stop != nil {
 			stops = append(stops, stop)
 		}

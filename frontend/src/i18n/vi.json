@@ -629,6 +629,14 @@
     "DPI_KERNEL_UNSUPPORTED": {
       "message": "Kernel Linux này không chuyển được gói tin cho engine DPI (thiếu nfnetlink_queue hoặc nft_queue)",
       "action": "Cài module netfilter queue của bản phân phối, hoặc bật proxy: chế độ chia nhỏ gói của proxy không cần các module này"
+    },
+    "SESSION_PENDING": {
+      "message": "Proxy hệ thống sẽ được đặt khi bạn đăng nhập vào màn hình",
+      "action": "Không cần làm gì: bảo vệ đã bật"
+    },
+    "PROXY_DESKTOP_UNSUPPORTED": {
+      "message": "Ghostline không đổi được cài đặt proxy của desktop này",
+      "action": "Tự đặt proxy HTTP về địa chỉ trên trang Proxy"
     }
   },
   "tray": {
@@ -703,7 +711,9 @@
     },
     "hint": {
       "goodbyedpi": "{{count}} kết nối bị chặn kể cả khi fragment — thử bật vượt DPI ở trang Vượt DPI"
-    }
+    },
+    "systemProxyDesktop": "Đặt proxy trong phần cài đặt của {{desktop}}",
+    "systemProxyManual": "Ghostline không đổi được cài đặt proxy của {{desktop}}: hãy tự đặt proxy HTTP về {{addr}}"
   },
   "rules": {
     "title": "RULES",

@@ -81,8 +81,8 @@ func AgentStreams() map[string]session.StreamTask {
 }
 
 type addrArgs struct {
-	Ours string `json:"ours"`
-	Addr string `json:"addr"`
+	Ours string `json:"ours,omitempty"`
+	Addr string `json:"addr,omitempty"`
 }
 
 type restoreArgs struct {

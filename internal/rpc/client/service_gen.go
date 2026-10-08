@@ -18,6 +18,7 @@ import (
 	"github.com/hashcott/ghostline/internal/stamps"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -122,6 +123,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).StartAutotune, 1763005864)
 	application.RegisterBindingMethodID((*Service).StartCFScan, 3945714453)
 	application.RegisterBindingMethodID((*Service).StopConflictingService, 3805516582)
+	application.RegisterBindingMethodID((*Service).SysProxyInfo, 3360194344)
 	application.RegisterBindingMethodID((*Service).TestUpstreamProxy, 1421704818)
 	application.RegisterBindingMethodID((*Service).UpdateList, 75098978)
 	application.RegisterBindingMethodID((*Service).UseOnlyServer, 2807799011)
@@ -644,6 +646,13 @@ func (s *Service) StartCFScan() error {
 
 func (s *Service) StopConflictingService(a0 string) error {
 	return s.call(context.Background(), "StopConflictingService", nil, a0)
+}
+
+func (s *Service) SysProxyInfo() sysproxy.Info {
+	var r sysproxy.Info
+	err := s.call(context.Background(), "SysProxyInfo", &r)
+	s.logErr("SysProxyInfo", err)
+	return r
 }
 
 func (s *Service) TestUpstreamProxy(a0 string) error {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashcott/ghostline/internal/store"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,4 +26,11 @@ func TestStartDPI_UnavailableEngineUsesZapret2(t *testing.T) {
 	require.NoError(t, h.o.Connect(context.Background()))
 	require.NoError(t, h.o.SetDPIEnabled(context.Background(), true))
 	require.Equal(t, store.EngineZapret2, h.dpi.lastStart().engine)
+}
+
+func TestService_SysProxyInfo(t *testing.T) {
+	sh := newSvc(t)
+	require.Equal(t, sysproxy.Info{}, sh.svc.SysProxyInfo())
+	sh.svc.x.SysProxyInfo = func() sysproxy.Info { return sysproxy.Info{Desktop: "KDE", Supported: true} }
+	require.Equal(t, "KDE", sh.svc.SysProxyInfo().Desktop)
 }

@@ -11,7 +11,7 @@ type Snapshot = model.ProxySnapshot
 
 // Info tells the UI which desktop's settings Ghostline changes.
 type Info struct {
-	Desktop   string `json:"desktop"`   // "Windows", "GNOME", "KDE"; "" when unknown
+	Desktop   string `json:"desktop"`   // the Linux desktop ("GNOME", "KDE"); "" on Windows or when unknown
 	Supported bool   `json:"supported"` // Ghostline can set the proxy here
 }
 
