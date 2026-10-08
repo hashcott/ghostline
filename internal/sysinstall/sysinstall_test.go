@@ -149,3 +149,18 @@ func TestUninstall_RemoveAllErrorStillUninstalls(t *testing.T) {
 	_, err := os.Stat(at(i, SelfUnit))
 	require.True(t, os.IsNotExist(err))
 }
+
+// Review: on a package install, --uninstall-system must not stop the
+// package's service or purge its data.
+func TestUninstall_RefusesPackaged(t *testing.T) {
+	i, sys := newInstaller(t)
+	require.NoError(t, os.MkdirAll(filepath.Dir(at(i, PackageUnit)), 0o755))
+	require.NoError(t, os.WriteFile(at(i, PackageUnit), []byte("[Unit]\n"), 0o644))
+	require.NoError(t, os.MkdirAll(at(i, "/var/lib/ghostline/data"), 0o700))
+	called := false
+	require.ErrorIs(t, i.Uninstall(true, func() error { called = true; return nil }), ErrPackaged)
+	require.False(t, called)
+	require.Empty(t, sys.calls)
+	_, err := os.Stat(at(i, "/var/lib/ghostline/data"))
+	require.NoError(t, err)
+}

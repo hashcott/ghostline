@@ -41,12 +41,18 @@ func (in *installer) install() error {
 	var daemon string
 	switch in.info().Kind {
 	case "appimage":
-		// Root cannot read the AppImage's FUSE mount: copy the daemon out.
-		dir := in.getenv("XDG_RUNTIME_DIR")
-		if dir == "" {
-			dir = os.TempDir()
+		// Root cannot read the AppImage's FUSE mount: copy the daemon out,
+		// into a new private (0700) directory so no other local user can
+		// swap the binary before pkexec runs it as root.
+		base := in.getenv("XDG_RUNTIME_DIR")
+		if base == "" {
+			base = os.TempDir()
 		}
-		dst := filepath.Join(dir, "ghostline-install", "ghostlined")
+		dir, err := os.MkdirTemp(base, "ghostline-install-*")
+		if err != nil {
+			return err
+		}
+		dst := filepath.Join(dir, "ghostlined")
 		if err := copyExecutable(filepath.Join(in.getenv("APPDIR"), "usr", "lib", "ghostline", "ghostlined"), dst); err != nil {
 			return err
 		}

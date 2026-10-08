@@ -58,7 +58,9 @@ func TestInstaller_AppImageCopiesThenPkexec(t *testing.T) {
 	require.NoError(t, os.WriteFile(src, []byte("daemon"), 0o755))
 	in, r := testInstaller(t, map[string]string{"APPIMAGE": "/h/G.AppImage", "APPDIR": appdir, "XDG_RUNTIME_DIR": runtime}, filepath.Join(appdir, "usr", "bin", "ghostline"))
 	require.NoError(t, in.install())
-	dst := filepath.Join(runtime, "ghostline-install", "ghostlined")
+	require.Len(t, r.calls, 1)
+	dst := r.calls[0][1]
+	require.Equal(t, runtime, filepath.Dir(filepath.Dir(dst)), "in the runtime directory")
 	got, err := os.ReadFile(dst)
 	require.NoError(t, err)
 	require.Equal(t, "daemon", string(got))
@@ -96,4 +98,27 @@ func TestInstaller_PkexecFailureSaysWhatToRun(t *testing.T) {
 	require.True(t, strings.HasPrefix(err.Error(), app.CodePkexecFailed+": sudo systemctl enable --now ghostline.service"), err.Error())
 	r.err = errors.New(`exec: "pkexec": executable file not found in $PATH`)
 	require.ErrorContains(t, in.start(), app.CodePkexecFailed)
+}
+
+// Review I4: without XDG_RUNTIME_DIR the daemon is staged in a new
+// private directory, never a fixed path in /tmp that another local user
+// could create first and swap the binary in before pkexec runs it.
+func TestInstaller_AppImageWithoutRuntimeDirUsesPrivateTemp(t *testing.T) {
+	appdir, tmp := t.TempDir(), t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	src := filepath.Join(appdir, "usr", "lib", "ghostline", "ghostlined")
+	require.NoError(t, os.MkdirAll(filepath.Dir(src), 0o755))
+	require.NoError(t, os.WriteFile(src, []byte("daemon"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmp, "ghostline-install"), 0o777), "planted by someone else")
+	in, r := testInstaller(t, map[string]string{"APPIMAGE": "/h/G.AppImage", "APPDIR": appdir}, filepath.Join(appdir, "usr", "bin", "ghostline"))
+	require.NoError(t, in.install())
+	require.Len(t, r.calls, 1)
+	dst := r.calls[0][1]
+	require.NotEqual(t, filepath.Join(tmp, "ghostline-install", "ghostlined"), dst)
+	fi, err := os.Stat(filepath.Dir(dst))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o700), fi.Mode().Perm())
+	got, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	require.Equal(t, "daemon", string(got))
 }

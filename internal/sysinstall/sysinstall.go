@@ -31,7 +31,7 @@ const (
 )
 
 // ErrPackaged refuses a self-install over a package install.
-var ErrPackaged = errors.New("sysinstall: Ghostline is installed by a package; update it with the package manager")
+var ErrPackaged = errors.New("sysinstall: Ghostline is installed by a package; update or remove it with the package manager")
 
 // Unit is the systemd unit running daemon.
 func Unit(daemon string) []byte {
@@ -111,6 +111,10 @@ func (i Installer) Install() error {
 func (i Installer) Uninstall(purge bool, removeAll func() error) error {
 	_, err := os.Stat(i.path(SelfUnit))
 	hadUnit := err == nil
+	if _, err := os.Stat(i.path(PackageUnit)); err == nil && !hadUnit {
+		// A package install: its own scripts remove it.
+		return ErrPackaged
+	}
 	if err := i.Sys.Systemctl("disable", "--now", unitName); err != nil && hadUnit {
 		return err
 	}
