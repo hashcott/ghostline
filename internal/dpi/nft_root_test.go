@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/nftables"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,6 +17,15 @@ func needRoot(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("needs root")
 	}
+}
+
+// tableExists reports whether Ghostline's table is loaded.
+func tableExists() (bool, error) {
+	c, err := nftables.New()
+	if err != nil {
+		return false, err
+	}
+	return tableExistsOn(c)
 }
 
 func listTable(t *testing.T) string {

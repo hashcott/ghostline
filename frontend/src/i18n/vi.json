@@ -240,7 +240,8 @@
       "clear": "xoá hết"
     },
     "blacklistSavedReload": "đã lưu — zapret2 đã nạp danh sách mới",
-    "autotuneDone": "✓ tự dò đã chọn {{preset}} ({{engine}})"
+    "autotuneDone": "✓ tự dò đã chọn {{preset}} ({{engine}})",
+    "mechanism": "Bắt gói: {{mechanism}}"
   },
   "logs": {
     "title": "NHẬT KÝ",

@@ -210,6 +210,7 @@ func New(o Options) (*Core, error) {
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
 		ListAdapters: func() ([]sysdns.Adapter, error) { return p.DNS.Info().Adapters, nil },
 		DNSInfo:      p.DNS.Info,
+		DPIInfo:      func() app.DPIInfo { return dpiInfo(dpiMgr.Engines(), dpiMgr.Info()) },
 		StopService:  func(name string) error { return p.Procs.StopService(name, 10*time.Second) },
 		SetMode:      setMode,
 		RestoreNow:   func() error { return restoreNow(states, p.DNS) },

@@ -172,6 +172,7 @@ type fDPI struct {
 	running string           // engine ID, "" when stopped
 	startE  error            // fails every start
 	failOn  map[string]error // fails starts of one engine
+	missing map[string]bool  // engines this "OS" does not have
 	starts  []dpiStart
 	onStart func()
 }
@@ -226,7 +227,13 @@ func (p *fDPI) Engine() string { p.mu.Lock(); defer p.mu.Unlock(); return p.runn
 func (p *fDPI) RefreshLists(dpi.Plan) error {
 	return p.r.add("dpi.refresh")
 }
-func (p *fDPI) Get(engine string) (dpi.Engine, bool) { e, ok := testEngines[engine]; return e, ok }
+func (p *fDPI) Get(engine string) (dpi.Engine, bool) {
+	if p.missing[engine] {
+		return nil, false
+	}
+	e, ok := testEngines[engine]
+	return e, ok
+}
 func (p *fDPI) setRunning(v string) {
 	p.mu.Lock()
 	p.running = v

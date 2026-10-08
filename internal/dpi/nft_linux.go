@@ -32,15 +32,6 @@ func tableExistsOn(c *nftables.Conn) (bool, error) {
 	return false, nil
 }
 
-// tableExists reports whether Ghostline's table is loaded.
-func tableExists() (bool, error) {
-	c, err := nftables.New()
-	if err != nil {
-		return false, err
-	}
-	return tableExistsOn(c)
-}
-
 // installTable replaces Ghostline's table with one built from f, in one
 // netlink batch: either the whole new table is in place or nothing changed.
 func installTable(f []CaptureRule) error {

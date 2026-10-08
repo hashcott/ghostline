@@ -98,6 +98,7 @@ type ServiceDeps struct {
 	SaveCustom   func([]model.Server) error
 	ListAdapters func() ([]sysdns.Adapter, error)
 	DNSInfo      func() sysdns.Info // the system DNS backend, for Settings
+	DPIInfo      func() DPIInfo     // the DPI engines and packet capture, for the DPI page
 	StopService  func(name string) error
 	SetMode      func(mode string)
 	RestoreNow   func() error
@@ -700,6 +701,28 @@ func (s *Service) StopConflictingService(name string) error {
 		}
 	}
 	return appErr(CodePort53NotOwner, nil, "name", name)
+}
+
+// DPIEngineInfo names an engine and the program it runs.
+type DPIEngineInfo struct {
+	ID  string `json:"id"`
+	Exe string `json:"exe"`
+}
+
+// DPIInfo is what the DPI page shows about this OS: its engines, how
+// packets reach them, and whether antivirus exclusions matter.
+type DPIInfo struct {
+	Engines      []DPIEngineInfo `json:"engines"`
+	Mechanism    string          `json:"mechanism"`
+	AVExclusions bool            `json:"avExclusions"`
+}
+
+// DPIInfo describes this OS's DPI engines (empty when unknown).
+func (s *Service) DPIInfo() DPIInfo {
+	if s.x.DPIInfo == nil {
+		return DPIInfo{}
+	}
+	return s.x.DPIInfo()
 }
 
 // DNSInfo describes how Ghostline changes this system's DNS (Settings

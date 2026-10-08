@@ -240,7 +240,8 @@
       "clear": "remove all"
     },
     "blacklistSavedReload": "saved — zapret2 loaded the new list",
-    "autotuneDone": "✓ auto-tune picked {{preset}} ({{engine}})"
+    "autotuneDone": "✓ auto-tune picked {{preset}} ({{engine}})",
+    "mechanism": "Packet capture: {{mechanism}}"
   },
   "logs": {
     "title": "LOGS",

@@ -47,6 +47,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).CreateCFRules, 1469676265)
 	application.RegisterBindingMethodID((*Service).DNSInfo, 4235783306)
 	application.RegisterBindingMethodID((*Service).DPIEngineDir, 3287260203)
+	application.RegisterBindingMethodID((*Service).DPIInfo, 3222097910)
 	application.RegisterBindingMethodID((*Service).DPIStrategies, 995292599)
 	application.RegisterBindingMethodID((*Service).DecodeStamps, 1897304945)
 	application.RegisterBindingMethodID((*Service).DefaultLookupSources, 3708316264)
@@ -255,6 +256,13 @@ func (s *Service) DPIEngineDir(a0 string) string {
 	var r string
 	err := s.call(context.Background(), "DPIEngineDir", &r, a0)
 	s.logErr("DPIEngineDir", err)
+	return r
+}
+
+func (s *Service) DPIInfo() app.DPIInfo {
+	var r app.DPIInfo
+	err := s.call(context.Background(), "DPIInfo", &r)
+	s.logErr("DPIInfo", err)
 	return r
 }
 

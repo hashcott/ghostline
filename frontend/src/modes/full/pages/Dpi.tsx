@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Service, type ProbeResult } from "../../../app/api";
+import { Service, type DPIInfo, type ProbeResult } from "../../../app/api";
 import { useGhost } from "../../../app/store";
 import { saveSettings } from "../../../app/settings";
 import { describeError, tCode } from "../../../i18n";
@@ -16,7 +16,6 @@ const entries = (text: string) => text.split("\n").filter((l) => l.trim() && !l.
 // GoodbyeDPI's numbered modes are not autotune steps, so the engine does not
 // list them; they stay selectable here.
 const GOODBYE_MODES = ["mode1", "mode2", "mode3", "mode4", "mode5", "mode6"];
-const ENGINES = ["zapret2", "goodbyedpi"] as const;
 const ENGINE_NAME: Record<string, string> = { zapret2: "zapret2", goodbyedpi: "GoodbyeDPI" };
 const ENGINE_EXE: Record<string, string> = { zapret2: "winws2.exe", goodbyedpi: "goodbyedpi.exe" };
 
@@ -29,8 +28,15 @@ export function Dpi() {
   const snap = useGhost((s) => s.snapshot);
   const autotune = useGhost((s) => s.autotune);
   const dpi = settings?.dpi;
-  // Settings from before zapret2 have no engine: they are GoodbyeDPI's.
-  const engine: string = dpi?.engine || "goodbyedpi";
+  // The engines this OS has come from the backend; the buttons wait for
+  // them so no engine flashes up that this OS lacks.
+  const [info, setInfo] = useState<DPIInfo | null>(null);
+  const available = (info?.engines ?? []).map((e) => e.id);
+  // Settings from before zapret2 have no engine: they are GoodbyeDPI's. A
+  // backup from another OS may name an engine this one lacks: the backend
+  // runs its first engine then, and so does the page.
+  const wanted: string = dpi?.engine || "goodbyedpi";
+  const engine: string = info && available.length > 0 && !available.includes(wanted) ? available[0] : wanted;
   const z: Zapret2 = dpi?.zapret2 ?? { strategy: "", customArgs: "", autoHostlist: false };
   const isZ = engine === "zapret2";
   const strategy = (isZ ? z.strategy : dpi?.preset) ?? "";
@@ -72,6 +78,12 @@ export function Dpi() {
       .then((l) => setAutoSites(l ?? []))
       .catch(() => setAutoSites([]));
   }, [autoOn, snap.dpi?.running]);
+  useEffect(() => {
+    if (!dpi) return;
+    Service.DPIInfo()
+      .then((i) => setInfo(i ?? null))
+      .catch(() => setInfo(null));
+  }, [!!dpi]); // eslint-disable-line react-hooks/exhaustive-deps
   const fallback = !!snap.dpi?.fallback;
   useEffect(() => {
     if (!fallback) return;
@@ -191,7 +203,7 @@ export function Dpi() {
           <span>{t("dpi.engineTitle")}</span>
           <Toggle label={t("dpi.engineTitle")} checked={dpi.enabled} onChange={toggleDPI} />
         </div>
-        {fallback && (
+        {fallback && info?.avExclusions !== false && (
           <div className={css.bad}>
             <div>⚠ {t("dpi.fallback.text", { dir: engineDir })}</div>
             <Chip onClick={() => void Service.RetryZapret2().catch((e) => setError(describeError(e)))}>{t("dpi.fallback.retry")}</Chip>
@@ -207,13 +219,14 @@ export function Dpi() {
         <div className={css.setting}>
           <span>{t("dpi.engine.label")}</span>
           <span className={css.row}>
-            {ENGINES.map((e) => (
+            {available.map((e) => (
               <Chip key={e} active={engine === e} onClick={() => pickEngine(e)} title={t(`dpi.engine.${e}Desc`)}>
                 {t(`dpi.engine.${e}`)}
               </Chip>
             ))}
           </span>
         </div>
+        {info?.mechanism && <div className={css.dim}>{t("dpi.mechanism", { mechanism: info.mechanism })}</div>}
         <div className={css.setting}>
           <span>{t("dpi.preset")}</span>
           <span className={css.row}>
@@ -310,7 +323,7 @@ export function Dpi() {
           <div className={css.ok}>{t("dpi.autotuneDone", { preset: tuneName, engine: ENGINE_NAME[autotune.engine] ?? autotune.engine })}</div>
         )}
         <div className={css.code} aria-label={t("dpi.preview")}>
-          {ENGINE_EXE[engine]} {preview.join(" ")}
+          {info?.engines?.find((e) => e.id === engine)?.exe ?? ENGINE_EXE[engine]} {preview.join(" ")}
         </div>
         {running ? (
           <div className={css.ok}>● {t("log.DPI_STARTED", { engine: ENGINE_NAME[runningEngine], preset: runningName })}</div>

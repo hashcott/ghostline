@@ -71,3 +71,12 @@ func TestManager_PrepareErrorIsReturned(t *testing.T) {
 	require.ErrorIs(t, err, boom)
 	require.NotContains(t, ic.c.log, "run:zapret2.exe")
 }
+
+func TestManager_EnginesInOrder(t *testing.T) {
+	rg := newRig(t)
+	var ids []string
+	for _, e := range rg.m.Engines() {
+		ids = append(ids, e.ID())
+	}
+	require.Equal(t, []string{"goodbyedpi", "zapret2"}, ids)
+}

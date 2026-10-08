@@ -95,6 +95,7 @@ type Installed struct {
 type Manager struct {
 	binDir  string
 	engines map[string]Installed
+	order   []string // engine IDs as given
 	runner  Runner
 	ic      Interceptor
 	sleep   func(time.Duration)
@@ -113,8 +114,18 @@ func NewManager(binDir string, engines []Installed, r Runner, ic Interceptor, sl
 	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, ic: ic, sleep: sleep}
 	for _, e := range engines {
 		m.engines[e.Engine.ID()] = e
+		m.order = append(m.order, e.Engine.ID())
 	}
 	return m
+}
+
+// Engines lists this OS's engines in the order they were given.
+func (m *Manager) Engines() []Engine {
+	out := make([]Engine, 0, len(m.order))
+	for _, id := range m.order {
+		out = append(out, m.engines[id].Engine)
+	}
+	return out
 }
 
 // Get returns an engine by ID.
