@@ -71,9 +71,11 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		DPIServices: dpi.NoServices{},
 		DPIEngines:  func(func() strategies.List) []dpi.Installed { return nil },
 
-		Startup: startup.Unsupported{},
+		// systemd is the watchdog (ExecStopPost=--restore) and the boot
+		// restore, so Connect's safety step has nothing to start.
+		Startup: startup.ServiceManaged{},
 		StartWatchdog: func(uint32, time.Time) (func() error, error) {
-			return nil, errUnsupported
+			return func() error { return nil }, nil
 		},
 
 		UserSecrets:    secretKey,

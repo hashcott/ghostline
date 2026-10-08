@@ -2,6 +2,7 @@ package platform
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -17,9 +18,15 @@ type fileLock struct {
 
 func newFileLock(path string) *fileLock { return &fileLock{path: path} }
 
-// Lock blocks until no other process (or other fileLock) holds path.
+// Lock blocks until no other process (or other fileLock) holds path. It
+// makes path's directory (/run/ghostline) when missing: --restore can run
+// before the daemon ever has.
 func (l *fileLock) Lock() error {
 	l.local.Lock()
+	if err := os.MkdirAll(filepath.Dir(l.path), 0o755); err != nil {
+		l.local.Unlock()
+		return err
+	}
 	f, err := os.OpenFile(l.path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		l.local.Unlock()
