@@ -13,3 +13,10 @@ func TestSessionAgent_RefusesUnknownTasks(t *testing.T) {
 	require.Equal(t, 2, runSessionAgent(bytes.NewBufferString(`{"task":"sh"}`+"\n"), &out))
 	require.Contains(t, out.String(), "UNKNOWN_TASK")
 }
+
+func TestSessionAgent_ServesProxyTasks(t *testing.T) {
+	for _, name := range []string{"proxy.snapshot", "proxy.apply", "proxy.isOurs", "proxy.restore"} {
+		require.Contains(t, agentTasks(), name)
+	}
+	require.Contains(t, agentStreams(), "proxy.watch")
+}
