@@ -174,3 +174,29 @@ func TestNSSAgent_NoDatabaseSkips(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, installResult{Skipped: true}, res)
 }
+
+// Review I4: the user deleted the CA in Chrome; removing it again is done,
+// not an error that keeps the entry (and a queued task) forever.
+func TestNSSAgent_RemoveOfMissingCertIsDone(t *testing.T) {
+	home := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(home, ".pki", "nssdb"), 0o700))
+	run := func(string, ...string) ([]byte, error) {
+		return []byte("certutil: could not find certificate named \"ghostline-x\": SEC_ERROR_BAD_DATABASE"), errors.New("exit status 255")
+	}
+	tasks := agentTasks(home, run, func(string) (string, error) { return "/usr/bin/certutil", nil })
+	b, _ := json.Marshal(removeArgs{Thumbprint: "x"})
+	_, err := tasks["nss.remove"](b)
+	require.NoError(t, err)
+}
+
+// Review I4: recorded before certutil runs, so a crash in between still
+// leads to a removal later.
+func TestNSS_RecordsBeforeInstalling(t *testing.T) {
+	f := &fakeSessions{active: &me, err: errors.New("agent crashed")}
+	n, _ := newT(t, f, false)
+	der := testCA(t, "Ghostline Fake SNI 1")
+	require.Error(t, n.Install(der))
+	l, err := n.List("Ghostline Fake SNI")
+	require.NoError(t, err)
+	require.Len(t, l, 1, "the attempt is on record")
+}

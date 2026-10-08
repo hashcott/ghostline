@@ -154,7 +154,16 @@ func (o *Orchestrator) forgetSessionCert(thumb string) error {
 // removeSessionCA removes one session CA from Root and, only then, from
 // state.json. A failure keeps it recorded for recovery and warns.
 func (o *Orchestrator) removeSessionCA(thumb string) error {
-	if err := o.d.Certs.RemoveSession(thumb); err != nil {
+	err := o.d.Certs.RemoveSession(thumb)
+	var p *certstore.PartialError
+	if errors.As(err, &p) {
+		// Gone from the system store; an optional one (Firefox, a user's
+		// NSS) could not be cleaned. Retrying would not help: warn once.
+		o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		o.log("fakesni", CodeCertPartial, "target", strings.Join(p.Targets, ", "), "err", p.Err.Error())
+		err = nil
+	}
+	if err != nil {
 		o.AddWarning(AppError{Code: CodeCertRemoveFailed, Params: map[string]any{"thumbprint": thumb}})
 		o.log("fakesni", CodeCertRemoveFailed, "thumbprint", thumb)
 		return err

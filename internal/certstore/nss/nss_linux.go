@@ -112,30 +112,43 @@ func (t *target) Install(der []byte) error {
 	if !ok {
 		return nil // nobody's browser to reach
 	}
+	cert, err := certstore.Describe(der)
+	if err != nil {
+		return err
+	}
+	// Recorded first: a crash during certutil still leads to a removal.
+	if err := t.record(u.UID, cert, true); err != nil {
+		return err
+	}
 	var res installResult
 	if err := t.s.Run(u, "nss.install", installArgs{DER: der}, &res); err != nil {
 		return agentErr(err)
 	}
 	if res.Skipped {
-		return nil
+		return t.record(u.UID, cert, false) // no database: nothing installed
 	}
-	cert, err := certstore.Describe(der)
-	if err != nil {
-		return err
-	}
+	return nil
+}
+
+// record adds (or drops) cert for uid in the users file.
+func (t *target) record(uid int, cert certstore.Cert, add bool) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	m, err := t.load()
 	if err != nil {
 		return err
 	}
-	key := strconv.Itoa(u.UID)
+	key := strconv.Itoa(uid)
+	keep := m[key][:0]
 	for _, c := range m[key] {
-		if c.Thumbprint == cert.Thumbprint {
-			return nil
+		if c.Thumbprint != cert.Thumbprint {
+			keep = append(keep, c)
 		}
 	}
-	m[key] = append(m[key], cert)
+	if add {
+		keep = append(keep, cert)
+	}
+	m[key] = keep
 	return t.save(m)
 }
 

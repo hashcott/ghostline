@@ -165,6 +165,9 @@ func (f firefox) Install(der []byte) error {
 
 func (f firefox) Remove(thumbprint string) error {
 	path := certFile(f.dir(), thumbprint)
+	if _, err := os.Lstat(path); errors.Is(err, fs.ErrNotExist) {
+		return nil // never installed here (or already removed)
+	}
 	deleted, dirs, err := f.edit(func(in []string) []string {
 		return slices.DeleteFunc(in, func(p string) bool { return p == path })
 	}, nil)

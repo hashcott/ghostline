@@ -80,3 +80,12 @@ func TestFirefox_MalformedPolicyUntouched(t *testing.T) {
 	require.Equal(t, "{bad", string(b))
 	require.NoFileExists(t, filepath.Join(filepath.Dir(policy), "ghostline-"+Thumbprint(der)+".crt"), "no orphan CA file")
 }
+
+// Review I5: nothing of Ghostline's in Firefox (its install failed on a
+// malformed policy): removal has nothing to do and never fails on the file.
+func TestFirefox_RemoveWithoutOurFileIsNoop(t *testing.T) {
+	policy, sidecar := ffPaths(t)
+	require.NoError(t, os.MkdirAll(filepath.Dir(policy), 0o755))
+	require.NoError(t, os.WriteFile(policy, []byte("{bad"), 0o644))
+	require.NoError(t, NewFirefox(policy, sidecar).Remove("deadbeef"))
+}

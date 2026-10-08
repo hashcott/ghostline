@@ -35,3 +35,17 @@ func TestPhaseS_NSSToolMissingWarns(t *testing.T) {
 	require.Contains(t, warningCodes(h.o.Snapshot()), CodeCertNSSToolMissing)
 	require.NotContains(t, warningCodes(h.o.Snapshot()), CodeCertPartial)
 }
+
+// Review I5: the system store is clean but Firefox's policy could not be
+// edited (malformed). The CA is gone from where it mattered: forget it,
+// warn, and do not retry forever.
+func TestPhaseS_PartialRemovalForgetsTheCA(t *testing.T) {
+	h := newSNIHarness(t)
+	require.NoError(t, h.o.Connect(context.Background()))
+	h.certs.removePartial = &certstore.PartialError{Targets: []string{"firefox"}, Err: errors.New("malformed policies.json")}
+	require.NoError(t, h.o.Disconnect(context.Background()))
+	st, err := h.states.Load()
+	require.NoError(t, err)
+	require.Nil(t, st.Certs, "nothing left to retry")
+	require.NotContains(t, warningCodes(h.o.Snapshot()), CodeCertRemoveFailed)
+}

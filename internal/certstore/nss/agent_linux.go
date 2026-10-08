@@ -74,7 +74,10 @@ func agentTasks(home string, run func(string, ...string) ([]byte, error), look f
 			if err != nil {
 				return nil, err
 			}
-			_, err = run(cu, "-d", db, "-D", "-n", nickname(a.Thumbprint))
+			out, err := run(cu, "-d", db, "-D", "-n", nickname(a.Thumbprint))
+			if err != nil && strings.Contains(string(out)+err.Error(), "could not find certificate") {
+				return nil, nil // already gone (deleted in the browser): done
+			}
 			return nil, err
 		},
 	}
