@@ -13,6 +13,7 @@ vars:
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
 
 tasks:
   build:

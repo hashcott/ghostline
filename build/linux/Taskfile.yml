@@ -1,0 +1,36 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+vars:
+  VERSION: '{{.VERSION | default "dev"}}'
+  LDFLAGS: '-s -w -X github.com/hashcott/ghostline/internal/brand.Version={{.VERSION}}'
+  PKG: 'ghostline-{{.VERSION}}-linux-amd64'
+
+tasks:
+  build:
+    summary: Builds the window (GTK4/WebKitGTK, cgo) and ghostlined (static) for Linux x86_64
+    deps:
+      - task: common:build:frontend
+    cmds:
+      - mkdir -p bin/linux
+      - CGO_ENABLED=1 go build -tags production -trimpath -buildvcs=false -ldflags="{{.LDFLAGS}}" -o bin/linux/ghostline .
+      - CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="{{.LDFLAGS}}" -o bin/linux/ghostlined ./cmd/ghostlined
+
+  package:
+    summary: Builds every Linux release file into bin/
+    cmds:
+      - task: package:tarball
+
+  package:tarball:
+    summary: bin/ghostline-<ver>-linux-amd64.tar.gz with install.sh and uninstall.sh
+    deps: [build]
+    cmds:
+      - rm -rf "bin/{{.PKG}}" && mkdir -p "bin/{{.PKG}}"
+      - cp bin/linux/ghostline bin/linux/ghostlined build/linux/tarball/install.sh build/linux/tarball/uninstall.sh "bin/{{.PKG}}/"
+      - cp build/linux/ghostline.desktop build/linux/io.github.hashcott.ghostline.metainfo.xml LICENSE NOTICE "bin/{{.PKG}}/"
+      - cp build/appicon.png "bin/{{.PKG}}/ghostline.png"
+      - chmod 0755 "bin/{{.PKG}}/ghostline" "bin/{{.PKG}}/ghostlined" "bin/{{.PKG}}/install.sh" "bin/{{.PKG}}/uninstall.sh"
+      - tar -C bin --owner=0 --group=0 -czf "bin/{{.PKG}}.tar.gz" "{{.PKG}}"
+      - rm -rf "bin/{{.PKG}}"

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Ghostline
+GenericName=Encrypted DNS
+GenericName[vi]=DNS mã hoá
+Comment=Encrypted DNS and DPI bypass
+Comment[vi]=DNS mã hoá và vượt DPI
+Exec=ghostline
+Icon=ghostline
+Terminal=false
+Categories=Network;
+Keywords=dns;doh;dot;dpi;proxy;
+StartupWMClass=ghostline
