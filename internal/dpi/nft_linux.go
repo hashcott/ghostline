@@ -153,7 +153,7 @@ func (r nftRule) exprs() ([]expr.Any, error) {
 			cmpEq(be16(uint16(r.Port))),
 			// ct <dir> packets 1-N: the counter is host order; nft compares it
 			// in network order after a byteorder conversion.
-			&expr.Ct{Register: 1, Key: expr.CtKeyPKTS, Direction: dir},
+			&expr.Ct{Register: 1, Key: expr.CtKeyPKTS, Direction: dir, OptDirection: true},
 			&expr.Byteorder{SourceRegister: 1, DestRegister: 1, Op: expr.ByteorderHton, Len: 8, Size: 8},
 			&expr.Range{Op: expr.CmpOpEq, Register: 1, FromData: be64(1), ToData: be64(uint64(r.Packets))},
 			&expr.Queue{Num: QueueNum, Flag: expr.QueueFlagBypass})

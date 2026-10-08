@@ -39,7 +39,12 @@ func TestNfqws2_FailOpen(t *testing.T) {
 	l, err := strategies.Parse(builtinStrategies.BuiltinJSON, zapret2.ValidateArgs)
 	require.NoError(t, err)
 	list := func() strategies.List { return l }
-	root := filepath.Join(t.TempDir(), "ghostline")
+	// nfqws2 drops to nobody: the test's temp dirs (0700) must be
+	// traversable, as /var/lib is for the daemon.
+	tmp := t.TempDir()
+	require.NoError(t, os.Chmod(tmp, 0o755))
+	require.NoError(t, os.Chmod(filepath.Dir(tmp), 0o755))
+	root := filepath.Join(tmp, "ghostline")
 	m := dpi.NewManager(filepath.Join(root, "bin"), []dpi.Installed{{Engine: zapret2.New(list), Assets: zapret2Files.FS}},
 		dpi.NewLinuxRunner(), dpi.NewNftables(zapret2.Filter), nil)
 	pid, err := m.Start(context.Background(), "zapret2", dpi.Plan{Strategy: l.Zapret2[0].ID, Scope: dpi.ScopeAll})
