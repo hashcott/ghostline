@@ -105,10 +105,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # Only this workflow's packages: the reusable CI run uploads its own
+      # 0.0.0-ci tarball into the same run.
       - uses: actions/download-artifact@v4
         with:
+          pattern: "{windows,linux}"
           path: dist
           merge-multiple: true
+      - name: Nothing but this release's files
+        run: |
+          ls -la dist
+          v="${GITHUB_REF_NAME#v}"
+          # deb and rpm spell a pre-release 0.6.0~rc1.
+          if ls dist | grep -v -F -e "$v" -e "$(printf '%s' "$v" | tr - '~')" -e ghostline-amd64-installer.exe; then
+            echo "unexpected files in dist (above)" >&2
+            exit 1
+          fi
       - name: Checksums and PKGBUILD
         run: |
           v="${GITHUB_REF_NAME#v}"
