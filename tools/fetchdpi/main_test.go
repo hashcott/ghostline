@@ -37,3 +37,11 @@ func TestPick_RejectsMissingFile(t *testing.T) {
 	_, err := pick(map[string][]byte{}, map[string]string{"a.exe": "00"})
 	require.Error(t, err)
 }
+
+// The release's sha256sum.txt must agree with the pins for both platforms.
+func TestCheckListed_LinuxBinary(t *testing.T) {
+	root := "zapret2-v1/"
+	pins := map[string]string{"nfqws2": "aa"}
+	require.NoError(t, checkListed(map[string]string{root + "binaries/linux-x86_64/nfqws2": "aa"}, root+"binaries/linux-x86_64/", pins))
+	require.Error(t, checkListed(map[string]string{root + "binaries/linux-x86_64/nfqws2": "bb"}, root+"binaries/linux-x86_64/", pins))
+}

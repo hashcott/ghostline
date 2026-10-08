@@ -3,6 +3,8 @@ package platform
 import (
 	"errors"
 	"fmt"
+	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
+	"github.com/hashcott/ghostline/internal/dpi/zapret2"
 	"os"
 	"path/filepath"
 	"time"
@@ -69,7 +71,9 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 
 		DPIRunner:      dpi.UnsupportedRunner{},
 		DPIInterceptor: dpi.NoInterceptor{},
-		DPIEngines:     func(func() strategies.List) []dpi.Installed { return nil },
+		DPIEngines: func(list func() strategies.List) []dpi.Installed {
+			return []dpi.Installed{{Engine: zapret2.New(list), Assets: zapret2Files.FS}}
+		},
 
 		// systemd is the watchdog (ExecStopPost=--restore) and the boot
 		// restore, so Connect's safety step has nothing to start.

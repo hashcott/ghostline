@@ -74,10 +74,13 @@ func fetchZapret2() (map[string][]byte, error) {
 		return nil, err
 	}
 	root := "zapret2-" + v + "/"
+	winDir, linDir := root+"binaries/windows-x86_64/", root+"binaries/linux-x86_64/"
 	all, err := untar(tgz, func(name string) (string, bool) {
 		switch {
-		case strings.HasPrefix(name, root+"binaries/windows-x86_64/"):
-			return strings.TrimPrefix(name, root+"binaries/windows-x86_64/"), true
+		case strings.HasPrefix(name, winDir):
+			return strings.TrimPrefix(name, winDir), true
+		case name == linDir+"nfqws2":
+			return "nfqws2", true
 		case strings.HasPrefix(name, root+"lua/"):
 			return strings.TrimPrefix(name, root), true
 		case name == root+"docs/LICENSE.txt":
@@ -89,14 +92,22 @@ func fetchZapret2() (map[string][]byte, error) {
 		return nil, err
 	}
 	// The release's own list must agree with the pins for every binary it covers.
-	for name, want := range zapret2.Pinned {
-		if got, ok := listed[root+"binaries/windows-x86_64/"+name]; ok && got != want {
-			return nil, fmt.Errorf("%s: sha256sum.txt says %s, pinned %s", name, got, want)
-		}
+	if err := checkListed(listed, winDir, zapret2.WindowsPins); err != nil {
+		return nil, err
 	}
-	files, err := pick(all, zapret2.Pinned)
+	if err := checkListed(listed, linDir, zapret2.LinuxPins); err != nil {
+		return nil, err
+	}
+	files, err := pick(all, zapret2.PinsFor(zapret2.WindowsPins))
 	if err != nil {
 		return nil, err
+	}
+	linux, err := pick(all, zapret2.LinuxPins)
+	if err != nil {
+		return nil, err
+	}
+	for name, b := range linux {
+		files[name] = b
 	}
 	files["LICENSE-zapret2.txt"] = all["LICENSE-zapret2.txt"]
 	return files, nil
@@ -185,6 +196,17 @@ func parseSHA256Sums(body string) map[string]string {
 }
 
 // pick returns exactly the wanted files, each matching its pinned hash.
+// checkListed fails when sha256sum.txt lists a pinned file under dir with
+// another hash.
+func checkListed(listed map[string]string, dir string, pins map[string]string) error {
+	for name, want := range pins {
+		if got, ok := listed[dir+name]; ok && got != want {
+			return fmt.Errorf("%s: sha256sum.txt says %s, pinned %s", name, got, want)
+		}
+	}
+	return nil
+}
+
 func pick(files map[string][]byte, want map[string]string) (map[string][]byte, error) {
 	out := map[string][]byte{}
 	for name, sum := range want {

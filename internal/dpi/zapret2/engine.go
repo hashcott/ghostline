@@ -1,6 +1,7 @@
-// Package zapret2 is the zapret2 (winws2) engine: it turns a strategy into a
-// winws2 command line and checks every strategy argument against an
-// allow-list, since winws2 runs strategy Lua as admin.
+// Package zapret2 is the zapret2 engine (winws2 on Windows, nfqws2 on
+// Linux): it turns a strategy into a command line and checks every
+// strategy argument against an allow-list, since the engine runs strategy
+// Lua with elevated rights.
 package zapret2
 
 import (
@@ -18,7 +19,7 @@ type engine struct{ list func() strategies.List }
 func New(list func() strategies.List) dpi.Engine { return engine{list: list} }
 
 func (engine) ID() string                    { return "zapret2" }
-func (engine) Exe() string                   { return "winws2.exe" }
+func (engine) Exe() string                   { return exeName }
 func (engine) HotReloadsLists() bool         { return true }
 func (engine) Files() map[string]string      { return Pinned }
 func (engine) ValidateCustom(s string) error { _, err := ValidateCustom(s); return err }
@@ -42,11 +43,7 @@ func (e engine) Args(p dpi.Plan) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args := []string{"--wf-tcp-out=80,443"}
-	if len(quic) > 0 {
-		args = append(args, "--wf-udp-out=443")
-	}
-	args = append(args, "--wf-dup-check=1")
+	args := interceptArgs(len(quic) > 0)
 	for _, l := range luaLibs {
 		args = append(args, "--lua-init=@"+l)
 	}
