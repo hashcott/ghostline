@@ -307,6 +307,9 @@ func TestManager_Get(t *testing.T) {
 // Defender refuses the write itself (ERROR_VIRUS_INFECTED or access
 // denied) when it scans the file being extracted.
 func TestManager_ExtractRefusedIsBlockedByAV(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes a read-only file: the refusal cannot be staged (CI runs this package as root)")
+	}
 	rg := newRig(t)
 	dst := filepath.Join(rg.bin, "zapret2", "zapret2.exe")
 	require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o755))

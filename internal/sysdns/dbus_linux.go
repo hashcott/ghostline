@@ -292,11 +292,14 @@ func (u *dbusUnits) waitState(unit string, wait time.Duration, done func(string)
 	}
 }
 
+// Reload makes unit re-read its configuration: a reload where the unit
+// supports one, a restart otherwise (systemd-resolved before systemd 256,
+// e.g. Ubuntu 24.04: "Job type reload is not applicable").
 func (u *dbusUnits) Reload(unit string) error {
-	if err := u.mgr().Call(systemdMgr+".ReloadUnit", 0, unit, "replace").Err; err != nil {
+	if err := u.mgr().Call(systemdMgr+".ReloadOrRestartUnit", 0, unit, "replace").Err; err != nil {
 		return err
 	}
-	return u.waitState(unit, 5*time.Second, func(s string) bool { return s != "reloading" })
+	return u.waitState(unit, 5*time.Second, func(s string) bool { return s == "active" })
 }
 
 func (u *dbusUnits) Stop(unit string, wait time.Duration) error {
