@@ -28,11 +28,10 @@ func Run(mode cli.Mode, p platform.Deps) int {
 		defer w.Close()
 		logger = slog.New(slog.NewTextHandler(w, nil)).With("mode", mode.Kind.String())
 		// Packages that log through slog.Default (store, backup, …) land in
-		// the file too.
+		// the file too, while Run runs.
+		prev := slog.Default()
 		slog.SetDefault(logger)
-		if err := logx.CrashOutput(paths.LogDir, "ghostline-crash"); err != nil {
-			logger.Warn("headless: crash output setup failed", "dir", paths.LogDir, "err", err)
-		}
+		defer slog.SetDefault(prev)
 	}
 	logger.Info("headless start", "version", brand.Version, "portable", paths.Portable, "admin", p.Procs.IsAdmin())
 	if mode.Kind == cli.KindExport {

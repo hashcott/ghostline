@@ -3,6 +3,7 @@ package headless
 import (
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -128,4 +129,15 @@ func TestRun_RestoreFailurePrintsToStderr(t *testing.T) {
 	out, _ := io.ReadAll(r)
 	require.Equal(t, 1, code)
 	require.Contains(t, string(out), "bus gone")
+}
+
+// Run is called by tests and by the exe alike: it logs to its file while
+// it runs and leaves the process's default logger as it found it. (The
+// crash output is set by main: it holds the crash log open for the life
+// of the process, which a test's temp dir cannot outlive on Windows.)
+func TestRun_LeavesTheDefaultLoggerAsItWas(t *testing.T) {
+	prev := slog.Default()
+	p := testDeps(t)
+	require.Equal(t, 0, Run(cli.Mode{Kind: cli.KindRestore}, p))
+	require.Same(t, prev, slog.Default())
 }

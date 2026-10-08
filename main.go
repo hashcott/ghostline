@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/cli"
 	"github.com/hashcott/ghostline/internal/headless"
+	"github.com/hashcott/ghostline/internal/logx"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/shell"
 )
@@ -36,6 +37,11 @@ func main() {
 	}
 	switch mode.Kind {
 	case cli.KindWatchdog, cli.KindRestore, cli.KindRemoveCerts, cli.KindExport:
+		// An unrecovered panic kills the process; a GUI exe has no stderr,
+		// so the crash report (with stacks) goes to a file.
+		if err := logx.CrashOutput(p.Paths.LogDir, "ghostline-crash"); err != nil {
+			fmt.Fprintln(os.Stderr, "Ghostline: crash output setup failed:", err)
+		}
 		os.Exit(headless.Run(mode, p))
 	}
 	if err := shell.Run(shell.Options{Mode: mode, Assets: assets, Executable: exe, Platform: p}); err != nil {
