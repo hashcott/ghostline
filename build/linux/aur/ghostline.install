@@ -1,0 +1,19 @@
+# pacman's hooks create the ghostline group (sysusers.d) and reload systemd.
+# Arch packages do not start services themselves: the window offers to.
+
+post_install() {
+	echo "Start the background service: sudo systemctl enable --now ghostline"
+	echo "(or open Ghostline and press \"start the service\")."
+}
+
+post_upgrade() {
+	systemctl try-restart ghostline.service 2>/dev/null || true
+}
+
+# The service stops first (it disconnects and restores the system), then
+# --remove-certs takes away certificates, firewall rules and the nftables
+# table. Settings stay in /var/lib/ghostline: remove it by hand to purge.
+pre_remove() {
+	systemctl disable --now ghostline.service 2>/dev/null || true
+	/usr/lib/ghostline/ghostlined --remove-certs || true
+}

@@ -31,22 +31,30 @@ tasks:
 
   package:tarball:
     summary: bin/ghostline-<ver>-linux-amd64.tar.gz with install.sh and uninstall.sh
-    deps: [build]
+    deps: [build, unit]
     cmds:
       - rm -rf "bin/{{.PKG}}" && mkdir -p "bin/{{.PKG}}"
       - cp bin/linux/ghostline bin/linux/ghostlined build/linux/tarball/install.sh build/linux/tarball/uninstall.sh "bin/{{.PKG}}/"
       - cp build/linux/ghostline.desktop build/linux/io.github.hashcott.ghostline.metainfo.xml LICENSE NOTICE "bin/{{.PKG}}/"
       - cp build/appicon.png "bin/{{.PKG}}/ghostline.png"
+      # For packagers (the PKGBUILD): the unit for /usr/lib/ghostline and the group.
+      - mkdir -p "bin/{{.PKG}}/packaging"
+      - cp bin/linux/ghostline.service "bin/{{.PKG}}/packaging/ghostline.service"
+      - cp build/linux/sysusers.d/ghostline.conf "bin/{{.PKG}}/packaging/ghostline-sysusers.conf"
       - chmod 0755 "bin/{{.PKG}}/ghostline" "bin/{{.PKG}}/ghostlined" "bin/{{.PKG}}/install.sh" "bin/{{.PKG}}/uninstall.sh"
       - tar -C bin --owner=0 --group=0 -czf "bin/{{.PKG}}.tar.gz" "{{.PKG}}"
       - rm -rf "bin/{{.PKG}}"
 
-  package:nfpm:
-    summary: bin/ghostline_<ver>_amd64.deb and bin/ghostline-<ver>.x86_64.rpm
-    deps: [build]
+  unit:
+    summary: bin/linux/ghostline.service, the unit for a package install
     cmds:
       - mkdir -p bin/linux
       - sed 's|@DAEMON@|/usr/lib/ghostline/ghostlined|g' internal/sysinstall/ghostline.service.tmpl > bin/linux/ghostline.service
+
+  package:nfpm:
+    summary: bin/ghostline_<ver>_amd64.deb and bin/ghostline-<ver>-1.x86_64.rpm
+    deps: [build, unit]
+    cmds:
       - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager deb --target bin/
       - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager rpm --target bin/
 
