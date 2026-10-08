@@ -1,7 +1,9 @@
 package session
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -48,4 +50,31 @@ func TestByUID(t *testing.T) {
 	require.Equal(t, "GNOME", u.Desktop)
 	_, ok = userByUID(lg, lookupMe, func(int) bool { return false }, 1000)
 	require.False(t, ok, "no runtime dir: no session bus to talk to")
+}
+
+// Every login starts a delayed lookup; a daemon up for months must not
+// keep one record per login.
+func TestDelayed_ForgetsFiredCalls(t *testing.T) {
+	var d delayed
+	var mu sync.Mutex
+	n := 0
+	for range 50 {
+		d.after(time.Millisecond, func() { mu.Lock(); n++; mu.Unlock() })
+	}
+	require.Eventually(t, func() bool { mu.Lock(); defer mu.Unlock(); return n == 50 }, time.Second, time.Millisecond)
+	require.Eventually(t, func() bool { return d.pending() == 0 }, time.Second, time.Millisecond)
+}
+
+func TestDelayed_StopCancelsPending(t *testing.T) {
+	var d delayed
+	ran := make(chan struct{}, 1)
+	d.after(50*time.Millisecond, func() { ran <- struct{}{} })
+	d.stop()
+	d.after(time.Millisecond, func() { ran <- struct{}{} })
+	select {
+	case <-ran:
+		t.Fatal("ran after stop")
+	case <-time.After(100 * time.Millisecond):
+	}
+	require.Zero(t, d.pending())
 }

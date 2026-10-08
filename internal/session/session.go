@@ -63,6 +63,10 @@ type reply struct {
 	Error  *Error `json:"error,omitempty"`
 }
 
+// maxReply caps what the daemon (root) reads from an agent, which runs as
+// the user.
+const maxReply = 1 << 20
+
 // Serve is the agent side: it reads one request, runs the task (a stream
 // until in ends) and writes the reply. Exit code: 0 ok, 1 the task failed,
 // 2 the request was refused.

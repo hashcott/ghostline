@@ -1,7 +1,6 @@
 package session
 
 import (
-	"sync"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -102,8 +101,7 @@ func (l *dbusLogind) WatchNew(onNew func(sessionInfo)) (func(), error) {
 	ch := make(chan *dbus.Signal, 8)
 	l.conn.Signal(ch)
 	done := make(chan struct{})
-	var mu sync.Mutex
-	var timers []*time.Timer
+	var later delayed
 	go func() {
 		for {
 			select {
@@ -115,13 +113,11 @@ func (l *dbusLogind) WatchNew(onNew func(sessionInfo)) (func(), error) {
 				if !ok {
 					continue
 				}
-				mu.Lock()
-				timers = append(timers, time.AfterFunc(time.Second, func() {
+				later.after(time.Second, func() {
 					if si, err := l.info(path); err == nil {
 						onNew(si)
 					}
-				}))
-				mu.Unlock()
+				})
 			case <-done:
 				return
 			}
@@ -131,11 +127,7 @@ func (l *dbusLogind) WatchNew(onNew func(sessionInfo)) (func(), error) {
 		close(done)
 		l.conn.RemoveSignal(ch)
 		_ = l.conn.RemoveMatchSignal(match...)
-		mu.Lock()
-		for _, t := range timers {
-			t.Stop()
-		}
-		mu.Unlock()
+		later.stop()
 	}, nil
 }
 

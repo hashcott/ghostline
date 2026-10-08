@@ -100,10 +100,6 @@ func (s *linuxSessions) command(ctx context.Context, u User) *exec.Cmd {
 	return cmd
 }
 
-// maxReply caps what the daemon (root) reads from an agent, which runs as
-// the user.
-const maxReply = 1 << 20
-
 // cappedBuffer keeps up to max bytes; past that its Write fails, which
 // stops the copy from the agent's stdout (the agent then gets EPIPE). The
 // buffer is a field, not embedded: its ReadFrom would bypass Write.
