@@ -129,7 +129,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		UserSecrets:    secretKey,
 		MachineSecrets: secretKey,
 
-		NetID:         netid.Unsupported{},
+		NetID:         netid.NewLinux(),
 		Procs:         procs.NewLinux(),
 		AttachConsole: func() {},
 		UsesDaemon:    true,

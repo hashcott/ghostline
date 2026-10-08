@@ -46,3 +46,9 @@ func TestISPResolvers_IPv4First(t *testing.T) {
 	live := []netid.LiveAdapter{{DNS: []string{"2001:ee0:23::23", "2001:ee0:26::26", "123.23.23.23", "123.26.26.26"}}}
 	require.Equal(t, []string{"123.23.23.23", "123.26.26.26", "2001:ee0:23::23", "2001:ee0:26::26"}, ispResolvers(store.State{Phase: "clean"}, live))
 }
+
+// Linux keeps the original servers in the snapshot's Linux branch.
+func TestISPResolvers_LinuxSnapshot(t *testing.T) {
+	st := store.State{Phase: store.PhaseDNSSet, DNS: model.DNSSnapshot{Backend: "resolved", Linux: &model.LinuxDNS{Servers: []string{"1.0.0.1"}}}}
+	require.Equal(t, []string{"1.0.0.1"}, ispResolvers(st, nil))
+}
