@@ -53,14 +53,14 @@
 | AppImage | Dùng GTK4/WebKitGTK 6.0 của máy; `AppRun` báo rõ khi thiếu |
 | SteamOS | Chưa kiểm chứng; không chặn L5 |
 | AUR | Chỉ PKGBUILD + kiểm `makepkg` trong CI; release đính kèm PKGBUILD đã điền |
-| Unit | Một file mẫu `cmd/ghostlined/ghostline.service.tmpl` (chỗ trống `@DAEMON@`), embed cho `--install-system`, `sed` cho gói |
+| Unit | Một file mẫu `internal/sysinstall/ghostline.service.tmpl` (chỗ trống `@DAEMON@`), embed trong package cài đặt cho `--install-system`, `sed` cho gói |
 | `pkexec` | Chỉ GUI gọi; daemon không bao giờ gọi |
 | Autostart GUI | GUI tự đồng bộ `~/.config/autostart/ghostline.desktop` theo `StartWithWindows`, không thêm method RPC |
 | Frontend trong release | Mỗi job tự build (vài giây), không chia sẻ artifact (khác §17 spec tổng, cho workflow đơn giản) |
 
 ## 4. Unit systemd và group
 
-- `cmd/ghostlined/ghostline.service.tmpl` thay `build/linux/ghostline.service`:
+- `internal/sysinstall/ghostline.service.tmpl` thay `build/linux/ghostline.service` (cùng package với code cài, để `go:embed` đọc được):
   - `ExecStart=@DAEMON@ --daemon`, `ExecStopPost=@DAEMON@ --restore`, `Restart=on-failure`, `RestartSec=2`.
   - `StateDirectory=ghostline` (`0755`), `LogsDirectory=ghostline`, `RuntimeDirectory=ghostline` (`0755`).
   - `NoNewPrivileges=yes`: không chặn `setuid()` của session-agent và của `nfqws2 --user=nobody`, chỉ chặn exec binary setuid.
@@ -161,7 +161,7 @@ Theo cách đã có cho `SetMode`/`GetSnapshot`: method mới khai báo trên `a
 
 ### 7.4 `tar.gz`
 
-`ghostline-<ver>-linux-amd64/`: hai binary, file chung, `install.sh`, `uninstall.sh`.
+`ghostline-<ver>-linux-amd64/`: hai binary, `.desktop`, icon, metainfo, license, `install.sh`, `uninstall.sh` (unit và group do `--install-system` tạo).
 - `install.sh` (root): GUI → `/usr/local/bin/ghostline`, `ghostlined` → `/usr/local/lib/ghostline/ghostlined` (để GUI tìm được, §6.1), `.desktop`/icon/metainfo → `/usr/local/share`, rồi `ghostlined --install-system`.
 - `uninstall.sh [--purge]` (root): `/var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`, xoá các file trong `/usr/local`.
 
