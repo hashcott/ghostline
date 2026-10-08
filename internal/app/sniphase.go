@@ -279,7 +279,11 @@ func (o *Orchestrator) installSession(der []byte) error {
 	err := o.d.Certs.InstallSession(der)
 	var p *certstore.PartialError
 	if errors.As(err, &p) {
-		o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		if errors.Is(p, certstore.ErrNSSToolMissing) {
+			o.AddWarning(AppError{Code: CodeCertNSSToolMissing})
+		} else {
+			o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		}
 		o.log("fakesni", CodeCertPartial, "target", strings.Join(p.Targets, ", "), "err", p.Err.Error())
 		return nil
 	}

@@ -88,3 +88,7 @@ func (c composite) List(prefix string) ([]Cert, error) {
 	}
 	return out, errors.Join(errs...)
 }
+
+// ErrNSSToolMissing: a user's NSS database needs certutil, which is not
+// installed (Ubuntu: libnss3-tools).
+var ErrNSSToolMissing = errors.New("certstore: certutil not found")

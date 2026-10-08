@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/hashcott/ghostline/internal/certstore/nss"
 	"io"
 	"maps"
 
@@ -13,6 +14,7 @@ import (
 func agentTasks() map[string]session.Task {
 	t := map[string]session.Task{}
 	maps.Copy(t, desktop.AgentTasks())
+	maps.Copy(t, nss.AgentTasks())
 	return t
 }
 

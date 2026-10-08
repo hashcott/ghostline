@@ -26,3 +26,12 @@ func TestPhaseS_PartialInstallWarns(t *testing.T) {
 	require.True(t, found)
 	require.NotContains(t, warningCodes(h.o.Snapshot()), CodeCertInstallFailed)
 }
+
+// Ubuntu without libnss3-tools: Chrome misses the root; say what to install.
+func TestPhaseS_NSSToolMissingWarns(t *testing.T) {
+	h := newSNIHarness(t)
+	h.certs.partial = &certstore.PartialError{Targets: []string{"nss"}, Err: certstore.ErrNSSToolMissing}
+	require.NoError(t, h.o.Connect(context.Background()))
+	require.Contains(t, warningCodes(h.o.Snapshot()), CodeCertNSSToolMissing)
+	require.NotContains(t, warningCodes(h.o.Snapshot()), CodeCertPartial)
+}

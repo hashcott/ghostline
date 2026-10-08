@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
+	"github.com/hashcott/ghostline/internal/certstore/nss"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2"
 	"github.com/hashcott/ghostline/internal/session"
 	"github.com/hashcott/ghostline/internal/sysproxy/desktop"
@@ -62,11 +63,14 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	// session agent; what waits for a login sits in the queue.
 	queue := session.NewQueue(filepath.Join(paths.DataDir, "session-queue.json"))
 	var sysProxy sysproxy.Backend = sysproxy.Unsupported{}
+	var nssTarget certstore.Target
 	var watchSessions func(func()) (func(), error)
 	if sessions, err := session.NewLinux(slog.Default()); err == nil {
 		sysProxy = desktop.NewBackend(sessions, queue)
+		nssTarget = nss.New(sessions, queue, filepath.Join(paths.DataDir, "nss-users.json"), nss.P11KitTrust)
 		handlers := map[string]func(string, json.RawMessage) error{
 			"proxy.restore": desktop.QueueHandler(sessions),
+			"nss.remove":    nss.QueueHandler(sessions),
 		}
 		drain := func(u session.User) {
 			_ = queue.Drain(u, func(task string, args json.RawMessage) error {
@@ -84,12 +88,16 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 			return sessions.WatchNew(func(u session.User) { drain(u); onNew() })
 		}
 	}
-	// Fake SNI roots: the system anchors (required), then Firefox's policy.
+	// Fake SNI roots: the system anchors (required), then Firefox's policy
+	// and the session user's NSS database.
 	var certs certstore.Store = certstore.Unsupported{}
 	if anchors, err := certstore.DetectAnchors(); err == nil {
 		var optional []certstore.Target
 		if certstore.FirefoxInstalled() {
 			optional = append(optional, certstore.NewFirefox("/etc/firefox/policies/policies.json", filepath.Join(paths.DataDir, "firefox-policy.json")))
+		}
+		if nssTarget != nil {
+			optional = append(optional, nssTarget)
 		}
 		certs = certstore.NewLinux(anchors, optional...)
 	}

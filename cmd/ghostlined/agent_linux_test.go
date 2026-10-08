@@ -15,7 +15,7 @@ func TestSessionAgent_RefusesUnknownTasks(t *testing.T) {
 }
 
 func TestSessionAgent_ServesProxyTasks(t *testing.T) {
-	for _, name := range []string{"proxy.snapshot", "proxy.apply", "proxy.isOurs", "proxy.restore"} {
+	for _, name := range []string{"proxy.snapshot", "proxy.apply", "proxy.isOurs", "proxy.restore", "nss.install", "nss.remove"} {
 		require.Contains(t, agentTasks(), name)
 	}
 	require.Contains(t, agentStreams(), "proxy.watch")

@@ -641,6 +641,10 @@
     "CERT_PARTIAL": {
       "message": "The Fake SNI certificate is trusted by the system, but not by {{target}}",
       "action": "Sites in that browser may show a certificate warning; the details are in the log"
+    },
+    "CERT_NSS_TOOL_MISSING": {
+      "message": "Chrome and Chromium do not trust the Fake SNI certificate yet: certutil is missing",
+      "action": "Install libnss3-tools (sudo apt install libnss3-tools), then turn Fake SNI off and on"
     }
   },
   "tray": {
