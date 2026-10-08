@@ -92,14 +92,8 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	// and the session user's NSS database.
 	var certs certstore.Store = certstore.Unsupported{}
 	if anchors, err := certstore.DetectAnchors(); err == nil {
-		var optional []certstore.Target
-		if certstore.FirefoxInstalled() {
-			optional = append(optional, certstore.NewFirefox("/etc/firefox/policies/policies.json", filepath.Join(paths.DataDir, "firefox-policy.json")))
-		}
-		if nssTarget != nil {
-			optional = append(optional, nssTarget)
-		}
-		certs = certstore.NewLinux(anchors, optional...)
+		ff := certstore.NewFirefox("/etc/firefox/policies/policies.json", filepath.Join(paths.DataDir, "firefox-policy.json"))
+		certs = certstore.NewLinux(anchors, optionalCertTargets(certstore.FirefoxInstalled(), nss.P11KitTrust(), ff, nssTarget)...)
 	}
 	return Deps{
 		Name:   "linux",
@@ -135,4 +129,19 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		AttachConsole: func() {},
 		UsesDaemon:    true,
 	}, nil
+}
+
+// optionalCertTargets are the trust stores beyond the system anchors.
+// Firefox's policy only where NSS does not read the anchors through
+// p11-kit (Debian, Ubuntu): a policy import stays in the Firefox profile
+// after the policy is gone, so it is used only where nothing else works.
+func optionalCertTargets(firefoxInstalled, p11kit bool, firefox, userNSS certstore.Target) []certstore.Target {
+	var out []certstore.Target
+	if firefoxInstalled && !p11kit {
+		out = append(out, firefox)
+	}
+	if userNSS != nil {
+		out = append(out, userNSS)
+	}
+	return out
 }

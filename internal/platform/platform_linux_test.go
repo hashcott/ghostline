@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"github.com/hashcott/ghostline/internal/certstore"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -50,3 +51,23 @@ func TestNewDev_SafetyIsSystemds(t *testing.T) {
 	require.NoError(t, d.Startup.CreateRecovery())
 	require.NoError(t, d.Startup.DeleteRecovery())
 }
+
+// Root run 3: with p11-kit (Arch, Fedora) Firefox already trusts the system
+// anchors, and a policy import stays in the Firefox profile after removal.
+func TestOptionalCertTargets(t *testing.T) {
+	ff, nssT := certstore.NewFake(), certstore.NewFake()
+	fft := namedTarget{ff, "firefox"}
+	nst := namedTarget{nssT, "nss"}
+	require.Empty(t, optionalCertTargets(true, true, fft, nst)[:0])
+	require.Equal(t, []certstore.Target{nst}, optionalCertTargets(true, true, fft, nst), "p11-kit: no Firefox policy")
+	require.Equal(t, []certstore.Target{fft, nst}, optionalCertTargets(true, false, fft, nst), "Ubuntu: Firefox needs the policy")
+	require.Equal(t, []certstore.Target{nst}, optionalCertTargets(false, false, fft, nst), "no Firefox")
+	require.Empty(t, optionalCertTargets(false, false, fft, nil))
+}
+
+type namedTarget struct {
+	*certstore.Fake
+	name string
+}
+
+func (n namedTarget) Name() string { return n.name }

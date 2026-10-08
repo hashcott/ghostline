@@ -78,6 +78,8 @@
 - Desktop không hỗ trợ là cảnh báo, proxy vẫn chạy (như khi chưa có phiên).
 - Không có mã `FIREWALL_UNKNOWN`: backend "không có firewall" báo chain `input` policy `drop` qua `IsPublicNetwork`, trang Proxy hiện cảnh báo sẵn có (câu chữ Linux ở bộ chuỗi ghi đè).
 - Firewall Linux hỏi trước cổng đã mở chưa, chỉ ghi và mở cổng chưa mở; gỡ cổng đã đóng không lỗi.
+- **Firefox giữ CA nhập qua policy** (đã kiểm chứng trên máy dev: CA vẫn trong `cert9.db` của hồ sơ với `CT,C` sau khi gỡ policy). Vì vậy policy Firefox chỉ dùng khi NSS không đọc kho hệ thống qua p11-kit (Debian, Ubuntu); Arch và Fedora (p11-kit) không dùng, Firefox đã tin anchors. Trên Ubuntu bản sao trong hồ sơ còn lại sau khi gỡ: khoá riêng của CA phiên không bao giờ rời bộ nhớ, CA bị giới hạn tên miền và hết hạn sau 30 ngày; dọn hồ sơ Firefox qua session agent để cho phần gỡ cài đặt (L5).
+- Bước tự kiểm Fake SNI đọc lại bundle tin cậy của hệ thống mỗi lần (`certstore.RootsSource`): Go chỉ đọc kho hệ thống một lần mỗi tiến trình.
 
 ## 4. Interface
 
