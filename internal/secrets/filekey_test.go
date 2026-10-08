@@ -50,3 +50,30 @@ func TestFileKey_TamperedBlobFails(t *testing.T) {
 	_, err = p.Unprotect([]byte("short"))
 	require.Error(t, err)
 }
+
+// An empty key file is what a crash between creating it and writing it
+// left (older builds): nothing was ever encrypted under it, so it is
+// replaced instead of failing every start.
+func TestFileKey_ReplacesEmptyKeyFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "secret.key")
+	require.NoError(t, os.WriteFile(path, nil, 0o600))
+	_, err := NewFileKey(path).Protect([]byte("x"))
+	require.NoError(t, err)
+	fi, err := os.Stat(path)
+	require.NoError(t, err)
+	require.Equal(t, int64(32), fi.Size())
+	require.Equal(t, os.FileMode(0o600), fi.Mode().Perm())
+	left, _ := filepath.Glob(filepath.Join(dir, ".secret.key-*"))
+	require.Empty(t, left, "no temporary file left behind")
+}
+
+// A key file someone else wrote is never replaced.
+func TestFileKey_KeepsShortNonEmptyKeyFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret.key")
+	require.NoError(t, os.WriteFile(path, []byte("short"), 0o600))
+	_, err := NewFileKey(path).Protect([]byte("x"))
+	require.Error(t, err)
+	got, _ := os.ReadFile(path)
+	require.Equal(t, "short", string(got))
+}
