@@ -79,7 +79,7 @@ type fakeNM struct {
 	saved []string
 }
 
-func (n fakeNM) ActiveSSID() (string, error)    { return n.ssid, nil }
+func (n fakeNM) ActiveSSID() (string, error)   { return n.ssid, nil }
 func (n fakeNM) SavedSSIDs() ([]string, error) { return n.saved, nil }
 
 func TestSSID_FromFakeNM(t *testing.T) {
