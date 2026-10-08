@@ -157,6 +157,7 @@ func (o *Orchestrator) startProxyPhase(ctx context.Context) error {
 				return appErr(CodeSysProxyFailed, err)
 			}
 			o.ClearWarning(CodeSessionPending)
+			o.ClearWarning(CodeProxyDesktopUnsupported)
 			if server, pac, has := o.d.SysProxy.Existing(snap); has {
 				if o.d.ConfirmOverride == nil || !o.d.ConfirmOverride(askCtx, server, pac) {
 					skipSys = true
@@ -272,6 +273,10 @@ func (o *Orchestrator) stopProxyPhase(ctx context.Context) {
 	o.px = proxyState{}
 	o.update(func(sn *Snapshot) { sn.Proxy = ProxyStatus{} })
 	o.clearReason(reasonProxy)
+	// They spoke of a system proxy this phase wanted; a restart that
+	// still wants it adds them again.
+	o.ClearWarning(CodeSessionPending)
+	o.ClearWarning(CodeProxyDesktopUnsupported)
 }
 
 // OnSessionNew runs when a user logs in: a system proxy that waited for a
