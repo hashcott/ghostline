@@ -1,12 +1,28 @@
-# pacman's hooks create the ghostline group (sysusers.d) and reload systemd.
-# Arch packages do not start services themselves: the window offers to.
+# pacman's hooks create the ghostline group (sysusers.d). Arch packages do
+# not start services themselves: the window offers to. GHOSTLINE_TEST_ROOT
+# prefixes paths in tests only.
+
+# A self-install (AppImage, tar.gz) put a unit in /etc that shadows this
+# package's and keeps the old daemon running: retire it and run the
+# package's service instead, as the user had protection running.
+_retire_self_install() {
+	_self="${GHOSTLINE_TEST_ROOT:-}/etc/systemd/system/ghostline.service"
+	[ -f "$_self" ] && grep -q '^ExecStart=/var/lib/ghostline/bin/ghostlined ' "$_self" || return 1
+	systemctl disable --now ghostline.service 2>/dev/null || true
+	rm -f "$_self" "${GHOSTLINE_TEST_ROOT:-}/var/lib/ghostline/bin/ghostlined"
+	systemctl daemon-reload 2>/dev/null || true
+	systemctl enable --now ghostline.service 2>/dev/null || true
+}
 
 post_install() {
+	_retire_self_install && return 0
 	echo "Start the background service: sudo systemctl enable --now ghostline"
 	echo "(or open Ghostline and press \"start the service\")."
 }
 
 post_upgrade() {
+	_retire_self_install && return 0
+	systemctl daemon-reload 2>/dev/null || true
 	systemctl try-restart ghostline.service 2>/dev/null || true
 }
 
