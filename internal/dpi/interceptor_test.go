@@ -18,7 +18,7 @@ type recIC struct {
 	prepareErr error
 }
 
-func (i *recIC) Prepare() error { i.c.log = append(i.c.log, "prepare"); return i.prepareErr }
+func (i *recIC) Prepare(string) error { i.c.log = append(i.c.log, "prepare"); return i.prepareErr }
 func (i *recIC) Ready(pid int) bool {
 	i.c.log = append(i.c.log, fmt.Sprintf("ready:%d", pid))
 	return i.ready

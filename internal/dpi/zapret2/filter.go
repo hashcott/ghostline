@@ -14,14 +14,6 @@ var Filter = []dpi.CaptureRule{
 	{Proto: "udp", Ports: []int{443}, OutPackets: 5, InPackets: 3, QUIC: true},
 }
 
-const (
-	// QueueNum is the NFQUEUE nfqws2 reads on Linux.
-	QueueNum = 200
-	// FWMark marks the packets nfqws2 sends itself, so they are not
-	// queued again (nfqws2's default).
-	FWMark = 0x40000000
-)
-
 func portsCSV(r dpi.CaptureRule) string {
 	s := make([]string, len(r.Ports))
 	for i, p := range r.Ports {

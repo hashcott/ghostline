@@ -29,7 +29,7 @@ func listTable(t *testing.T) string {
 func TestNft_InstallListDelete(t *testing.T) {
 	needRoot(t)
 	require.NoError(t, installTable(testFilter))
-	defer deleteTable()
+	defer func() { _ = deleteTable() }()
 	got := listTable(t)
 	for _, want := range []string{
 		"hook postrouting priority srcnat - 1",
@@ -59,7 +59,7 @@ func TestNft_InstallListDelete(t *testing.T) {
 func TestNft_InstallReplacesExistingTable(t *testing.T) {
 	needRoot(t)
 	require.NoError(t, installTable(testFilter))
-	defer deleteTable()
+	defer func() { _ = deleteTable() }()
 	first := strings.Count(listTable(t), "\n")
 	require.NoError(t, installTable(testFilter))
 	require.Equal(t, first, strings.Count(listTable(t), "\n"))

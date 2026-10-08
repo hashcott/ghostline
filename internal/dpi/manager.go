@@ -19,15 +19,16 @@ var (
 	ErrStartFailed   = errors.New("dpi: DPI engine failed to start")
 	ErrBlockedByAV   = errors.New("dpi: DPI engine was blocked (antivirus?)")
 	ErrUnknownEngine = errors.New("dpi: unknown engine")
+	// ErrKernelUnsupported: the Linux kernel cannot queue packets to the
+	// engine (nfnetlink_queue / nft_queue missing).
+	ErrKernelUnsupported = errors.New("dpi: the kernel cannot queue packets (nfnetlink_queue/nft_queue)")
 )
 
 // List files are copied into the engine directory under these names: the
 // engines read argv as ANSI (GoodbyeDPI) or through Cygwin (winws2), so a
 // path with Vietnamese letters (C:\Users\Đức…) would be mangled.
-const (
-	blacklistName    = "blacklist.txt"
-	autoHostlistName = "autohostlist.txt"
-)
+// autoHostlistName is per OS (lists_<os>.go).
+const blacklistName = "blacklist.txt"
 
 func extractWith(src fs.FS, dir string, pins map[string]string) error {
 	for name, want := range pins {
@@ -148,12 +149,12 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 			return 0, err
 		}
 	}
-	if err := m.ic.Prepare(); err != nil {
-		return 0, err
-	}
 	rel, err := copyLists(dir, p)
 	if err != nil {
 		return 0, fmt.Errorf("%w: lists: %v", ErrStartFailed, err)
+	}
+	if err := m.ic.Prepare(dir); err != nil {
+		return 0, err
 	}
 	args, err := in.Engine.Args(rel)
 	if err != nil {
@@ -201,7 +202,11 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, autoHostlistName), b, 0o644); err != nil {
+		dst := filepath.Join(dir, filepath.FromSlash(autoHostlistName))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return p, err
+		}
+		if err := os.WriteFile(dst, b, 0o644); err != nil {
 			return p, err
 		}
 		p.AutoHostlist = autoHostlistName
@@ -241,7 +246,7 @@ func (m *Manager) stopLocked() error {
 	if m.proc != nil {
 		if m.plan.AutoHostlist != "" {
 			// Keep what the engine learned; it only lives in its directory.
-			if b, err := os.ReadFile(filepath.Join(m.dir(m.running), autoHostlistName)); err == nil {
+			if b, err := os.ReadFile(filepath.Join(m.dir(m.running), filepath.FromSlash(autoHostlistName))); err == nil {
 				errs = append(errs, os.WriteFile(m.plan.AutoHostlist, b, 0o644))
 			}
 		}

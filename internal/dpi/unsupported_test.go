@@ -13,7 +13,7 @@ func TestUnsupported(t *testing.T) {
 	require.ErrorIs(t, err, errors.ErrUnsupported)
 
 	var ic Interceptor = NoInterceptor{}
-	require.NoError(t, ic.Prepare())
+	require.NoError(t, ic.Prepare(t.TempDir()))
 	require.True(t, ic.Ready(1))
 	require.NoError(t, ic.Cleanup())
 	require.Equal(t, InterceptorInfo{}, ic.Info())

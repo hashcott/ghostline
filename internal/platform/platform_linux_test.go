@@ -24,6 +24,8 @@ func TestNew_DaemonDirectories(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "/var/lib/ghostline/data", d.Paths.DataDir)
 	require.Equal(t, "/var/log/ghostline", d.Paths.LogDir)
+	// The engine dir sits beside data/ (0700): nfqws2 runs as nobody.
+	require.Equal(t, "/var/lib/ghostline/bin", d.Paths.BinDir)
 	require.Equal(t, "/run/ghostline/ctl.sock", d.Socket)
 	require.Equal(t, "/run/ghostline/state.lock", d.Lock.(*fileLock).path)
 }

@@ -624,6 +624,10 @@
     "TEST_DOMAIN_NO_ADDRESS": {
       "message": "This test domain has no IPv4 address (A record), so every server would fail. Use a site with a real address, for example store.steampowered.com instead of steam.com",
       "action": ""
+    },
+    "DPI_KERNEL_UNSUPPORTED": {
+      "message": "This Linux kernel cannot pass packets to the DPI engine (nfnetlink_queue or nft_queue is missing)",
+      "action": "Install your distribution's netfilter queue modules, or turn on the proxy: its fragmentation does not need them"
     }
   },
   "tray": {

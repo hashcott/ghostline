@@ -3,8 +3,9 @@ package dpi
 // Interceptor sets up, checks and removes the packet capture an engine
 // runs behind: the WinDivert driver on Windows, an nftables queue on Linux.
 type Interceptor interface {
-	// Prepare runs before the engine starts.
-	Prepare() error
+	// Prepare runs before the engine starts, once its files and lists are
+	// in dir.
+	Prepare(dir string) error
 	// Ready reports whether the engine (pid) is capturing packets.
 	Ready(pid int) bool
 	// Cleanup runs after the engine stops and during recovery; nothing to
@@ -22,7 +23,7 @@ type InterceptorInfo struct {
 // NoInterceptor is the Interceptor for an OS without packet capture yet.
 type NoInterceptor struct{}
 
-func (NoInterceptor) Prepare() error        { return nil }
+func (NoInterceptor) Prepare(string) error  { return nil }
 func (NoInterceptor) Ready(int) bool        { return true }
 func (NoInterceptor) Cleanup() error        { return nil }
 func (NoInterceptor) Info() InterceptorInfo { return InterceptorInfo{} }

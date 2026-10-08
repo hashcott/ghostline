@@ -2,6 +2,18 @@ package dpi
 
 import "net/netip"
 
+const (
+	// QueueNum is the NFQUEUE the Linux engine reads.
+	QueueNum = 200
+	// FWMark marks the packets the engine sends itself, so they are not
+	// queued again (nfqws2's default).
+	FWMark = 0x40000000
+	// DropUser is who the Linux engine runs as once it holds the queue.
+	DropUser = "nobody"
+
+	nftTable = "ghostline"
+)
+
 // nftRule describes one rule of the Linux capture table; nft_linux.go turns
 // it into netlink expressions. Keeping the plan pure lets it be tested on
 // any OS.

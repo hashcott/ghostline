@@ -9,12 +9,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Conntrack directions (enum ip_conntrack_dir).
 const (
-	nftTable  = "ghostline"
-	queueNum  = 200
-	engineFWM = 0x40000000 // nfqws2's --fwmark for the packets it sends
-
-	// Conntrack directions (enum ip_conntrack_dir).
 	ctDirOriginal = 0
 	ctDirReply    = 1
 )
@@ -116,7 +112,7 @@ func l4proto(p byte) []expr.Any {
 func markSet() []expr.Any {
 	return []expr.Any{
 		&expr.Meta{Key: expr.MetaKeyMARK, Register: 1},
-		&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(engineFWM), Xor: host32(0)},
+		&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(FWMark), Xor: host32(0)},
 		&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: host32(0)},
 	}
 }
@@ -130,7 +126,7 @@ func (r nftRule) exprs() ([]expr.Any, error) {
 		// … ct mark set ct mark | FWM accept
 		ex = append(markSet(),
 			&expr.Ct{Register: 1, Key: expr.CtKeyMARK},
-			&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(^uint32(engineFWM)), Xor: host32(engineFWM)},
+			&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(^uint32(FWMark)), Xor: host32(FWMark)},
 			&expr.Ct{Register: 1, SourceRegister: true, Key: expr.CtKeyMARK},
 			verdict(expr.VerdictAccept))
 	case "loaccept":
@@ -169,7 +165,7 @@ func (r nftRule) exprs() ([]expr.Any, error) {
 			&expr.Ct{Register: 1, Key: expr.CtKeyPKTS, Direction: dir},
 			&expr.Byteorder{SourceRegister: 1, DestRegister: 1, Op: expr.ByteorderHton, Len: 8, Size: 8},
 			&expr.Range{Op: expr.CmpOpEq, Register: 1, FromData: be64(1), ToData: be64(uint64(r.Packets))},
-			&expr.Queue{Num: queueNum, Flag: expr.QueueFlagBypass})
+			&expr.Queue{Num: QueueNum, Flag: expr.QueueFlagBypass})
 	case "ttldrop":
 		proto, typ := byte(unix.IPPROTO_ICMP), byte(11) // time-exceeded
 		if r.Family == "ip6" {
@@ -180,7 +176,7 @@ func (r nftRule) exprs() ([]expr.Any, error) {
 			&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseTransportHeader, Offset: 0, Len: 1},
 			cmpEq([]byte{typ}),
 			&expr.Ct{Register: 1, Key: expr.CtKeyMARK},
-			&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(engineFWM), Xor: host32(0)},
+			&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4, Mask: host32(FWMark), Xor: host32(0)},
 			&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: host32(0)},
 			verdict(expr.VerdictDrop))
 	default:

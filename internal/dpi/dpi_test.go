@@ -184,14 +184,14 @@ func TestManager_AutoHostlistRoundTrip(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "dpi-autohostlist.txt")
 	require.NoError(t, os.WriteFile(src, []byte("a.com\n"), 0o644))
 	rg.r.onRun = func(dir string) {
-		b, err := os.ReadFile(filepath.Join(dir, "autohostlist.txt"))
+		b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(autoHostlistName)))
 		require.NoError(t, err)
 		require.Equal(t, "a.com\n", string(b))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "autohostlist.txt"), []byte("a.com\nb.com\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(autoHostlistName)), []byte("a.com\nb.com\n"), 0o644))
 	}
 	_, err := rg.m.Start(context.Background(), "zapret2", Plan{AutoHostlist: src})
 	require.NoError(t, err)
-	require.Equal(t, "autohostlist.txt", rg.z2.got[0].AutoHostlist)
+	require.Equal(t, autoHostlistName, rg.z2.got[0].AutoHostlist)
 	require.NoError(t, rg.m.Stop())
 	b, err := os.ReadFile(src)
 	require.NoError(t, err)
@@ -203,7 +203,7 @@ func TestManager_AutoHostlistMissingSourceStartsEmpty(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "dpi-autohostlist.txt")
 	_, err := rg.m.Start(context.Background(), "zapret2", Plan{AutoHostlist: src})
 	require.NoError(t, err)
-	b, err := os.ReadFile(filepath.Join(rg.bin, "zapret2", "autohostlist.txt"))
+	b, err := os.ReadFile(filepath.Join(rg.bin, "zapret2", filepath.FromSlash(autoHostlistName)))
 	require.NoError(t, err)
 	require.Empty(t, b)
 }

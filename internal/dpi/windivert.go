@@ -25,7 +25,7 @@ func NewWinDivert(s Services) Interceptor { return winDivert{svc: s} }
 
 // Prepare has nothing to do: Cleanup already ran when the previous engine
 // stopped (Manager.Start always stops first).
-func (winDivert) Prepare() error { return nil }
+func (winDivert) Prepare(string) error { return nil }
 
 func (w winDivert) Ready(int) bool {
 	ok, _ := w.svc.Running(driverService)

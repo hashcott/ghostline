@@ -55,6 +55,7 @@ func ClientSocket() string {
 
 func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
+	paths.BinDir = filepath.Join(filepath.Dir(dataDir), "bin") // outside data/ (0700): nfqws2 runs as nobody
 	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
 	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
 	return Deps{
@@ -69,8 +70,8 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		Certs:         certstore.Unsupported{},
 		Firewall:      firewall.Unsupported{},
 
-		DPIRunner:      dpi.UnsupportedRunner{},
-		DPIInterceptor: dpi.NoInterceptor{},
+		DPIRunner:      dpi.NewLinuxRunner(),
+		DPIInterceptor: dpi.NewNftables(zapret2.Filter),
 		DPIEngines: func(list func() strategies.List) []dpi.Installed {
 			return []dpi.Installed{{Engine: zapret2.New(list), Assets: zapret2Files.FS}}
 		},

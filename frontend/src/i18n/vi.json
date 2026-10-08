@@ -624,6 +624,10 @@
     "TEST_DOMAIN_NO_ADDRESS": {
       "message": "Tên miền thử này không có địa chỉ IPv4 (bản ghi A) nên mọi máy chủ sẽ trượt. Hãy dùng trang có địa chỉ thật, ví dụ store.steampowered.com thay cho steam.com",
       "action": ""
+    },
+    "DPI_KERNEL_UNSUPPORTED": {
+      "message": "Kernel Linux này không chuyển được gói tin cho engine DPI (thiếu nfnetlink_queue hoặc nft_queue)",
+      "action": "Cài module netfilter queue của bản phân phối, hoặc bật proxy: chế độ chia nhỏ gói của proxy không cần các module này"
     }
   },
   "tray": {
