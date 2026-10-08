@@ -33,6 +33,12 @@ func runClient(o Options) error {
 	defer conn.Close()
 	settings := newSettingsCache(svc)
 	ui.b = settings
+	autostart := func(s store.Settings) {
+		if err := applyAutostart(s, os.Getenv, os.Executable); err != nil {
+			log.Warn("autostart entry", "err", err)
+		}
+	}
+	autostart(settings.GetSettings())
 	ui.saveFullWindow = func(w, h int) {
 		go func() {
 			s := settings.GetSettings()
@@ -45,10 +51,11 @@ func runClient(o Options) error {
 	em := &emitter{}
 	conn.OnEvent(func(name string, data json.RawMessage) {
 		switch name {
-		case "settings": // language or proxy changed: relabel the tray
+		case "settings": // language, proxy or start with the system changed
 			var n store.Settings
 			if json.Unmarshal(data, &n) == nil {
 				settings.set(n)
+				autostart(n)
 			}
 			ui.onLanguage()
 			return

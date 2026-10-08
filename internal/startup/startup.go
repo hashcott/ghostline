@@ -32,10 +32,11 @@ func (Unsupported) DeleteRecovery() error { return nil }
 
 // ServiceManaged is the Manager where a service manager runs Ghostline
 // (systemd's ghostline.service on Linux): the unit itself is the recovery
-// step (ExecStopPost=--restore, and the daemon restores first at boot), so
-// there is nothing to register. Starting the GUI at logon is not done yet.
+// step (ExecStopPost=--restore, and the daemon restores first at boot) and
+// starts the daemon at boot, so there is nothing to register. The GUI keeps
+// its own autostart entry in step with the setting.
 type ServiceManaged struct{}
 
-func (ServiceManaged) SetAutostart(on bool) error { return Unsupported{}.SetAutostart(on) }
+func (ServiceManaged) SetAutostart(bool) error { return nil }
 func (ServiceManaged) CreateRecovery() error      { return nil }
 func (ServiceManaged) DeleteRecovery() error      { return nil }
