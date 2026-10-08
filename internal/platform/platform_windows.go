@@ -32,6 +32,7 @@ func New(exe string) (Deps, error) {
 		return Deps{}, err
 	}
 	return Deps{
+		Name:  "windows",
 		Paths: store.WithMachineDir(store.ResolvePaths(exe, os.Getenv("APPDATA")), filepath.Join(os.Getenv("ProgramData"), brand.AppName)),
 		Lock:  lock,
 

@@ -102,6 +102,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		certs = certstore.NewLinux(anchors, optional...)
 	}
 	return Deps{
+		Name:   "linux",
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),

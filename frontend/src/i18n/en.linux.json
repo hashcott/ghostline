@@ -1,0 +1,48 @@
+{
+  "settings": {
+    "startWithWindows": "start with the system",
+    "stopServiceConfirm": "The system service {{name}} holds port 53. Stopping it can break whatever uses it (a local DNS cache, container networking) until you restart it. Continue?",
+    "certs": {
+      "none": "no Ghostline certificate on this system"
+    },
+    "backup": {
+      "warn": {
+        "flag_off": {
+          "startWithWindows": "Start with the system will be turned off."
+        }
+      }
+    }
+  },
+  "errors": {
+    "DPI_BLOCKED_BY_AV": {
+      "message": "The DPI bypass engine could not be started",
+      "action": "Check that /var/lib/ghostline/bin is not modified or mounted noexec, then try again"
+    },
+    "SYSPROXY_FAILED": {
+      "message": "could not set the desktop's system proxy"
+    },
+    "SYSPROXY_RESTORE_FAILED": {
+      "message": "could not restore the desktop's system proxy",
+      "action": "Open your desktop's network or proxy settings and turn the manual proxy off"
+    },
+    "CERT_INSTALL_FAILED": {
+      "message": "could not add the root certificate to the system's trusted certificates"
+    },
+    "CERT_REMOVE_FAILED": {
+      "message": "a Ghostline certificate could not be removed from the system yet"
+    },
+    "FAKESNI_SELFTEST_FAILED": {
+      "message": "The system does not trust the Fake SNI certificate"
+    }
+  },
+  "proxy": {
+    "lan": {
+      "public": "A firewall on this machine keeps other devices out (a public zone, or a drop-by-default rule), so they cannot connect. Allow the proxy port in your firewall to share."
+    }
+  },
+  "fakesni": {
+    "warning": {
+      "p5": "The Ghostline root certificate installed on this system can sign only the domains in your rules and is removed when you disconnect."
+    }
+  }
+}

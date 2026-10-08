@@ -142,6 +142,8 @@ type Certs interface {
 
 // Deps wires the orchestrator.
 type Deps struct {
+	// Platform names the OS ("windows", "linux") for the UI's wording.
+	Platform     string
 	Engine       Engine
 	DNS          DNS
 	DPI          DPI

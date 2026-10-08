@@ -21,6 +21,10 @@ import (
 
 // Deps is everything OS-specific Ghostline uses.
 type Deps struct {
+	// Name is the OS ("windows", "linux"), so shared code never asks
+	// runtime.GOOS.
+	Name string
+
 	Paths store.Paths
 	Lock  store.Locker // serialises state.json across processes
 	// Socket is the daemon's control socket ("" where there is no daemon).

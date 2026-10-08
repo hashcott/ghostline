@@ -79,7 +79,7 @@ func New(d Deps) *Orchestrator {
 	if !d.ListenV6.IsValid() {
 		d.ListenV6 = netip.MustParseAddrPort("[::1]:53")
 	}
-	o := &Orchestrator{d: d, snap: Snapshot{Status: StatusDisconnected}}
+	o := &Orchestrator{d: d, snap: Snapshot{Status: StatusDisconnected, Platform: d.Platform}}
 	s := d.Settings()
 	o.snap.DPI = DPIStatus{Enabled: s.DPI.Enabled, Preset: s.DPI.Preset}
 	return o

@@ -17,6 +17,7 @@ func TestNewDev_PutsEverythingUnderDir(t *testing.T) {
 		require.True(t, strings.HasPrefix(p, dir+string(filepath.Separator)), p)
 	}
 	require.True(t, d.UsesDaemon)
+	require.Equal(t, "linux", d.Name)
 }
 
 func TestNew_DaemonDirectories(t *testing.T) {
