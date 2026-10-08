@@ -52,10 +52,10 @@ func TestWrite_V4HasDNSNotSnapshot(t *testing.T) {
 	b, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Contains(t, string(b), `"dns"`)
-	require.Contains(t, string(b), `"version": 4`)
+	require.Contains(t, string(b), `"version": 5`)
 	require.NotContains(t, string(b), `"snapshot":`)
 	st, err := s.Load()
 	require.NoError(t, err)
 	require.Equal(t, "networkmanager", st.DNS.Backend)
-	require.Equal(t, 4, store.CleanState().Version)
+	require.Equal(t, 5, store.CleanState().Version)
 }

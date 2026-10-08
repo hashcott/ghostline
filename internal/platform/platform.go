@@ -26,11 +26,10 @@ type Deps struct {
 	// Socket is the daemon's control socket ("" where there is no daemon).
 	Socket string
 
-	DNS           sysdns.Backend // also watches the network
-	SysProxy      sysproxy.API
-	WatchSysProxy func(onChange func()) (stop func(), err error)
-	Certs         certstore.Store
-	Firewall      firewall.Manager
+	DNS      sysdns.Backend // also watches the network
+	SysProxy sysproxy.Backend
+	Certs    certstore.Store
+	Firewall firewall.Manager
 
 	DPIRunner      dpi.Runner
 	DPIInterceptor dpi.Interceptor

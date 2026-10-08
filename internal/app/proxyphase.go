@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"net/netip"
 	"slices"
 
@@ -22,7 +23,7 @@ type proxyState struct {
 	addr      string // the system proxy value Ghostline sets
 	sysSet    bool
 	takenOver bool
-	snap      *store.SysProxySnapshot
+	snap      *sysproxy.Snapshot
 	fwSet     bool
 }
 
@@ -30,7 +31,7 @@ type proxyState struct {
 // the "Restore system proxy" action (SYSPROXY_RESTORE_FAILED).
 type pendingRestore struct {
 	addr string
-	snap store.SysProxySnapshot
+	snap sysproxy.Snapshot
 }
 
 // addReason marks the connection degraded for reason r.
@@ -108,7 +109,7 @@ func (o *Orchestrator) startProxyPhase(ctx context.Context) error {
 	o.mu.Unlock()
 	wantSys := s.Proxy.SystemProxy && o.d.SysProxy != nil
 	wantFW := s.Proxy.ShareLAN && o.d.Firewall != nil
-	var snap store.SysProxySnapshot
+	var snap sysproxy.Snapshot
 	skipSys := false
 	// Disconnect cancels the background context before taking opMu, so an
 	// unanswered SYSPROXY_EXISTING prompt never blocks it.
@@ -138,13 +139,10 @@ func (o *Orchestrator) startProxyPhase(ctx context.Context) error {
 				return nil
 			}
 			var err error
-			if snap, err = o.d.SysProxy.Snapshot(); err != nil {
+			// Our own leftover value (crash before Set was recorded) comes
+			// back as the system default: what was there before is unknown.
+			if snap, err = o.d.SysProxy.Snapshot(addr); err != nil {
 				return appErr(CodeSysProxyFailed, err)
-			}
-			if snap.Server == addr {
-				// Our own leftover value (crash before Set was recorded):
-				// what was there before is unknown, so restore to direct.
-				snap = store.SysProxySnapshot{Flags: 1}
 			}
 			if server, pac, has := o.d.SysProxy.Existing(snap); has {
 				if o.d.ConfirmOverride == nil || !o.d.ConfirmOverride(askCtx, server, pac) {

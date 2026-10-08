@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/rules"
 	"github.com/hashcott/ghostline/internal/rules/lists"
 	"github.com/hashcott/ghostline/internal/store"
@@ -99,14 +100,14 @@ func TestState_V1ReadsWithoutProxy(t *testing.T) {
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
 	require.Nil(t, st.SysProxy)
 	require.Nil(t, st.Firewall)
-	require.Equal(t, 4, store.CleanState().Version)
+	require.Equal(t, 5, store.CleanState().Version)
 	require.Equal(t, store.PhaseClean, store.CleanState().Phase)
 }
 
 func TestState_SysProxyRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	s := store.NewStateStore(path, &fakeLocker{})
-	want := &store.SysProxyState{Set: true, Ours: "127.0.0.1:8080", Snapshot: &store.SysProxySnapshot{Flags: 1, Bypass: "<local>"}}
+	want := &store.SysProxyState{Set: true, Ours: "127.0.0.1:8080", Snapshot: &model.ProxySnapshot{Backend: "windows", Windows: &model.WinINETProxy{Flags: 1, Bypass: "<local>"}}}
 	require.NoError(t, s.Update(func(st *store.State) error {
 		st.SysProxy = want
 		st.AddFirewallRule("Ghostline Proxy")

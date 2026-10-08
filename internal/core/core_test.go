@@ -40,14 +40,13 @@ func (nopEmitter) Emit(string, any) {}
 func testDeps(t *testing.T) platform.Deps {
 	t.Helper()
 	dir := t.TempDir()
-	watch := func(func()) (func(), error) { return func() {}, nil }
 	return platform.Deps{
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
 		DNS:      sysdns.UnsupportedBackend{},
-		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
-		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
+		SysProxy: sysproxy.Unsupported{},
+		Certs:    certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
 		DPIRunner: dpi.UnsupportedRunner{}, DPIInterceptor: dpi.NoInterceptor{},
 		DPIEngines: func(func() strategies.List) []dpi.Installed { return nil },

@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"sync"
 	"testing"
 
@@ -43,17 +45,26 @@ func (p *fProxy) Alive() bool                    { p.mu.Lock(); defer p.mu.Unloc
 type fSysProxy struct {
 	r        *rec
 	states   *fStates
-	existing store.SysProxySnapshot
+	existing model.WinINETProxy
 	ours     bool
 	t        *testing.T
 }
 
-func (s *fSysProxy) Snapshot() (store.SysProxySnapshot, error) {
-	return s.existing, s.r.add("sysproxy.snapshot")
+// Snapshot follows the Backend contract: Ghostline's own leftover address
+// comes back as the default ("direct").
+func (s *fSysProxy) Snapshot(ours string) (sysproxy.Snapshot, error) {
+	w := s.existing
+	if w.Server == ours {
+		w = model.WinINETProxy{Flags: 1}
+	}
+	return sysproxy.Snapshot{Backend: "windows", Windows: &w}, s.r.add("sysproxy.snapshot")
 }
-func (s *fSysProxy) Existing(snap store.SysProxySnapshot) (string, string, bool) {
-	return snap.Server, snap.AutoconfigURL, snap.Server != "" || snap.AutoconfigURL != ""
+func (s *fSysProxy) Existing(snap sysproxy.Snapshot) (string, string, bool) {
+	w := snap.Windows
+	return w.Server, w.AutoconfigURL, w.Server != "" || w.AutoconfigURL != ""
 }
+func (s *fSysProxy) Watch(func()) (func(), error) { return func() {}, nil }
+func (s *fSysProxy) Info() sysproxy.Info          { return sysproxy.Info{Desktop: "Windows", Supported: true} }
 func (s *fSysProxy) Apply(addr string) error {
 	// Write-ahead invariant: the snapshot is in state.json before any change.
 	st, err := s.states.Load()
@@ -67,7 +78,7 @@ func (s *fSysProxy) Apply(addr string) error {
 	return nil
 }
 func (s *fSysProxy) IsOurs(string) (bool, error) { return s.ours, nil }
-func (s *fSysProxy) RestoreIfOurs(string, store.SysProxySnapshot) (bool, error) {
+func (s *fSysProxy) RestoreIfOurs(string, sysproxy.Snapshot) (bool, error) {
 	if err := s.r.add("sysproxy.restore"); err != nil {
 		return false, err
 	}
@@ -195,7 +206,7 @@ func TestProxyPhase_PortBusy(t *testing.T) {
 
 func TestProxyPhase_ExistingDeclined(t *testing.T) {
 	h := newProxyHarness(t, false)
-	h.sp.existing = store.SysProxySnapshot{Flags: 3, Server: "10.0.0.1:3128"}
+	h.sp.existing = model.WinINETProxy{Flags: 3, Server: "10.0.0.1:3128"}
 	require.NoError(t, h.o.Connect(context.Background()))
 	require.Equal(t, 1, h.asked)
 	require.NotContains(t, h.r.list(), "sysproxy.apply")

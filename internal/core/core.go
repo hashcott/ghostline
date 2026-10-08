@@ -27,7 +27,6 @@ import (
 	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
-	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/upstreams"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
@@ -165,7 +164,7 @@ func New(o Options) (*Core, error) {
 		BlacklistPath:    paths.DPIBlacklist,
 		AutoHostlistPath: paths.DPIAutoHostlist,
 		Proxy:            pw,
-		SysProxy:         sysproxy.Manager{API: p.SysProxy},
+		SysProxy:         p.SysProxy,
 		Firewall:         p.Firewall,
 		ConfirmOverride: func(ctx context.Context, server, pac string) bool {
 			return svc != nil && app.AskOverride(ctx, svc, server, pac, 60*time.Second)
@@ -297,7 +296,7 @@ func New(o Options) (*Core, error) {
 // the watches are removed.
 func (c *Core) Start(ctx context.Context) (wait func()) {
 	var stops []func()
-	if stop, err := c.p.WatchSysProxy(c.Orch.OnSysProxyChanged); err != nil {
+	if stop, err := c.p.SysProxy.Watch(c.Orch.OnSysProxyChanged); err != nil {
 		c.log.Warn("system proxy watch", "err", err)
 	} else if stop != nil {
 		stops = append(stops, stop)

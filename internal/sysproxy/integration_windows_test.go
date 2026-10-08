@@ -12,13 +12,14 @@ import (
 
 // Run from an admin terminal: go test -tags integration ./internal/sysproxy/
 func TestIntegration_ApplyRestoreRoundTrip(t *testing.T) {
-	m := sysproxy.Manager{API: sysproxy.NewWindowsAPI()}
-	snap, err := m.Snapshot()
+	api := sysproxy.NewWindowsAPI()
+	m := sysproxy.NewWinINET(api, sysproxy.Watch)
+	snap, err := m.Snapshot("127.0.0.1:18080")
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = m.API.Set(snap) })
+	t.Cleanup(func() { _ = api.Set(*snap.Windows) })
 
 	changed := make(chan struct{}, 8)
-	stop, err := sysproxy.Watch(func() { changed <- struct{}{} })
+	stop, err := m.Watch(func() { changed <- struct{}{} })
 	require.NoError(t, err)
 	defer stop()
 
@@ -35,7 +36,7 @@ func TestIntegration_ApplyRestoreRoundTrip(t *testing.T) {
 	restored, err := m.RestoreIfOurs("127.0.0.1:18080", snap)
 	require.NoError(t, err)
 	require.True(t, restored)
-	got, err := m.Snapshot()
+	got, err := m.Snapshot("127.0.0.1:18080")
 	require.NoError(t, err)
 	require.Equal(t, snap, got)
 }

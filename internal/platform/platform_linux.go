@@ -1,8 +1,6 @@
 package platform
 
 import (
-	"errors"
-	"fmt"
 	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2"
 	"os"
@@ -21,8 +19,6 @@ import (
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/sysproxy"
 )
-
-var errUnsupported = fmt.Errorf("platform: %w", errors.ErrUnsupported)
 
 // Default directories of the Linux daemon (systemd StateDirectory,
 // LogsDirectory and RuntimeDirectory).
@@ -57,18 +53,16 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
 	paths.BinDir = filepath.Join(filepath.Dir(dataDir), "bin") // outside data/ (0700): nfqws2 runs as nobody
 	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
-	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
 	return Deps{
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
-		DNS:           sysdns.DetectLinux(paths.DataDir),
-		WatchResume:   watchResume,
-		SysProxy:      sysproxy.Unsupported{},
-		WatchSysProxy: unwatched,
-		Certs:         certstore.Unsupported{},
-		Firewall:      firewall.Unsupported{},
+		DNS:         sysdns.DetectLinux(paths.DataDir),
+		WatchResume: watchResume,
+		SysProxy:    sysproxy.Unsupported{},
+		Certs:       certstore.Unsupported{},
+		Firewall:    firewall.Unsupported{},
 
 		DPIRunner:      dpi.NewLinuxRunner(),
 		DPIInterceptor: dpi.NewNftables(zapret2.Filter),

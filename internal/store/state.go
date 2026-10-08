@@ -44,7 +44,8 @@ type State struct {
 	Certs        *CertsState       `json:"certs,omitempty"`
 }
 
-// UnmarshalJSON reads v4, and v3 files (v0.5), whose adapters were in
+// UnmarshalJSON reads v5, v4 (its proxy snapshot migrates in
+// model.ProxySnapshot), and v3 files (v0.5), whose adapters were in
 // "snapshot": they become a "windows" DNS snapshot.
 func (s *State) UnmarshalJSON(b []byte) error {
 	type plain State
@@ -58,27 +59,19 @@ func (s *State) UnmarshalJSON(b []byte) error {
 	if len(aux.Legacy) > 0 && s.DNS.Empty() {
 		s.DNS = model.DNSSnapshot{Backend: "windows", Windows: aux.Legacy}
 	}
-	if s.Version < 4 {
-		s.Version = 4
+	if s.Version < 5 {
+		s.Version = 5
 	}
 	return nil
-}
-
-// SysProxySnapshot is the WinINET per-connection proxy configuration.
-type SysProxySnapshot struct {
-	Flags         uint32 `json:"flags"`
-	Server        string `json:"server"`
-	Bypass        string `json:"bypass"`
-	AutoconfigURL string `json:"autoconfigUrl"`
 }
 
 // SysProxyState records Ghostline's change to the system proxy. Set is true
 // once Ghostline applied Ours; TakenOver once another app replaced it.
 type SysProxyState struct {
-	Set       bool              `json:"set"`
-	TakenOver bool              `json:"takenOver"`
-	Ours      string            `json:"ours"`
-	Snapshot  *SysProxySnapshot `json:"snapshot"`
+	Set       bool                 `json:"set"`
+	TakenOver bool                 `json:"takenOver"`
+	Ours      string               `json:"ours"`
+	Snapshot  *model.ProxySnapshot `json:"snapshot"`
 }
 
 // FirewallState records the inbound rules Ghostline created, by name.
@@ -151,7 +144,7 @@ func (s *State) RemoveSessionCert(thumbprint string) {
 }
 
 // CleanState is the state with nothing to restore.
-func CleanState() State { return State{Version: 4, Phase: PhaseClean} }
+func CleanState() State { return State{Version: 5, Phase: PhaseClean} }
 
 func cleanState() State { return CleanState() }
 

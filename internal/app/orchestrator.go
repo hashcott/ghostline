@@ -394,7 +394,7 @@ func (o *Orchestrator) connectSteps() []step {
 			dnsSnap = snap
 			pid, start := o.d.System.SelfPID()
 			if err := o.d.States.Update(func(st *store.State) error {
-				st.Version, st.Phase, st.PID, st.PIDStartTime, st.StartedAt = 4, store.PhaseDNSSet, pid, start, o.d.Now()
+				st.Version, st.Phase, st.PID, st.PIDStartTime, st.StartedAt = 5, store.PhaseDNSSet, pid, start, o.d.Now()
 				st.DNS = dnsSnap
 				return nil
 			}); err != nil {
