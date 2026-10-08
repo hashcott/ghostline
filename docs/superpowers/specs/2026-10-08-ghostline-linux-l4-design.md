@@ -61,8 +61,9 @@
 | Luật nft | `github.com/google/nftables` (netlink), không gọi lệnh `nft` |
 | Firewall nhớ cổng | **Khác spec tổng:** backend Linux tự ghi `data/firewall-rules.json` (tên → zone, giao thức, cổng), vì `DeleteNamed(name)` không có cổng |
 | Khoá mạng | **Khác spec tổng:** đọc `/proc/net/route` và `/proc/net/arp` thay cho netlink. Cùng kết quả với IPv4, test bằng file mẫu |
-| Ẩn/hiện trong UI | Theo cờ khả năng backend báo, không theo tên OS; chữ theo `platform` qua `t(key)` |
-| `state.json` | v5, migrate từ v4 |
+| Ẩn/hiện trong UI | Theo cờ khả năng backend báo, không theo tên OS. Chữ: bộ chuỗi ghi đè `en.linux.json`/`vi.linux.json` nạp đè lên bộ gốc khi `platform` là `linux`; component không đổi |
+| Việc chờ phiên user | Hàng đợi trong `session` (`data/session-queue.json`), do backend proxy và NSS dùng; `app` và `CertsState` không đổi |
+| `state.json` | v5 (chỉ đổi snapshot proxy), migrate từ v4 |
 
 ## 4. Interface
 
@@ -92,15 +93,15 @@ type InterceptorInfo struct {
 type Rule struct {
 	Proto     string // "tcp" | "udp"
 	Ports     []int
-	Out       bool   // chiều đi ra (false: gói trả về)
-	Packets   int    // số gói đầu của kết nối cần bắt (0: không giới hạn)
-	QUICOnly  bool   // chỉ khi chiến lược có profile QUIC
+	OutPackets int   // số gói đầu chiều đi cần bắt (ct original packets)
+	InPackets  int   // số gói đầu chiều về (ct reply packets), cho autohostlist
+	QUIC       bool  // Windows chỉ bắt khi chiến lược có profile QUIC
 }
-var Filter = []Rule{…} // TCP 80,443 ra; UDP 443 ra (QUIC); TCP 80,443 vào (autohostlist)
+var Filter = []Rule{{"tcp", []int{80, 443}, 20, 10, false}, {"udp", []int{443}, 5, 3, true}}
 ```
 
 - Windows: `--wf-tcp-out`, `--wf-udp-out` sinh từ `Filter`. Test giữ đúng chuỗi tham số hiện nay.
-- Linux: luật nft sinh từ `Filter` (§5.2). Giá trị `Packets` cho Linux lấy theo `nft.sh` của zapret2 trong bản pin.
+- Linux: luật nft sinh từ `Filter` (§5.2).
 
 ### 4.3 Proxy
 
@@ -140,6 +141,12 @@ type Sessions interface {
 	Stream(u User, task string, in any, onLine func([]byte)) (stop func(), err error) // tác vụ chạy lâu
 	WatchNew(onNew func(User)) (stop func(), err error) // logind SessionNew
 }
+
+// Queue giữ việc phải làm trong phiên của một user chưa đăng nhập.
+type Queue interface {
+	Add(uid int, task string, args any) error
+	Drain(u User, run func(task string, args json.RawMessage) error) error // chạy và xoá việc của u.UID
+}
 ```
 
 - Agent là chính binary của daemon (`/proc/self/exe`), chạy `--session-agent`, `SysProcAttr.Credential` = uid/gid/groups của user. Môi trường: `HOME`, `USER`, `XDG_RUNTIME_DIR=/run/user/<uid>`, `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/<uid>/bus`, `XDG_CURRENT_DESKTOP`, `PATH` chuẩn. Không truyền biến nào khác của daemon.
@@ -165,17 +172,18 @@ type Sessions interface {
 - `assets/zapret2/embed_linux.go` nhúng `nfqws2` và 3 file Lua. `pins.go` giữ hash Lua (dùng chung); hash file chạy tách sang `pins_windows.go` / `pins_linux.go`. `Engine.Files()` trả hash đúng nền tảng.
 - `tools/fetchdpi` tải thêm `binaries/linux-x86_64/nfqws2` và đối chiếu với `sha256sum.txt`.
 - Thư mục engine trên Linux: `/var/lib/ghostline/bin/zapret2` (`platform` đặt `Paths.BinDir`), quyền `0750` root:group của `nobody`. `nfqws2` `0755` root, Lua và danh sách `0644`, file autohostlist thuộc `nobody`. `data/` vẫn `0700`.
+- Chế độ pre-NAT của zapret2 (`POSTNAT=0`): Ghostline chỉ xử lý gói của chính máy, không làm router. Số gói đầu theo `config.default` bản pin: TCP ra 20, TCP vào 10, UDP ra 5, UDP vào 3. Bảng luôn có cả UDP 443; chiến lược không có profile QUIC thì `nfqws2` để gói đi nguyên.
 - Tham số Linux: `--qnum=200 --fwmark=0x40000000 --user=nobody`, sau đó `--lua-init` và các profile như Windows. Danh sách truyền thẳng đường dẫn (`HotReloadsLists` vẫn `true`).
 
 ### 5.2 Luật nftables
 
 Bảng `inet ghostline`:
 
-- Chain `post`: hook `postrouting`, priority theo `nft.sh` bản pin (`postnat` 101 nếu áp dụng).
+- Chain `post`: hook `postrouting`, priority 99 (pre-NAT, theo `nft.sh` bản pin).
   - Bỏ qua: `meta mark and 0x40000000 != 0`, `oifname "lo"`, đích loopback, LAN/private (RFC1918, link-local, ULA, CGNAT).
   - Mỗi `Rule` ra của `Filter` → `ct original packets 1-N` + cổng → `queue num 200 bypass`.
   - Luật chống lỗi TTL của zapret2 (đánh dấu `ct mark` cho gói do `nfqws2` sinh).
-- Chain `pre`: hook `prerouting`; `Rule` vào của `Filter` → `queue num 200 bypass`; bỏ gói ICMP time-exceeded của kết nối đã đánh dấu.
+- Chain `pre`: hook `prerouting`, priority -99; `Rule` vào của `Filter` (`ct reply packets 1-N`) → `queue num 200 bypass`; bỏ gói ICMP time-exceeded của kết nối đã đánh dấu.
 - `bypass` bảo đảm fail-open. Gỡ = xoá cả bảng; không đụng bảng khác.
 
 ### 5.3 Kernel và vòng đời
@@ -194,8 +202,9 @@ Bảng `inet ghostline`:
 
 ### 6.2 Việc chờ phiên
 
-- Cần đặt hoặc khôi phục mà user không có phiên (`/run/user/<uid>` không có) → thêm vào `state.Pending` (`{kind, uid}`), không báo lỗi chặn Connect; UI hiện cảnh báo `SESSION_PENDING`.
-- `core.Start` đăng ký `Sessions.WatchNew`; phiên mới của uid có việc chờ → chạy việc đó rồi xoá khỏi `Pending`.
+- **Khôi phục** khi user không có phiên (`/run/user/<uid>` không có): backend thêm việc vào `session.Queue` (`data/session-queue.json`, ghi tạm rồi `rename`) và coi như đã xong; `state.json` được dọn như thường.
+- **Đặt** khi chưa có phiên đồ hoạ: `Snapshot` trả `sysproxy.ErrNoSession`; `app` bỏ qua proxy hệ thống cho lần này (Connect vẫn thành công), hiện cảnh báo `SESSION_PENDING` và gọi `ReapplyProxy` khi có phiên mới.
+- `core.Start` đăng ký `Sessions.WatchNew`; phiên mới → `Queue.Drain` cho uid đó, rồi `ReapplyProxy` nếu đang có `SESSION_PENDING`. Daemon khởi động mà đã có phiên → `Drain` ngay.
 
 ### 6.3 Backend
 
@@ -217,7 +226,7 @@ Bảng `inet ghostline`:
 | NSS của user | Không | session-agent | Chỉ khi NSS không đọc kho hệ thống qua p11-kit (`libnssckbi.so` không trỏ tới `p11-kit-trust.so`) và `~/.pki/nssdb` tồn tại: `certutil -d sql:$HOME/.pki/nssdb -A/-D`. Không có `certutil` → `CERT_NSS_TOOL_MISSING` |
 
 - `ErrPartial` → `app` hiện cảnh báo `CERT_PARTIAL` (tham số: đích) nhưng Fake SNI vẫn bật.
-- Gỡ NSS khi user không có phiên → `Pending`.
+- NSS ghi uid đã cài vào `data/nss-users.json` (uid → thumbprint). Gỡ khi user không có phiên → `session.Queue`.
 
 ## 8. Firewall
 
@@ -239,8 +248,8 @@ Bảng `inet ghostline`:
 
 ## 10. Giao diện
 
-- `Snapshot.Platform`; `t(key)` trong `frontend/src/i18n` dùng `<key>.linux` khi có. Test parity kiểm mọi khoá `.linux` có đủ hai ngôn ngữ.
-- Biến thể `.linux` cho các chuỗi nói về Windows, Defender, WinDivert, "chứng chỉ trong Windows", proxy Windows, svchost/Hotspot/WSL, Public/Private.
+- `Snapshot.Platform`; `frontend/src/i18n` nạp `en.linux.json`/`vi.linux.json` đè lên bộ gốc (`addResourceBundle(…, deep, overwrite)`) khi `platform` là `linux`. Test parity: hai file Linux có cùng khoá, và mọi khoá của chúng có trong bộ gốc.
+- Bản ghi đè cho các chuỗi nói về Windows, Defender, WinDivert, "chứng chỉ trong Windows", proxy Windows, svchost/Hotspot/WSL, Public/Private.
 - Trang DPI: danh sách engine theo backend (Linux chỉ zapret2); phần loại trừ antivirus chỉ khi `AVExclusions`; hiện `Mechanism`.
 - Trang Proxy: hiện `Desktop`; rỗng → hướng dẫn đặt tay.
 - Mã lỗi/cảnh báo mới có chuỗi vi/en: `DPI_KERNEL_UNSUPPORTED`, `PROXY_DESKTOP_UNSUPPORTED`, `SESSION_PENDING`, `CERT_PARTIAL`, `CERT_NSS_TOOL_MISSING`, `FIREWALL_UNKNOWN`.
@@ -249,9 +258,8 @@ Bảng `inet ghostline`:
 
 - `state.json` v5:
   - `sysProxy.snapshot` → `model.ProxySnapshot`; v4 (WinINET) migrate vào nhánh `windows`.
-  - `certs.userUid`.
-  - `pending`: `[{kind, uid}]` (`proxy.restore`, `proxy.apply`, `nss.remove`).
-- Thứ tự khôi phục (`--restore`, daemon khởi động, `ExecStopPost`) giữ thứ tự của `watchdog` hiện nay, thêm backend Linux: giết `nfqws2` còn sống → `Interceptor.Cleanup` → proxy (qua agent hoặc `Pending`) → chứng chỉ (kho hệ thống, Firefox ngay; NSS có thể `Pending`) → firewall (`firewall-rules.json`) → DNS (L3).
+  - Việc chờ phiên nằm trong `session.Queue`, uid của NSS trong `data/nss-users.json`; không thêm trường nào khác.
+- Thứ tự khôi phục (`--restore`, daemon khởi động, `ExecStopPost`) giữ thứ tự của `watchdog` hiện nay, thêm backend Linux: giết `nfqws2` còn sống → `Interceptor.Cleanup` → proxy (qua agent, hoặc `session.Queue`) → chứng chỉ (kho hệ thống, Firefox ngay; NSS có thể vào `session.Queue`) → firewall (`firewall-rules.json`) → DNS (L3).
 
 ## 12. Kiểm thử
 
