@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +19,9 @@ var testTasks = map[string]Task{
 	"echo": func(args json.RawMessage) (any, error) { return args, nil },
 	"fail": func(json.RawMessage) (any, error) { return nil, &Error{Code: "BOOM", Message: "it failed"} },
 	"env":  func(json.RawMessage) (any, error) { return os.Environ(), nil },
+	"flood": func(json.RawMessage) (any, error) {
+		return strings.Repeat("x", 2*maxReply), nil
+	},
 }
 
 var testStreams = map[string]StreamTask{

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -99,6 +100,27 @@ func (s *linuxSessions) command(ctx context.Context, u User) *exec.Cmd {
 	return cmd
 }
 
+// maxReply caps what the daemon (root) reads from an agent, which runs as
+// the user.
+const maxReply = 1 << 20
+
+// cappedBuffer keeps up to max bytes; past that its Write fails, which
+// stops the copy from the agent's stdout (the agent then gets EPIPE). The
+// buffer is a field, not embedded: its ReadFrom would bypass Write.
+type cappedBuffer struct {
+	buf  bytes.Buffer
+	max  int
+	over bool
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	if b.buf.Len()+len(p) > b.max {
+		b.over = true
+		return 0, errors.New("session: agent reply too large")
+	}
+	return b.buf.Write(p)
+}
+
 type wireReply struct {
 	Result json.RawMessage `json:"result"`
 	Error  *Error          `json:"error"`
@@ -122,11 +144,14 @@ func (s *linuxSessions) Run(u User, task string, in, out any) error {
 	defer cancel()
 	cmd := s.command(ctx, u)
 	cmd.Stdin = bytes.NewReader(line)
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
+	stdout := &cappedBuffer{max: maxReply}
+	cmd.Stdout = stdout
 	runErr := cmd.Run()
+	if stdout.over {
+		return fmt.Errorf("session: agent %s for uid %d: reply too large", task, u.UID)
+	}
 	var r wireReply
-	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &r); err != nil {
+	if err := json.Unmarshal(bytes.TrimSpace(stdout.buf.Bytes()), &r); err != nil {
 		return fmt.Errorf("session: agent %s for uid %d: %v (%v)", task, u.UID, runErr, err)
 	}
 	if r.Error != nil {

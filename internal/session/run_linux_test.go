@@ -37,6 +37,16 @@ func TestRun_AgentErrorIsErrAgent(t *testing.T) {
 
 // The agent gets the user's session environment and nothing of the
 // daemon's own.
+// The agent runs as the user: the root daemon reads at most maxReply of
+// what it writes.
+func TestRun_ReplyIsCapped(t *testing.T) {
+	s, u := self(t)
+	var out string
+	err := s.Run(u, "flood", nil, &out)
+	require.ErrorContains(t, err, "reply too large")
+	require.Empty(t, out)
+}
+
 func TestRun_EnvIsTheSessionOnly(t *testing.T) {
 	t.Setenv("LEAK_ME", "1")
 	s, u := self(t)
