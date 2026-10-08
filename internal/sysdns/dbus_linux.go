@@ -22,6 +22,9 @@ const (
 	resolvedName = "org.freedesktop.resolve1"
 	resolvedPath = "/org/freedesktop/resolve1"
 	resolvedMgr  = "org.freedesktop.resolve1.Manager"
+	networkdName = "org.freedesktop.network1"
+	networkdPath = "/org/freedesktop/network1"
+	networkdMgr  = "org.freedesktop.network1.Manager"
 
 	systemdName = "org.freedesktop.systemd1"
 	systemdPath = "/org/freedesktop/systemd1"
@@ -244,10 +247,28 @@ func (r *dbusResolved) Links() ([]model.ResolvedLink, error) {
 }
 
 func (r *dbusResolved) SetDefaultRoute(ifindex int, on bool) error {
-	err := r.mgr().Call(resolvedMgr+".SetLinkDefaultRoute", 0, int32(ifindex), on).Err
+	resolved := func(i int32, on bool) error {
+		return r.mgr().Call(resolvedMgr+".SetLinkDefaultRoute", 0, i, on).Err
+	}
+	networkd := func(i int32, on bool) error {
+		return r.conn.Object(networkdName, networkdPath).Call(networkdMgr+".SetLinkDefaultRoute", 0, i, on).Err
+	}
+	return setLinkDefaultRoute(resolved, networkd, ifindex, on)
+}
+
+// setLinkDefaultRoute asks resolved; a link systemd-networkd manages is
+// refused there ("Link eth0 is managed.") and set through networkd, which
+// passes it on to resolved.
+func setLinkDefaultRoute(resolved, networkd func(int32, bool) error, ifindex int, on bool) error {
+	err := resolved(int32(ifindex), on)
 	var de dbus.Error
-	if errors.As(err, &de) && de.Name == "org.freedesktop.resolve1.NoSuchLink" {
-		return errNoSuchLink
+	if errors.As(err, &de) {
+		switch de.Name {
+		case "org.freedesktop.resolve1.NoSuchLink":
+			return errNoSuchLink
+		case "org.freedesktop.resolve1.LinkBusy":
+			return networkd(int32(ifindex), on)
+		}
 	}
 	return err
 }
