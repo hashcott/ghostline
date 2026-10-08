@@ -37,9 +37,11 @@ func (i *nftInterceptor) Prepare(dir string) error {
 	return i.install(i.filter)
 }
 
-func (i *nftInterceptor) Ready(int) bool {
+// Ready reports whether the engine (pid) holds the queue: a queue some
+// other process reads would get the packets instead.
+func (i *nftInterceptor) Ready(pid int) bool {
 	b, err := i.queue()
-	return err == nil && queueBound(b, QueueNum)
+	return err == nil && queueBound(b, QueueNum, pid)
 }
 
 func (i *nftInterceptor) Cleanup() error { return i.remove() }

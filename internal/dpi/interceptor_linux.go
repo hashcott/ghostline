@@ -8,6 +8,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+
+	"golang.org/x/sys/unix"
 )
 
 // NewNftables captures through Ghostline's nftables table and an NFQUEUE
@@ -18,7 +20,14 @@ func NewNftables(filter []CaptureRule) Interceptor {
 		install: installTable,
 		remove:  deleteTable,
 		missing: func() []string {
-			return missingModules(func(m string) bool { _, err := os.Stat("/sys/module/" + m); return err == nil })
+			var uts unix.Utsname
+			_ = unix.Uname(&uts)
+			list, _ := os.ReadFile(filepath.Join("/lib/modules", unix.ByteSliceToString(uts.Release[:]), "modules.builtin"))
+			builtin := builtinModules(list)
+			return missingModules(func(m string) bool {
+				_, err := os.Stat("/sys/module/" + m)
+				return err == nil || builtin[m]
+			})
 		},
 		modprobe: func(m string) error { return exec.Command("modprobe", m).Run() },
 		queue:    func() ([]byte, error) { return os.ReadFile("/proc/net/netfilter/nfnetlink_queue") },
