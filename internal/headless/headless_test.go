@@ -34,16 +34,15 @@ func (l *memLock) Unlock() error { l.mu.Unlock(); return nil }
 func testDeps(t *testing.T) platform.Deps {
 	t.Helper()
 	dir := t.TempDir()
-	watch := func(func()) (func(), error) { return func() {}, nil }
 	return platform.Deps{
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
 		DNS:      sysdns.UnsupportedBackend{},
-		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
-		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
+		SysProxy: sysproxy.Unsupported{},
+		Certs:    certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
-		DPIRunner: dpi.UnsupportedRunner{}, DPIServices: dpi.NoServices{},
+		DPIRunner: dpi.UnsupportedRunner{}, DPIInterceptor: dpi.NoInterceptor{},
 		DPIEngines: func(func() strategies.List) []dpi.Installed { return nil },
 
 		Startup:       startup.Unsupported{},
@@ -71,4 +70,30 @@ func TestRun_RestoreOnCleanStateIsNoop(t *testing.T) {
 	st, err := store.NewStateStore(p.Paths.State, &memLock{}).Load()
 	require.NoError(t, err)
 	require.Equal(t, store.PhaseClean, st.Phase)
+}
+
+// cleanupIC records Cleanup: on Linux that deletes the nftables table.
+type cleanupIC struct {
+	dpi.NoInterceptor
+	cleaned int
+}
+
+func (c *cleanupIC) Cleanup() error { c.cleaned++; return nil }
+
+// After kill -9 of a daemon that ran DPI, --restore (systemd's
+// ExecStopPost) removes the packet capture it left behind.
+func TestRun_RestoreAfterKillCleansCapture(t *testing.T) {
+	p := testDeps(t)
+	ic := &cleanupIC{}
+	p.DPIInterceptor = ic
+	st := store.CleanState()
+	st.Phase, st.PID = store.PhaseDNSSet, 999999999
+	st.DPI = store.DPIState{Running: true, PID: 999999998}
+	require.NoError(t, os.MkdirAll(p.Paths.DataDir, 0o755))
+	require.NoError(t, store.WriteJSONAtomic(p.Paths.State, st))
+	require.Equal(t, 0, Run(cli.Mode{Kind: cli.KindRestore}, p))
+	require.Equal(t, 1, ic.cleaned)
+	got, err := store.NewStateStore(p.Paths.State, &memLock{}).Load()
+	require.NoError(t, err)
+	require.Equal(t, store.PhaseClean, got.Phase)
 }

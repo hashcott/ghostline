@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/platform"
 	"log/slog"
 	"math/rand"
@@ -56,7 +57,11 @@ func newProxyWiring(box *app.SettingsBox, eng *engine.Engine, p platform.Deps, b
 	if err != nil {
 		log.Warn("frag cache", "err", err)
 	}
-	return &proxyWiring{box: box, eng: eng, paths: paths, fw: p.Firewall, nid: p.NetID, secret: p.UserSecrets, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
+	w := &proxyWiring{box: box, eng: eng, paths: paths, fw: p.Firewall, nid: p.NetID, secret: p.UserSecrets, bus: bus, holder: &rules.Holder{}, frag: fc, log: log}
+	if rs, ok := p.Certs.(certstore.RootsSource); ok {
+		w.mitm.roots = rs.Roots // Linux: see a session CA installed a moment ago
+	}
+	return w
 }
 
 func (w *proxyWiring) fetcher() *lists.Fetcher {

@@ -72,6 +72,9 @@ func contains(xs []string, s string) bool {
 	return false
 }
 
+// Describe reads a certificate's thumbprint, common name and expiry.
+func Describe(der []byte) (Cert, error) { return describe(der) }
+
 func describe(der []byte) (Cert, error) {
 	c, err := x509.ParseCertificate(der)
 	if err != nil {

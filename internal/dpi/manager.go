@@ -19,20 +19,16 @@ var (
 	ErrStartFailed   = errors.New("dpi: DPI engine failed to start")
 	ErrBlockedByAV   = errors.New("dpi: DPI engine was blocked (antivirus?)")
 	ErrUnknownEngine = errors.New("dpi: unknown engine")
+	// ErrKernelUnsupported: the Linux kernel cannot queue packets to the
+	// engine (nfnetlink_queue / nft_queue missing).
+	ErrKernelUnsupported = errors.New("dpi: the kernel cannot queue packets (nfnetlink_queue/nft_queue)")
 )
-
-// driverService is the WinDivert 2.x service name. WinDivert 1.x (shipped
-// with GoodbyeDPI 0.2.2) used a versioned name ("WinDivert1.4"), so cleanup
-// looks for the prefix.
-const driverService = "WinDivert"
 
 // List files are copied into the engine directory under these names: the
 // engines read argv as ANSI (GoodbyeDPI) or through Cygwin (winws2), so a
 // path with Vietnamese letters (C:\Users\Đức…) would be mangled.
-const (
-	blacklistName    = "blacklist.txt"
-	autoHostlistName = "autohostlist.txt"
-)
+// autoHostlistName is per OS (lists_<os>.go).
+const blacklistName = "blacklist.txt"
 
 func extractWith(src fs.FS, dir string, pins map[string]string) error {
 	for name, want := range pins {
@@ -88,14 +84,6 @@ type Runner interface {
 	Start(exe string, args []string, dir string) (Process, error)
 }
 
-// Services controls Windows services.
-type Services interface {
-	Find(prefix string) ([]string, error)
-	Running(name string) (bool, error)
-	Stop(name string) error
-	Delete(name string) error
-}
-
 // Installed pairs an engine with the embedded files it is extracted from.
 type Installed struct {
 	Engine Engine
@@ -107,8 +95,9 @@ type Installed struct {
 type Manager struct {
 	binDir  string
 	engines map[string]Installed
+	order   []string // engine IDs as given
 	runner  Runner
-	svc     Services
+	ic      Interceptor
 	sleep   func(time.Duration)
 
 	mu      sync.Mutex
@@ -118,15 +107,25 @@ type Manager struct {
 }
 
 // NewManager manages the given engines, extracted under binDir.
-func NewManager(binDir string, engines []Installed, r Runner, s Services, sleep func(time.Duration)) *Manager {
+func NewManager(binDir string, engines []Installed, r Runner, ic Interceptor, sleep func(time.Duration)) *Manager {
 	if sleep == nil {
 		sleep = time.Sleep
 	}
-	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, svc: s, sleep: sleep}
+	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, ic: ic, sleep: sleep}
 	for _, e := range engines {
 		m.engines[e.Engine.ID()] = e
+		m.order = append(m.order, e.Engine.ID())
 	}
 	return m
+}
+
+// Engines lists this OS's engines in the order they were given.
+func (m *Manager) Engines() []Engine {
+	out := make([]Engine, 0, len(m.order))
+	for _, id := range m.order {
+		out = append(out, m.engines[id].Engine)
+	}
+	return out
 }
 
 // Get returns an engine by ID.
@@ -137,10 +136,10 @@ func (m *Manager) Get(engine string) (Engine, bool) {
 
 func (m *Manager) dir(engine string) string { return filepath.Join(m.binDir, engine) }
 
-// Start stops whatever runs, removes leftover WinDivert services, verifies
-// (re-extracting if needed) and launches the engine. It is running when,
-// after 2s, the process is alive and the WinDivert driver is up. p's list
-// paths are absolute.
+// Start stops whatever runs (cleaning up its capture), verifies
+// (re-extracting if needed), prepares the capture and launches the engine.
+// It is running when, after 2s, the process is alive and the Interceptor
+// says it captures. p's list paths are absolute.
 func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -165,6 +164,15 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 	if err != nil {
 		return 0, fmt.Errorf("%w: lists: %v", ErrStartFailed, err)
 	}
+	if err := m.ic.Prepare(dir); err != nil {
+		return 0, err
+	}
+	started := false
+	defer func() {
+		if !started {
+			_ = m.ic.Cleanup() // remove the capture prepared for nothing
+		}
+	}()
 	args, err := in.Engine.Args(rel)
 	if err != nil {
 		return 0, err
@@ -183,11 +191,12 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 		}
 		return 0, ErrStartFailed
 	}
-	if ok, _ := m.svc.Running(driverService); !ok {
+	if !m.ic.Ready(proc.PID()) {
 		_ = proc.Kill()
-		return 0, fmt.Errorf("%w: WinDivert driver not running", ErrStartFailed)
+		return 0, fmt.Errorf("%w: %s not capturing", ErrStartFailed, m.ic.Info().Mechanism)
 	}
 	m.proc, m.running, m.plan = proc, engine, p
+	started = true
 	return proc.PID(), nil
 }
 
@@ -201,7 +210,7 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, blacklistName), b, 0o644); err != nil {
+		if err := writeEngineList(filepath.Join(dir, blacklistName), b); err != nil {
 			return p, err
 		}
 		p.Blacklist = blacklistName
@@ -211,7 +220,11 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, autoHostlistName), b, 0o644); err != nil {
+		dst := filepath.Join(dir, filepath.FromSlash(autoHostlistName))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return p, err
+		}
+		if err := writeEngineList(dst, b); err != nil {
 			return p, err
 		}
 		p.AutoHostlist = autoHostlistName
@@ -239,7 +252,7 @@ func isAppControlBlock(err error) bool {
 		bytes.Contains([]byte(err.Error()), []byte("virus"))
 }
 
-// Stop kills the engine and removes every WinDivert service.
+// Stop kills the engine and cleans up its capture.
 func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -251,7 +264,7 @@ func (m *Manager) stopLocked() error {
 	if m.proc != nil {
 		if m.plan.AutoHostlist != "" {
 			// Keep what the engine learned; it only lives in its directory.
-			if b, err := os.ReadFile(filepath.Join(m.dir(m.running), autoHostlistName)); err == nil {
+			if b, err := readEngineList(filepath.Join(m.dir(m.running), filepath.FromSlash(autoHostlistName))); err == nil {
 				errs = append(errs, os.WriteFile(m.plan.AutoHostlist, b, 0o644))
 			}
 		}
@@ -260,11 +273,7 @@ func (m *Manager) stopLocked() error {
 		}
 		m.proc, m.running, m.plan = nil, "", Plan{}
 	}
-	names, err := m.svc.Find(driverService)
-	errs = append(errs, err)
-	for _, n := range names {
-		errs = append(errs, m.svc.Stop(n), m.svc.Delete(n))
-	}
+	errs = append(errs, m.ic.Cleanup())
 	return errors.Join(errs...)
 }
 
@@ -284,3 +293,6 @@ func (m *Manager) Engine() string {
 	}
 	return m.running
 }
+
+// Info describes the packet capture for the UI.
+func (m *Manager) Info() InterceptorInfo { return m.ic.Info() }

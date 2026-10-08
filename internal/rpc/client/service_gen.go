@@ -18,6 +18,7 @@ import (
 	"github.com/hashcott/ghostline/internal/stamps"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -47,6 +48,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).CreateCFRules, 1469676265)
 	application.RegisterBindingMethodID((*Service).DNSInfo, 4235783306)
 	application.RegisterBindingMethodID((*Service).DPIEngineDir, 3287260203)
+	application.RegisterBindingMethodID((*Service).DPIInfo, 3222097910)
 	application.RegisterBindingMethodID((*Service).DPIStrategies, 995292599)
 	application.RegisterBindingMethodID((*Service).DecodeStamps, 1897304945)
 	application.RegisterBindingMethodID((*Service).DefaultLookupSources, 3708316264)
@@ -121,6 +123,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).StartAutotune, 1763005864)
 	application.RegisterBindingMethodID((*Service).StartCFScan, 3945714453)
 	application.RegisterBindingMethodID((*Service).StopConflictingService, 3805516582)
+	application.RegisterBindingMethodID((*Service).SysProxyInfo, 3360194344)
 	application.RegisterBindingMethodID((*Service).TestUpstreamProxy, 1421704818)
 	application.RegisterBindingMethodID((*Service).UpdateList, 75098978)
 	application.RegisterBindingMethodID((*Service).UseOnlyServer, 2807799011)
@@ -255,6 +258,13 @@ func (s *Service) DPIEngineDir(a0 string) string {
 	var r string
 	err := s.call(context.Background(), "DPIEngineDir", &r, a0)
 	s.logErr("DPIEngineDir", err)
+	return r
+}
+
+func (s *Service) DPIInfo() app.DPIInfo {
+	var r app.DPIInfo
+	err := s.call(context.Background(), "DPIInfo", &r)
+	s.logErr("DPIInfo", err)
 	return r
 }
 
@@ -636,6 +646,13 @@ func (s *Service) StartCFScan() error {
 
 func (s *Service) StopConflictingService(a0 string) error {
 	return s.call(context.Background(), "StopConflictingService", nil, a0)
+}
+
+func (s *Service) SysProxyInfo() sysproxy.Info {
+	var r sysproxy.Info
+	err := s.call(context.Background(), "SysProxyInfo", &r)
+	s.logErr("SysProxyInfo", err)
+	return r
 }
 
 func (s *Service) TestUpstreamProxy(a0 string) error {

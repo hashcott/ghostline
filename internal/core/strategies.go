@@ -62,5 +62,5 @@ func NewDPIManager(paths store.Paths, p platform.Deps, list func() strategies.Li
 		l, _ := strategies.Parse(builtinStrategies.BuiltinJSON, zapret2.ValidateArgs)
 		list = func() strategies.List { return l }
 	}
-	return dpi.NewManager(filepath.Clean(paths.BinDir), p.DPIEngines(list), p.DPIRunner, p.DPIServices, time.Sleep)
+	return dpi.NewManager(filepath.Clean(paths.BinDir), p.DPIEngines(list), p.DPIRunner, p.DPIInterceptor, time.Sleep)
 }

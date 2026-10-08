@@ -40,16 +40,15 @@ func (nopEmitter) Emit(string, any) {}
 func testDeps(t *testing.T) platform.Deps {
 	t.Helper()
 	dir := t.TempDir()
-	watch := func(func()) (func(), error) { return func() {}, nil }
 	return platform.Deps{
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
 		DNS:      sysdns.UnsupportedBackend{},
-		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
-		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
+		SysProxy: sysproxy.Unsupported{},
+		Certs:    certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
-		DPIRunner: dpi.UnsupportedRunner{}, DPIServices: dpi.NoServices{},
+		DPIRunner: dpi.UnsupportedRunner{}, DPIInterceptor: dpi.NoInterceptor{},
 		DPIEngines: func(func() strategies.List) []dpi.Installed { return nil },
 
 		Startup:       startup.Unsupported{},
@@ -196,6 +195,25 @@ func TestStart_RegistersResumeWatch(t *testing.T) {
 	wait := c.Start(ctx)
 	require.NotNil(t, onResume)
 	onResume() // disconnected: nothing to re-check, must not panic
+	cancel()
+	wait()
+	require.Equal(t, 1, stopped)
+}
+
+// A login runs the proxy work that waited for a desktop session.
+func TestStart_RegistersSessionWatch(t *testing.T) {
+	p := testDeps(t)
+	var onNew func()
+	stopped := 0
+	p.WatchSessions = func(f func()) (func(), error) {
+		onNew = f
+		return func() { stopped++ }, nil
+	}
+	c := newCore(t, p, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
+	require.NotNil(t, onNew)
+	onNew() // not connected: nothing to reapply, must not panic
 	cancel()
 	wait()
 	require.Equal(t, 1, stopped)

@@ -2,6 +2,7 @@ package watchdog_test
 
 import (
 	"errors"
+	"github.com/hashcott/ghostline/internal/model"
 	"os"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var proxySnap = store.SysProxySnapshot{Flags: 1, Bypass: "<local>"}
+var proxySnap = model.ProxySnapshot{Backend: "windows", Windows: &model.WinINETProxy{Flags: 1, Bypass: "<local>"}}
 
 func dirtyWithProxy() *store.State {
 	st := dirty()
@@ -38,7 +39,7 @@ func (o *orderDNS) RestoreDefault() error {
 
 func withProxyHooks(d watchdog.Deps, log *[]string, sysErr error) watchdog.Deps {
 	d.DNS = &orderDNS{fakeDNS: fakeDNS{loopback: []sysdns.Adapter{{GUID: snap.GUID}}}, log: log}
-	d.RestoreSysProxy = func(ours string, s store.SysProxySnapshot) (bool, error) {
+	d.RestoreSysProxy = func(ours string, s model.ProxySnapshot) (bool, error) {
 		*log = append(*log, "sysproxy:"+ours)
 		return sysErr == nil, sysErr
 	}

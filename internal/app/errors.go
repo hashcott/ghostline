@@ -14,23 +14,35 @@ const (
 	CodeNotAuthorized     = "NOT_AUTHORIZED"
 	CodeNoUI              = "NO_UI"
 	// Log code: the system changed DNS and Ghostline set it again (Linux).
-	CodeDNSReapplied      = "DNS_REAPPLIED"
-	CodePort53Busy        = "PORT53_BUSY"
-	CodePort53NotOwner    = "PORT53_NOT_OWNER"
-	CodeNoServers         = "NO_SERVERS"
-	CodeEngineSelfTest    = "ENGINE_SELFTEST_FAILED"
-	CodeSetDNSFailed      = "SET_DNS_FAILED"
-	CodeVerifyLeak        = "VERIFY_LEAK"
-	CodeRestoreFailed     = "RESTORE_FAILED"
-	CodeDPIStartFailed    = "DPI_START_FAILED"
-	CodeDPIBlockedByAV    = "DPI_BLOCKED_BY_AV"
-	CodeDPIHashMismatch   = "DPI_HASH_MISMATCH"
-	CodeServerListBadSig  = "SERVERLIST_BAD_SIGNATURE"
-	CodeUpdateCheckFailed = "UPDATE_CHECK_FAILED"
-	CodeAutotuneNoPreset  = "AUTOTUNE_NO_PRESET"
-	CodeInternal          = "INTERNAL"
-	CodeSettingsReset     = "SETTINGS_RESET"
-	CodeNotConnected      = "NOT_CONNECTED"
+	CodeDNSReapplied         = "DNS_REAPPLIED"
+	CodePort53Busy           = "PORT53_BUSY"
+	CodePort53NotOwner       = "PORT53_NOT_OWNER"
+	CodeNoServers            = "NO_SERVERS"
+	CodeEngineSelfTest       = "ENGINE_SELFTEST_FAILED"
+	CodeSetDNSFailed         = "SET_DNS_FAILED"
+	CodeVerifyLeak           = "VERIFY_LEAK"
+	CodeRestoreFailed        = "RESTORE_FAILED"
+	CodeDPIStartFailed       = "DPI_START_FAILED"
+	CodeDPIBlockedByAV       = "DPI_BLOCKED_BY_AV"
+	CodeDPIKernelUnsupported = "DPI_KERNEL_UNSUPPORTED"
+	// CodeSessionPending: the system proxy waits for a user's desktop
+	// session (Linux, before login).
+	CodeSessionPending = "SESSION_PENDING"
+	// CodeProxyDesktopUnsupported: Ghostline cannot set this desktop's proxy.
+	CodeProxyDesktopUnsupported = "PROXY_DESKTOP_UNSUPPORTED"
+	// CodeCertPartial: a Fake SNI root is in the system store but not in
+	// every browser's (Linux: Firefox's policy or a user's NSS database).
+	CodeCertPartial = "CERT_PARTIAL"
+	// CodeCertNSSToolMissing: Chrome's per-user store needs certutil
+	// (Ubuntu: libnss3-tools).
+	CodeCertNSSToolMissing = "CERT_NSS_TOOL_MISSING"
+	CodeDPIHashMismatch    = "DPI_HASH_MISMATCH"
+	CodeServerListBadSig   = "SERVERLIST_BAD_SIGNATURE"
+	CodeUpdateCheckFailed  = "UPDATE_CHECK_FAILED"
+	CodeAutotuneNoPreset   = "AUTOTUNE_NO_PRESET"
+	CodeInternal           = "INTERNAL"
+	CodeSettingsReset      = "SETTINGS_RESET"
+	CodeNotConnected       = "NOT_CONNECTED"
 
 	// Phase 2A (spec 2A section 10).
 	CodeProxyPortBusy     = "PROXY_PORT_BUSY"

@@ -12,13 +12,9 @@ func TestUnsupported(t *testing.T) {
 	_, err := r.Start("x", nil, "")
 	require.ErrorIs(t, err, errors.ErrUnsupported)
 
-	var s Services = NoServices{}
-	names, err := s.Find("WinDivert")
-	require.NoError(t, err)
-	require.Empty(t, names)
-	running, err := s.Running("WinDivert")
-	require.NoError(t, err)
-	require.False(t, running)
-	require.NoError(t, s.Stop("WinDivert"))
-	require.NoError(t, s.Delete("WinDivert"))
+	var ic Interceptor = NoInterceptor{}
+	require.NoError(t, ic.Prepare(t.TempDir()))
+	require.True(t, ic.Ready(1))
+	require.NoError(t, ic.Cleanup())
+	require.Equal(t, InterceptorInfo{}, ic.Info())
 }

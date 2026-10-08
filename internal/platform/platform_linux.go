@@ -1,8 +1,14 @@
 package platform
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
+	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
+	"github.com/hashcott/ghostline/internal/certstore/nss"
+	"github.com/hashcott/ghostline/internal/dpi/zapret2"
+	"github.com/hashcott/ghostline/internal/session"
+	"github.com/hashcott/ghostline/internal/sysproxy/desktop"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,8 +25,6 @@ import (
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/sysproxy"
 )
-
-var errUnsupported = fmt.Errorf("platform: %w", errors.ErrUnsupported)
 
 // Default directories of the Linux daemon (systemd StateDirectory,
 // LogsDirectory and RuntimeDirectory).
@@ -53,23 +57,62 @@ func ClientSocket() string {
 
 func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
+	paths.BinDir = filepath.Join(filepath.Dir(dataDir), "bin") // outside data/ (0700): nfqws2 runs as nobody
 	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
-	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
+	// Desktop-session work (system proxy, a user's NSS) runs through the
+	// session agent; what waits for a login sits in the queue.
+	queue := session.NewQueue(filepath.Join(paths.DataDir, "session-queue.json"))
+	var sysProxy sysproxy.Backend = sysproxy.Unsupported{}
+	var nssTarget certstore.Target
+	var watchSessions func(func()) (func(), error)
+	if sessions, err := session.NewLinux(slog.Default()); err == nil {
+		sysProxy = desktop.NewBackend(sessions, queue)
+		nssTarget = nss.New(sessions, queue, filepath.Join(paths.DataDir, "nss-users.json"), nss.P11KitTrust)
+		handlers := map[string]func(string, json.RawMessage) error{
+			"proxy.restore": desktop.QueueHandler(sessions),
+			"nss.remove":    nss.QueueHandler(sessions),
+		}
+		drain := func(u session.User) {
+			_ = queue.Drain(u, func(task string, args json.RawMessage) error {
+				h, ok := handlers[task]
+				if !ok {
+					return fmt.Errorf("platform: no handler for queued %s", task)
+				}
+				return h(task, args)
+			})
+		}
+		watchSessions = func(onNew func()) (func(), error) {
+			if u, ok := sessions.Active(); ok {
+				go drain(u) // logged in before the daemon started
+			}
+			return sessions.WatchNew(func(u session.User) { drain(u); onNew() })
+		}
+	}
+	// Fake SNI roots: the system anchors (required), then Firefox's policy
+	// and the session user's NSS database.
+	var certs certstore.Store = certstore.Unsupported{}
+	if anchors, err := certstore.DetectAnchors(); err == nil {
+		ff := certstore.NewFirefox("/etc/firefox/policies/policies.json", filepath.Join(paths.DataDir, "firefox-policy.json"))
+		certs = certstore.NewLinux(anchors, optionalCertTargets(certstore.FirefoxInstalled(), nss.P11KitTrust(), ff, nssTarget)...)
+	}
 	return Deps{
+		Name:   "linux",
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
 		DNS:           sysdns.DetectLinux(paths.DataDir),
 		WatchResume:   watchResume,
-		SysProxy:      sysproxy.Unsupported{},
-		WatchSysProxy: unwatched,
-		Certs:         certstore.Unsupported{},
-		Firewall:      firewall.Unsupported{},
+		WatchSessions: watchSessions,
+		SysProxy:      sysProxy,
+		Certs:         certs,
+		Firewall:      firewall.DetectLinux(paths.DataDir),
 
-		DPIRunner:   dpi.UnsupportedRunner{},
-		DPIServices: dpi.NoServices{},
-		DPIEngines:  func(func() strategies.List) []dpi.Installed { return nil },
+		DPIRunner:      dpi.NewLinuxRunner(),
+		DPIInterceptor: dpi.NewNftables(zapret2.Filter),
+		DPIEngines: func(list func() strategies.List) []dpi.Installed {
+			return []dpi.Installed{{Engine: zapret2.New(list), Assets: zapret2Files.FS}}
+		},
 
 		// systemd is the watchdog (ExecStopPost=--restore) and the boot
 		// restore, so Connect's safety step has nothing to start.
@@ -81,9 +124,24 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		UserSecrets:    secretKey,
 		MachineSecrets: secretKey,
 
-		NetID:         netid.Unsupported{},
+		NetID:         netid.NewLinux(),
 		Procs:         procs.NewLinux(),
 		AttachConsole: func() {},
 		UsesDaemon:    true,
 	}, nil
+}
+
+// optionalCertTargets are the trust stores beyond the system anchors.
+// Firefox's policy only where NSS does not read the anchors through
+// p11-kit (Debian, Ubuntu): a policy import stays in the Firefox profile
+// after the policy is gone, so it is used only where nothing else works.
+func optionalCertTargets(firefoxInstalled, p11kit bool, firefox, userNSS certstore.Target) []certstore.Target {
+	var out []certstore.Target
+	if firefoxInstalled && !p11kit {
+		out = append(out, firefox)
+	}
+	if userNSS != nil {
+		out = append(out, userNSS)
+	}
+	return out
 }

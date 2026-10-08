@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"crypto/x509"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,4 +110,18 @@ func TestCertWiring_ForeignOwnedFilesReplaced(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, evil.Thumbprint(), ca.Thumbprint())
 	require.False(t, st.Has(evil.Thumbprint()))
+}
+
+// The self-test asks the store for fresh roots when it has them (Linux).
+func TestMITMBox_SelfTestUsesFreshRoots(t *testing.T) {
+	ca, err := certs.NewSessionCA([]string{"example.com"}, time.Now())
+	require.NoError(t, err)
+	var b mitmBox
+	b.set(certs.NewIssuer(ca, time.Now))
+	trusting := x509.NewCertPool()
+	trusting.AddCert(ca.Cert)
+	b.roots = func() (*x509.CertPool, error) { return trusting, nil }
+	require.NoError(t, b.selfTest(context.Background()))
+	b.roots = func() (*x509.CertPool, error) { return x509.NewCertPool(), nil }
+	require.Error(t, b.selfTest(context.Background()))
 }

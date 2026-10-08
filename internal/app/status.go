@@ -61,6 +61,7 @@ type ProxyStatus struct {
 
 // Snapshot is the UI-facing state, emitted on every change.
 type Snapshot struct {
+	Platform     string     `json:"platform"` // "windows", "linux": the UI's wording
 	Status       Status     `json:"status"`
 	Step         int        `json:"step"`                // 1..7 while connecting
 	PickDone     int        `json:"pickDone,omitempty"`  // servers checked so far in step 2

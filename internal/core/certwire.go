@@ -154,7 +154,12 @@ func (c *certWiring) RemoveSession(thumb string) error {
 func (c *certWiring) List() ([]certstore.Cert, error) { return c.store.List("Ghostline") }
 
 // mitmBox holds the Fake SNI certificate source the proxy reads.
-type mitmBox struct{ p atomic.Pointer[leafRef] }
+type mitmBox struct {
+	p atomic.Pointer[leafRef]
+	// roots reads the trusted roots afresh for the self-test (Linux:
+	// Go's system pool is read once per process); nil uses the system's.
+	roots func() (*x509.CertPool, error)
+}
 
 type leafRef struct{ l mitm.LeafSource }
 
@@ -189,8 +194,14 @@ func (b *mitmBox) selfTest(context.Context) error {
 	if err != nil {
 		return err
 	}
+	var roots *x509.CertPool
+	if b.roots != nil {
+		if roots, err = b.roots(); err != nil {
+			return err
+		}
+	}
 	inter := x509.NewCertPool()
-	_, err = leaf.Leaf.Verify(x509.VerifyOptions{DNSName: domains[0], Intermediates: inter,
+	_, err = leaf.Leaf.Verify(x509.VerifyOptions{DNSName: domains[0], Intermediates: inter, Roots: roots,
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}})
 	if err != nil {
 		return fmt.Errorf("fake SNI: the system does not trust the session CA: %w", err)

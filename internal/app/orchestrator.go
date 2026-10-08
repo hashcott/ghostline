@@ -79,7 +79,7 @@ func New(d Deps) *Orchestrator {
 	if !d.ListenV6.IsValid() {
 		d.ListenV6 = netip.MustParseAddrPort("[::1]:53")
 	}
-	o := &Orchestrator{d: d, snap: Snapshot{Status: StatusDisconnected}}
+	o := &Orchestrator{d: d, snap: Snapshot{Status: StatusDisconnected, Platform: d.Platform}}
 	s := d.Settings()
 	o.snap.DPI = DPIStatus{Enabled: s.DPI.Enabled, Preset: s.DPI.Preset}
 	return o
@@ -394,7 +394,7 @@ func (o *Orchestrator) connectSteps() []step {
 			dnsSnap = snap
 			pid, start := o.d.System.SelfPID()
 			if err := o.d.States.Update(func(st *store.State) error {
-				st.Version, st.Phase, st.PID, st.PIDStartTime, st.StartedAt = 4, store.PhaseDNSSet, pid, start, o.d.Now()
+				st.Version, st.Phase, st.PID, st.PIDStartTime, st.StartedAt = 5, store.PhaseDNSSet, pid, start, o.d.Now()
 				st.DNS = dnsSnap
 				return nil
 			}); err != nil {
@@ -510,7 +510,10 @@ func (o *Orchestrator) disconnectLocked(ctx context.Context) []sysdns.RestoreErr
 	if healthStop != nil {
 		healthStop()
 	}
-	if o.d.DPI.Running() {
+	// An engine that died (kill -9) is not running, but its capture
+	// (WinDivert services, the nftables table) is still there: stop
+	// whatever this run started.
+	if st, err := o.d.States.Load(); o.d.DPI.Running() || (err == nil && st.DPI.Running) {
 		_ = o.d.DPI.Stop()
 	}
 	_ = o.d.Engine.Stop(ctx)

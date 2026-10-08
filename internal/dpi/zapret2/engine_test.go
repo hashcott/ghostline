@@ -17,13 +17,15 @@ var testList = strategies.List{Version: 1, Zapret2: []strategies.Strategy{
 
 func newTest() dpi.Engine { return New(func() strategies.List { return testList }) }
 
-var head = []string{
-	"--wf-tcp-out=80,443",
-	"--wf-dup-check=1",
+// luaInits load the strategies' Lua libraries; the capture flags before
+// them are per OS (args_<os>_test.go pins them).
+var luaInits = []string{
 	"--lua-init=@lua/zapret-lib.lua",
 	"--lua-init=@lua/zapret-antidpi.lua",
 	"--lua-init=@lua/zapret-auto.lua",
 }
+
+var head = cat(interceptArgs(false), luaInits)
 
 func cat(parts ...[]string) []string {
 	var out []string
@@ -43,7 +45,7 @@ func TestArgs_BlacklistWithQUIC(t *testing.T) {
 	a, err := newTest().Args(dpi.Plan{Strategy: "z-fake", Scope: dpi.ScopeBlacklist, Blacklist: "blacklist.txt"})
 	require.NoError(t, err)
 	require.Equal(t, cat(
-		[]string{"--wf-tcp-out=80,443", "--wf-udp-out=443"}, head[1:],
+		interceptArgs(true), luaInits,
 		[]string{"--filter-tcp=80,443", "--hostlist=blacklist.txt",
 			"--lua-desync=fake:blob=fake_default_tls:badsum", "--lua-desync=multidisorder:pos=1,midsld"},
 		[]string{"--new", "--filter-udp=443", "--filter-l7=quic", "--hostlist=blacklist.txt",
@@ -99,7 +101,7 @@ func TestStrategies_FollowList(t *testing.T) {
 func TestEngineIdentity(t *testing.T) {
 	e := newTest()
 	require.Equal(t, "zapret2", e.ID())
-	require.Equal(t, "winws2.exe", e.Exe())
+	require.Equal(t, exeName, e.Exe())
 	require.True(t, e.HotReloadsLists())
 	require.Equal(t, Pinned, e.Files())
 	require.NoError(t, e.ValidateCustom("--lua-desync=pass"))

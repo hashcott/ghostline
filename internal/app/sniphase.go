@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"errors"
+	"github.com/hashcott/ghostline/internal/certstore"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/certs"
@@ -77,7 +79,7 @@ func (o *Orchestrator) startSNIPhase(ctx context.Context) error {
 			return ignoreNoChange(o.setState(func(st *store.State) { st.RemoveSessionCert(ca.Thumbprint()) }))
 		}},
 		{name: "sni.install", do: func(context.Context) error {
-			if err := o.d.Certs.InstallSession(ca.DER); err != nil {
+			if err := o.installSession(ca.DER); err != nil {
 				o.undoFailedInstall(ca.Thumbprint())
 				return appErr(CodeCertInstallFailed, err, "kind", "session")
 			}
@@ -152,7 +154,16 @@ func (o *Orchestrator) forgetSessionCert(thumb string) error {
 // removeSessionCA removes one session CA from Root and, only then, from
 // state.json. A failure keeps it recorded for recovery and warns.
 func (o *Orchestrator) removeSessionCA(thumb string) error {
-	if err := o.d.Certs.RemoveSession(thumb); err != nil {
+	err := o.d.Certs.RemoveSession(thumb)
+	var p *certstore.PartialError
+	if errors.As(err, &p) {
+		// Gone from the system store; an optional one (Firefox, a user's
+		// NSS) could not be cleaned. Retrying would not help: warn once.
+		o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		o.log("fakesni", CodeCertPartial, "target", strings.Join(p.Targets, ", "), "err", p.Err.Error())
+		err = nil
+	}
+	if err != nil {
 		o.AddWarning(AppError{Code: CodeCertRemoveFailed, Params: map[string]any{"thumbprint": thumb}})
 		o.log("fakesni", CodeCertRemoveFailed, "thumbprint", thumb)
 		return err
@@ -252,7 +263,7 @@ func (o *Orchestrator) rotateSession(ctx context.Context, force bool) {
 		o.AddWarning(AppError{Code: CodeCertInstallFailed, Params: map[string]any{"kind": "session"}})
 		return
 	}
-	if err := o.d.Certs.InstallSession(ca.DER); err != nil {
+	if err := o.installSession(ca.DER); err != nil {
 		if o.undoFailedInstall(thumb) {
 			_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveSessionCert(thumb) }))
 		}
@@ -268,4 +279,22 @@ func (o *Orchestrator) rotateSession(ctx context.Context, force bool) {
 	o.setSNIStatus()
 	_ = o.removeSessionCA(old)
 	o.log("fakesni", "FAKESNI_ROTATED", "domains", len(domains))
+}
+
+// installSession installs a session CA. On Linux an optional trust store
+// (Firefox, a user's NSS) may miss it: Fake SNI still works for the rest,
+// so that is a warning, not a failure.
+func (o *Orchestrator) installSession(der []byte) error {
+	err := o.d.Certs.InstallSession(der)
+	var p *certstore.PartialError
+	if errors.As(err, &p) {
+		if errors.Is(p, certstore.ErrNSSToolMissing) {
+			o.AddWarning(AppError{Code: CodeCertNSSToolMissing})
+		} else {
+			o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		}
+		o.log("fakesni", CodeCertPartial, "target", strings.Join(p.Targets, ", "), "err", p.Err.Error())
+		return nil
+	}
+	return err
 }

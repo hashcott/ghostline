@@ -25,3 +25,15 @@ func TestParseList_ErrorFailsTheCheck(t *testing.T) {
 	_, err = parseList("github.com/hashcott/ghostline/cmd/ghostlined\tdirectory not found\n")
 	require.ErrorContains(t, err, "directory not found")
 }
+
+// The Windows exe must not link the Linux session agent or nftables.
+func TestRules_LinuxOnlyPackagesForbiddenOnWindows(t *testing.T) {
+	var forbid []string
+	for _, r := range Rules {
+		if r.GOOS == "windows" && r.Pkg == "." {
+			forbid = append(forbid, r.Forbid...)
+		}
+	}
+	require.Contains(t, forbid, "github.com/hashcott/ghostline/internal/session")
+	require.Contains(t, forbid, "github.com/google/nftables")
+}

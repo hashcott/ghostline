@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/hashcott/ghostline/internal/model"
 	"testing"
 	"time"
 
@@ -47,18 +48,18 @@ func TestRestoreSystemProxy_AfterFailedRestore(t *testing.T) {
 // gets restored later is a direct connection, not the dead port.
 func TestProxyPhase_StaleOwnValueNotPrompted(t *testing.T) {
 	ph := newProxyHarness(t, true)
-	ph.sp.existing = store.SysProxySnapshot{Flags: 3, Server: "127.0.0.1:8080"}
+	ph.sp.existing = model.WinINETProxy{Flags: 3, Server: "127.0.0.1:8080"}
 	require.NoError(t, ph.o.Connect(context.Background()))
 	require.Zero(t, ph.asked)
 	st, _ := ph.states.Load()
-	require.Equal(t, store.SysProxySnapshot{Flags: 1}, *st.SysProxy.Snapshot)
+	require.Equal(t, model.ProxySnapshot{Backend: "windows", Windows: &model.WinINETProxy{Flags: 1}}, *st.SysProxy.Snapshot)
 }
 
 // Final review I9: Disconnect must not wait up to 60 s for an unanswered
 // SYSPROXY_EXISTING prompt.
 func TestDisconnect_CancelsPendingOverridePrompt(t *testing.T) {
 	ph := newProxyHarness(t, true)
-	ph.sp.existing = store.SysProxySnapshot{Flags: 3, Server: "10.0.0.1:3128"}
+	ph.sp.existing = model.WinINETProxy{Flags: 3, Server: "10.0.0.1:3128"}
 	ph.o.d.ConfirmOverride = func(ctx context.Context, server, pac string) bool {
 		select {
 		case <-ctx.Done():

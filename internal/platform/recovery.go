@@ -6,7 +6,6 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
 
@@ -20,7 +19,7 @@ func (d Deps) Recovery(states *store.StateStore, stopDPI func() error, log *slog
 		StopDPI:         stopDPI,
 		Alive:           d.Procs.Alive,
 		Log:             log,
-		RestoreSysProxy: sysproxy.Manager{API: d.SysProxy}.RestoreIfOurs,
+		RestoreSysProxy: d.SysProxy.RestoreIfOurs,
 		DeleteRule:      d.Firewall.DeleteNamed,
 		RemoveCert: func(t string) error {
 			// state.json is user-writable: remove only Fake SNI roots.

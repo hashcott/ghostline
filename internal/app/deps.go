@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"net/netip"
 	"time"
 
@@ -109,14 +110,8 @@ type Proxy interface {
 	Alive() bool
 }
 
-// SysProxy changes the Windows system proxy.
-type SysProxy interface {
-	Snapshot() (store.SysProxySnapshot, error)
-	Existing(store.SysProxySnapshot) (server, pac string, has bool)
-	Apply(addr string) error
-	IsOurs(addr string) (bool, error)
-	RestoreIfOurs(addr string, snap store.SysProxySnapshot) (bool, error)
-}
+// SysProxy changes the system proxy (WinINET, or the desktop's settings).
+type SysProxy = sysproxy.Backend
 
 // Firewall manages Ghostline's inbound rules.
 type Firewall interface {
@@ -147,6 +142,8 @@ type Certs interface {
 
 // Deps wires the orchestrator.
 type Deps struct {
+	// Platform names the OS ("windows", "linux") for the UI's wording.
+	Platform     string
 	Engine       Engine
 	DNS          DNS
 	DPI          DPI

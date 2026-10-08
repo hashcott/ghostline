@@ -36,10 +36,8 @@ func ispResolvers(st store.State, live []netid.LiveAdapter) []string {
 		}
 	}
 	if st.Phase != store.PhaseClean {
-		for _, s := range st.DNS.Windows {
-			for _, v := range append(slices.Clone(s.IPv4.Servers), s.IPv6.Servers...) {
-				add(v)
-			}
+		for _, v := range st.DNS.Servers() { // the servers from before Connect
+			add(v)
 		}
 	}
 	for _, a := range live {

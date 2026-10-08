@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/hashcott/ghostline/internal/model"
 	"log/slog"
 	"math/big"
 	"path/filepath"
@@ -37,12 +38,12 @@ type recProcs struct {
 func (p *recProcs) Alive(pid uint32, _ time.Time) bool { p.asked = append(p.asked, pid); return true }
 
 type recProxy struct {
-	cur store.SysProxySnapshot
-	set []store.SysProxySnapshot
+	cur model.WinINETProxy
+	set []model.WinINETProxy
 }
 
-func (p *recProxy) Query() (store.SysProxySnapshot, error) { return p.cur, nil }
-func (p *recProxy) Set(s store.SysProxySnapshot) error     { p.set = append(p.set, s); return nil }
+func (p *recProxy) Query() (model.WinINETProxy, error) { return p.cur, nil }
+func (p *recProxy) Set(s model.WinINETProxy) error     { p.set = append(p.set, s); return nil }
 
 func selfSigned(t *testing.T, cn string) []byte {
 	t.Helper()
@@ -59,13 +60,13 @@ func selfSigned(t *testing.T, cn string) []byte {
 // mode use this builder; each hook must reach this OS's implementation.
 func TestRecovery_WiresEveryCleanup(t *testing.T) {
 	fw, pr := &recFirewall{}, &recProcs{}
-	px := &recProxy{cur: store.SysProxySnapshot{Flags: sysproxy.FlagProxy, Server: "127.0.0.1:8080"}}
+	px := &recProxy{cur: model.WinINETProxy{Flags: sysproxy.FlagProxy, Server: "127.0.0.1:8080"}}
 	roots := certstore.NewFake()
 	session, lan := selfSigned(t, certs.SessionPrefix+" 1"), selfSigned(t, "Ghostline LAN CA")
 	require.NoError(t, roots.Install(session))
 	require.NoError(t, roots.Install(lan))
 	stopped := false
-	p := Deps{DNS: sysdns.UnsupportedBackend{}, SysProxy: px, Certs: roots, Firewall: fw, Procs: pr}
+	p := Deps{DNS: sysdns.UnsupportedBackend{}, SysProxy: sysproxy.NewWinINET(px, nil), Certs: roots, Firewall: fw, Procs: pr}
 
 	d := p.Recovery(store.NewStateStore(filepath.Join(t.TempDir(), "state.json"), nil), func() error { stopped = true; return nil }, slog.Default())
 
@@ -76,10 +77,10 @@ func TestRecovery_WiresEveryCleanup(t *testing.T) {
 	require.Equal(t, []uint32{42}, pr.asked)
 	require.NoError(t, d.DeleteRule(firewall.RuleSetup))
 	require.Equal(t, []string{firewall.RuleSetup}, fw.deleted)
-	restored, err := d.RestoreSysProxy("127.0.0.1:8080", store.SysProxySnapshot{Flags: sysproxy.FlagDirect})
+	restored, err := d.RestoreSysProxy("127.0.0.1:8080", model.ProxySnapshot{Backend: "windows", Windows: &model.WinINETProxy{Flags: sysproxy.FlagDirect}})
 	require.NoError(t, err)
 	require.True(t, restored)
-	require.Equal(t, []store.SysProxySnapshot{{Flags: sysproxy.FlagDirect}}, px.set)
+	require.Equal(t, []model.WinINETProxy{{Flags: sysproxy.FlagDirect}}, px.set)
 
 	// state.json is user-writable: RemoveCert must refuse anything but a Fake SNI root.
 	require.NoError(t, d.RemoveCert(certstore.Thumbprint(lan)))

@@ -16,6 +16,8 @@ func dpiErr(err error, engine string) *AppError {
 		code = CodeDPIHashMismatch
 	case errors.Is(err, dpi.ErrBlockedByAV):
 		code = CodeDPIBlockedByAV
+	case errors.Is(err, dpi.ErrKernelUnsupported):
+		code = CodeDPIKernelUnsupported
 	}
 	return appErr(code, err, "engine", engine)
 }
@@ -66,6 +68,10 @@ func (o *Orchestrator) startEngine(ctx context.Context, engine string, p dpi.Pla
 // keep zapret2, so the next start tries it again (spec §8.1).
 func (o *Orchestrator) startDPI(ctx context.Context, s store.Settings) error {
 	engine := s.DPI.Engine
+	if _, ok := o.d.DPI.Get(engine); !ok {
+		// Settings from another OS (a Windows backup naming GoodbyeDPI).
+		engine = store.EngineZapret2
+	}
 	p := o.planFor(s, engine)
 	err := o.startEngine(ctx, engine, p)
 	if err == nil {

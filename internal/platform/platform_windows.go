@@ -32,17 +32,17 @@ func New(exe string) (Deps, error) {
 		return Deps{}, err
 	}
 	return Deps{
+		Name:  "windows",
 		Paths: store.WithMachineDir(store.ResolvePaths(exe, os.Getenv("APPDATA")), filepath.Join(os.Getenv("ProgramData"), brand.AppName)),
 		Lock:  lock,
 
-		DNS:           sysdns.NewAdapterBackend(sysdns.NewWindowsAPI(), sysdns.Watch),
-		SysProxy:      sysproxy.NewWindowsAPI(),
-		WatchSysProxy: sysproxy.Watch,
-		Certs:         certstore.NewWindows(certstore.LocalMachine),
-		Firewall:      firewall.NewNetsh(exe),
+		DNS:      sysdns.NewAdapterBackend(sysdns.NewWindowsAPI(), sysdns.Watch),
+		SysProxy: sysproxy.NewWinINET(sysproxy.NewWindowsAPI(), sysproxy.Watch),
+		Certs:    certstore.NewWindows(certstore.LocalMachine),
+		Firewall: firewall.NewNetsh(exe),
 
-		DPIRunner:   dpi.NewWindowsRunner(),
-		DPIServices: dpi.NewWindowsServices(),
+		DPIRunner:      dpi.NewWindowsRunner(),
+		DPIInterceptor: dpi.NewWinDivert(dpi.NewWindowsServices()),
 		DPIEngines: func(list func() strategies.List) []dpi.Installed {
 			return []dpi.Installed{
 				{Engine: goodbyedpi.New(), Assets: goodbyedpiFiles.FS},

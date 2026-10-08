@@ -21,25 +21,31 @@ import (
 
 // Deps is everything OS-specific Ghostline uses.
 type Deps struct {
+	// Name is the OS ("windows", "linux"), so shared code never asks
+	// runtime.GOOS.
+	Name string
+
 	Paths store.Paths
 	Lock  store.Locker // serialises state.json across processes
 	// Socket is the daemon's control socket ("" where there is no daemon).
 	Socket string
 
-	DNS           sysdns.Backend // also watches the network
-	SysProxy      sysproxy.API
-	WatchSysProxy func(onChange func()) (stop func(), err error)
-	Certs         certstore.Store
-	Firewall      firewall.Manager
+	DNS      sysdns.Backend // also watches the network
+	SysProxy sysproxy.Backend
+	Certs    certstore.Store
+	Firewall firewall.Manager
 
-	DPIRunner   dpi.Runner
-	DPIServices dpi.Services
+	DPIRunner      dpi.Runner
+	DPIInterceptor dpi.Interceptor
 	// DPIEngines lists the engines this OS can run, with their files.
 	DPIEngines func(list func() strategies.List) []dpi.Installed
 
 	// WatchResume reports the machine waking from sleep; nil where the GUI
 	// sees it itself (Windows: WM_POWERBROADCAST).
 	WatchResume func(onResume func()) (stop func(), err error)
+	// WatchSessions reports a user logging in (Linux: logind), so work that
+	// waited for their desktop session can run; nil where there is none.
+	WatchSessions func(onNew func()) (stop func(), err error)
 
 	Startup       startup.Manager
 	StartWatchdog func(pid uint32, start time.Time) (stop func() error, err error)

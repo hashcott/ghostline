@@ -6,6 +6,7 @@ package watchdog
 import (
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/model"
 	"log/slog"
 	"slices"
 	"time"
@@ -35,7 +36,7 @@ type Deps struct {
 	Sleep   func(time.Duration) // default time.Sleep
 	// RestoreSysProxy puts the system proxy back if it is still Ghostline's
 	// (sysproxy.Manager.RestoreIfOurs); nil skips it.
-	RestoreSysProxy func(ours string, snap store.SysProxySnapshot) (bool, error)
+	RestoreSysProxy func(ours string, snap model.ProxySnapshot) (bool, error)
 	// DeleteRule removes an inbound firewall rule by name (idempotent);
 	// nil skips firewall cleanup.
 	DeleteRule func(name string) error

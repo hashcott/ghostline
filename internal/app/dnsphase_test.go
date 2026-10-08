@@ -62,6 +62,12 @@ type fCerts struct {
 	lanErr error
 	// failAfterInstall adds the certificate, then reports a read-back error.
 	failAfterInstall bool
+	// partial is returned after a successful install (an optional trust
+	// store failed, Linux).
+	partial error
+	// removePartial is returned after a successful removal (an optional
+	// trust store could not be cleaned, Linux).
+	removePartial error
 }
 
 func (c *fCerts) LANCA(context.Context) (*certs.CA, error) {
@@ -105,13 +111,16 @@ func (c *fCerts) InstallSession(der []byte) error {
 	if c.failAfterInstall {
 		return certstore.ErrNotInstalled
 	}
-	return nil
+	return c.partial
 }
 func (c *fCerts) RemoveSession(thumb string) error {
 	if err := c.r.add("certs.remove"); err != nil {
 		return err
 	}
-	return c.store.Remove(thumb)
+	if err := c.store.Remove(thumb); err != nil {
+		return err
+	}
+	return c.removePartial
 }
 func (c *fCerts) List() ([]certstore.Cert, error) { return c.store.List("Ghostline") }
 

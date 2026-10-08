@@ -5,6 +5,7 @@ import { useGhost } from "../../app/store";
 import { initI18n } from "../../i18n";
 
 const svc = vi.hoisted(() => ({
+  DPIInfo: vi.fn(() => Promise.resolve({ engines: [{ id: "zapret2", exe: "winws2.exe" }, { id: "goodbyedpi", exe: "goodbyedpi.exe" }], mechanism: "WinDivert", avExclusions: true })),
   SaveSettings: vi.fn(() => Promise.resolve()),
   SetDPIEnabled: vi.fn(() => Promise.resolve()),
   StartAutotune: vi.fn(() => Promise.resolve()),
@@ -57,7 +58,7 @@ beforeEach(() => {
 
 test("switching the engine saves it", async () => {
   render(<Dpi />);
-  fireEvent.click(screen.getByRole("button", { name: "GoodbyeDPI" }));
+  fireEvent.click(await screen.findByRole("button", { name: "GoodbyeDPI" }));
   await waitFor(() => expect(svc.SaveSettings).toHaveBeenCalled());
   expect(saved().dpi.engine).toBe("goodbyedpi");
 });
@@ -154,7 +155,7 @@ test("switching engine never shows the old engine's args or a raw strategy id", 
 test("picking an engine by hand retires the 'try zapret2' hint", async () => {
   withDPI({ engine: "goodbyedpi" });
   render(<Dpi />);
-  fireEvent.click(screen.getByRole("button", { name: "zapret2 (khuyên dùng)" }));
+  fireEvent.click(await screen.findByRole("button", { name: "zapret2 (khuyên dùng)" }));
   await waitFor(() => expect(svc.SaveSettings).toHaveBeenCalled());
   expect(saved().dpi.engine).toBe("zapret2");
   expect(saved().dpi.hideEngineHint).toBe(true);

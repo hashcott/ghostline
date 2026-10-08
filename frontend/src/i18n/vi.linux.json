@@ -1,0 +1,48 @@
+{
+  "settings": {
+    "startWithWindows": "khởi động cùng hệ thống",
+    "stopServiceConfirm": "Dịch vụ hệ thống {{name}} đang giữ cổng 53. Dừng nó có thể làm hỏng những gì đang dùng nó (bộ nhớ đệm DNS cục bộ, mạng của container) cho tới khi bạn bật lại. Tiếp tục?",
+    "certs": {
+      "none": "không có chứng chỉ Ghostline nào trên hệ thống"
+    },
+    "backup": {
+      "warn": {
+        "flag_off": {
+          "startWithWindows": "Khởi động cùng hệ thống sẽ bị tắt."
+        }
+      }
+    }
+  },
+  "errors": {
+    "DPI_BLOCKED_BY_AV": {
+      "message": "Không khởi động được engine vượt DPI",
+      "action": "Kiểm tra /var/lib/ghostline/bin không bị sửa hoặc mount noexec, rồi thử lại"
+    },
+    "SYSPROXY_FAILED": {
+      "message": "không đặt được proxy hệ thống của desktop"
+    },
+    "SYSPROXY_RESTORE_FAILED": {
+      "message": "không khôi phục được proxy hệ thống của desktop",
+      "action": "Mở cài đặt mạng hoặc proxy của desktop và tắt proxy thủ công"
+    },
+    "CERT_INSTALL_FAILED": {
+      "message": "không thêm được chứng chỉ gốc vào kho chứng chỉ tin cậy của hệ thống"
+    },
+    "CERT_REMOVE_FAILED": {
+      "message": "chưa gỡ được chứng chỉ Ghostline khỏi hệ thống"
+    },
+    "FAKESNI_SELFTEST_FAILED": {
+      "message": "Hệ thống chưa tin chứng chỉ Fake SNI"
+    }
+  },
+  "proxy": {
+    "lan": {
+      "public": "Firewall trên máy đang chặn thiết bị khác (zone public, hoặc luật chặn mặc định), nên chúng không vào được. Mở cổng proxy trong firewall để chia sẻ."
+    }
+  },
+  "fakesni": {
+    "warning": {
+      "p5": "Chứng chỉ gốc Ghostline cài vào hệ thống chỉ ký được cho đúng các tên miền trong rule và bị gỡ khi ngắt kết nối."
+    }
+  }
+}

@@ -20,6 +20,7 @@ func TestParseArgs(t *testing.T) {
 		{[]string{"status"}, Args{Command: "status", AllowUID: -1}},
 		{[]string{"connect", "--socket", "/tmp/s"}, Args{Command: "connect", Socket: "/tmp/s", AllowUID: -1}},
 		{[]string{"disconnect"}, Args{Command: "disconnect", AllowUID: -1}},
+		{[]string{"--session-agent"}, Args{Command: "session-agent", AllowUID: -1}},
 		{[]string{"--daemon", "--data-dir", "/tmp/d", "--allow-uid", "1000"}, Args{Command: "daemon", DataDir: "/tmp/d", AllowUID: 1000}},
 	}
 	for _, c := range cases {

@@ -17,7 +17,7 @@ type Args struct {
 	ExportPath string
 }
 
-const usage = "usage: ghostlined --daemon | --restore | --remove-certs | --export <file> | status | connect | disconnect [--socket <path>] [--data-dir <dir>] [--allow-uid <uid>]"
+const usage = "usage: ghostlined --daemon | --restore | --remove-certs | --export <file> | --session-agent | status | connect | disconnect [--socket <path>] [--data-dir <dir>] [--allow-uid <uid>]"
 
 func parseArgs(argv []string) (Args, error) {
 	a := Args{AllowUID: -1}
@@ -44,6 +44,8 @@ func parseArgs(argv []string) (Args, error) {
 			err = set("restore")
 		case "--remove-certs":
 			err = set("remove-certs")
+		case "--session-agent":
+			err = set("session-agent")
 		case "--export":
 			if err = set("export"); err == nil {
 				a.ExportPath, err = value(&i, arg)

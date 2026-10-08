@@ -27,7 +27,6 @@ import (
 	"github.com/hashcott/ghostline/internal/secrets"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
-	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/hashcott/ghostline/internal/upstreams"
 	"github.com/hashcott/ghostline/internal/watchdog"
 )
@@ -143,7 +142,8 @@ func New(o Options) (*Core, error) {
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
 	orch := app.New(app.Deps{
-		Engine: eng, DNS: p.DNS, DPI: dpiMgr, Safety: safety{startup: p.Startup, startWatchdog: p.StartWatchdog}, System: system{procs: p.Procs},
+		Platform: p.Name,
+		Engine:   eng, DNS: p.DNS, DPI: dpiMgr, Safety: safety{startup: p.Startup, startWatchdog: p.StartWatchdog}, System: system{procs: p.Procs},
 		Picker: picker, Scans: picker, Builder: build, Resolver: net.DefaultResolver,
 		Prober: probe.Prober{
 			Resolve: func(ctx context.Context, host string) ([]netipAddr, error) {
@@ -165,7 +165,7 @@ func New(o Options) (*Core, error) {
 		BlacklistPath:    paths.DPIBlacklist,
 		AutoHostlistPath: paths.DPIAutoHostlist,
 		Proxy:            pw,
-		SysProxy:         sysproxy.Manager{API: p.SysProxy},
+		SysProxy:         p.SysProxy,
 		Firewall:         p.Firewall,
 		ConfirmOverride: func(ctx context.Context, server, pac string) bool {
 			return svc != nil && app.AskOverride(ctx, svc, server, pac, 60*time.Second)
@@ -210,6 +210,8 @@ func New(o Options) (*Core, error) {
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
 		ListAdapters: func() ([]sysdns.Adapter, error) { return p.DNS.Info().Adapters, nil },
 		DNSInfo:      p.DNS.Info,
+		DPIInfo:      func() app.DPIInfo { return dpiInfo(dpiMgr.Engines(), dpiMgr.Info()) },
+		SysProxyInfo: p.SysProxy.Info,
 		StopService:  func(name string) error { return p.Procs.StopService(name, 10*time.Second) },
 		SetMode:      setMode,
 		RestoreNow:   func() error { return restoreNow(states, p.DNS) },
@@ -296,7 +298,7 @@ func New(o Options) (*Core, error) {
 // the watches are removed.
 func (c *Core) Start(ctx context.Context) (wait func()) {
 	var stops []func()
-	if stop, err := c.p.WatchSysProxy(c.Orch.OnSysProxyChanged); err != nil {
+	if stop, err := c.p.SysProxy.Watch(c.Orch.OnSysProxyChanged); err != nil {
 		c.log.Warn("system proxy watch", "err", err)
 	} else if stop != nil {
 		stops = append(stops, stop)
@@ -309,6 +311,13 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 	if c.p.WatchResume != nil {
 		if stop, err := c.p.WatchResume(func() { go c.Orch.OnResume(context.Background()) }); err != nil {
 			c.log.Warn("resume watch", "err", err)
+		} else if stop != nil {
+			stops = append(stops, stop)
+		}
+	}
+	if c.p.WatchSessions != nil {
+		if stop, err := c.p.WatchSessions(func() { go c.Orch.OnSessionNew(context.Background()) }); err != nil {
+			c.log.Warn("session watch", "err", err)
 		} else if stop != nil {
 			stops = append(stops, stop)
 		}
