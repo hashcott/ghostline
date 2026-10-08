@@ -103,17 +103,18 @@ func (i Installer) Install() error {
 	return i.Sys.Systemctl("enable", "--now", unitName)
 }
 
-// Uninstall restores the system (removeAll: what the package's prerm runs),
-// stops and removes the service and the installed daemon; purge also
-// removes the data and the logs. The ghostline group stays: users may have
-// been added to it.
+// Uninstall stops the service (it disconnects and its ExecStopPost
+// restores), restores whatever is left (removeAll: what the package's
+// prerm runs), then removes the service and the installed daemon; purge
+// also removes the data and the logs. The ghostline group stays: users
+// may have been added to it.
 func (i Installer) Uninstall(purge bool, removeAll func() error) error {
-	errRestore := removeAll()
 	_, err := os.Stat(i.path(SelfUnit))
 	hadUnit := err == nil
 	if err := i.Sys.Systemctl("disable", "--now", unitName); err != nil && hadUnit {
-		return errors.Join(errRestore, err)
+		return err
 	}
+	errRestore := removeAll()
 	if err := os.Remove(i.path(SelfUnit)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.Join(errRestore, err)
 	}

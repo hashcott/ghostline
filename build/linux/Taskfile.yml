@@ -7,6 +7,8 @@ vars:
   VERSION: '{{.VERSION | default "dev"}}'
   LDFLAGS: '-s -w -X github.com/hashcott/ghostline/internal/brand.Version={{.VERSION}}'
   PKG: 'ghostline-{{.VERSION}}-linux-amd64'
+  # Pinned: a release at least two weeks old when chosen (2026-10-09).
+  NFPM: 'go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0'
 
 tasks:
   build:
@@ -22,6 +24,7 @@ tasks:
     summary: Builds every Linux release file into bin/
     cmds:
       - task: package:tarball
+      - task: package:nfpm
 
   package:tarball:
     summary: bin/ghostline-<ver>-linux-amd64.tar.gz with install.sh and uninstall.sh
@@ -34,3 +37,12 @@ tasks:
       - chmod 0755 "bin/{{.PKG}}/ghostline" "bin/{{.PKG}}/ghostlined" "bin/{{.PKG}}/install.sh" "bin/{{.PKG}}/uninstall.sh"
       - tar -C bin --owner=0 --group=0 -czf "bin/{{.PKG}}.tar.gz" "{{.PKG}}"
       - rm -rf "bin/{{.PKG}}"
+
+  package:nfpm:
+    summary: bin/ghostline_<ver>_amd64.deb and bin/ghostline-<ver>.x86_64.rpm
+    deps: [build]
+    cmds:
+      - mkdir -p bin/linux
+      - sed 's|@DAEMON@|/usr/lib/ghostline/ghostlined|g' internal/sysinstall/ghostline.service.tmpl > bin/linux/ghostline.service
+      - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager deb --target bin/
+      - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager rpm --target bin/

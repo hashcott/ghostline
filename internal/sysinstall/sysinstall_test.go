@@ -110,11 +110,11 @@ func TestUninstall_RemovesServiceKeepsData(t *testing.T) {
 	require.NoError(t, os.MkdirAll(at(i, "/var/lib/ghostline/data"), 0o700))
 	require.NoError(t, os.WriteFile(at(i, "/var/lib/ghostline/data/x"), nil, 0o600))
 	sys.calls = nil
-	var order []string
-	removeAll := func() error { order = append(order, "remove-certs"); return nil }
+	// The service stops first: it disconnects and its ExecStopPost
+	// restores; --remove-certs then takes away what is left.
+	removeAll := func() error { sys.calls = append(sys.calls, "remove-certs"); return nil }
 	require.NoError(t, i.Uninstall(false, removeAll))
-	require.Equal(t, []string{"remove-certs"}, order)
-	require.Equal(t, []string{"systemctl disable --now ghostline.service", "systemctl daemon-reload"}, sys.calls)
+	require.Equal(t, []string{"systemctl disable --now ghostline.service", "remove-certs", "systemctl daemon-reload"}, sys.calls)
 	for _, p := range []string{SelfUnit, "/var/lib/ghostline/bin"} {
 		_, err := os.Stat(at(i, p))
 		require.True(t, os.IsNotExist(err), p)
