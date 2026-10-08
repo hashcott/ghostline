@@ -84,6 +84,15 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 			return sessions.WatchNew(func(u session.User) { drain(u); onNew() })
 		}
 	}
+	// Fake SNI roots: the system anchors (required), then Firefox's policy.
+	var certs certstore.Store = certstore.Unsupported{}
+	if anchors, err := certstore.DetectAnchors(); err == nil {
+		var optional []certstore.Target
+		if certstore.FirefoxInstalled() {
+			optional = append(optional, certstore.NewFirefox("/etc/firefox/policies/policies.json", filepath.Join(paths.DataDir, "firefox-policy.json")))
+		}
+		certs = certstore.NewLinux(anchors, optional...)
+	}
 	return Deps{
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
@@ -93,7 +102,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		WatchResume:   watchResume,
 		WatchSessions: watchSessions,
 		SysProxy:      sysProxy,
-		Certs:         certstore.Unsupported{},
+		Certs:         certs,
 		Firewall:      firewall.Unsupported{},
 
 		DPIRunner:      dpi.NewLinuxRunner(),

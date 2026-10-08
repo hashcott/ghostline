@@ -637,6 +637,10 @@
     "PROXY_DESKTOP_UNSUPPORTED": {
       "message": "Ghostline cannot change this desktop's proxy settings",
       "action": "Set an HTTP proxy to the address on the Proxy page by hand"
+    },
+    "CERT_PARTIAL": {
+      "message": "The Fake SNI certificate is trusted by the system, but not by {{target}}",
+      "action": "Sites in that browser may show a certificate warning; the details are in the log"
     }
   },
   "tray": {

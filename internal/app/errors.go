@@ -30,13 +30,16 @@ const (
 	CodeSessionPending = "SESSION_PENDING"
 	// CodeProxyDesktopUnsupported: Ghostline cannot set this desktop's proxy.
 	CodeProxyDesktopUnsupported = "PROXY_DESKTOP_UNSUPPORTED"
-	CodeDPIHashMismatch         = "DPI_HASH_MISMATCH"
-	CodeServerListBadSig        = "SERVERLIST_BAD_SIGNATURE"
-	CodeUpdateCheckFailed       = "UPDATE_CHECK_FAILED"
-	CodeAutotuneNoPreset        = "AUTOTUNE_NO_PRESET"
-	CodeInternal                = "INTERNAL"
-	CodeSettingsReset           = "SETTINGS_RESET"
-	CodeNotConnected            = "NOT_CONNECTED"
+	// CodeCertPartial: a Fake SNI root is in the system store but not in
+	// every browser's (Linux: Firefox's policy or a user's NSS database).
+	CodeCertPartial       = "CERT_PARTIAL"
+	CodeDPIHashMismatch   = "DPI_HASH_MISMATCH"
+	CodeServerListBadSig  = "SERVERLIST_BAD_SIGNATURE"
+	CodeUpdateCheckFailed = "UPDATE_CHECK_FAILED"
+	CodeAutotuneNoPreset  = "AUTOTUNE_NO_PRESET"
+	CodeInternal          = "INTERNAL"
+	CodeSettingsReset     = "SETTINGS_RESET"
+	CodeNotConnected      = "NOT_CONNECTED"
 
 	// Phase 2A (spec 2A section 10).
 	CodeProxyPortBusy     = "PROXY_PORT_BUSY"

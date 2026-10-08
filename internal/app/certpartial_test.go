@@ -1,0 +1,28 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/hashcott/ghostline/internal/certstore"
+	"github.com/stretchr/testify/require"
+)
+
+// Linux: the system store took the CA but Firefox's policy could not be
+// written. Fake SNI still runs; the user is told which browser misses it.
+func TestPhaseS_PartialInstallWarns(t *testing.T) {
+	h := newSNIHarness(t)
+	h.certs.partial = &certstore.PartialError{Targets: []string{"firefox"}, Err: errors.New("read-only")}
+	require.NoError(t, h.o.Connect(context.Background()))
+	require.NotNil(t, h.active(), "Fake SNI is active")
+	var found bool
+	for _, w := range h.o.Snapshot().Warnings {
+		if w.Code == CodeCertPartial {
+			found = true
+			require.Equal(t, "firefox", w.Params["target"])
+		}
+	}
+	require.True(t, found)
+	require.NotContains(t, warningCodes(h.o.Snapshot()), CodeCertInstallFailed)
+}

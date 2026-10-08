@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"errors"
+	"github.com/hashcott/ghostline/internal/certstore"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/certs"
@@ -77,7 +79,7 @@ func (o *Orchestrator) startSNIPhase(ctx context.Context) error {
 			return ignoreNoChange(o.setState(func(st *store.State) { st.RemoveSessionCert(ca.Thumbprint()) }))
 		}},
 		{name: "sni.install", do: func(context.Context) error {
-			if err := o.d.Certs.InstallSession(ca.DER); err != nil {
+			if err := o.installSession(ca.DER); err != nil {
 				o.undoFailedInstall(ca.Thumbprint())
 				return appErr(CodeCertInstallFailed, err, "kind", "session")
 			}
@@ -252,7 +254,7 @@ func (o *Orchestrator) rotateSession(ctx context.Context, force bool) {
 		o.AddWarning(AppError{Code: CodeCertInstallFailed, Params: map[string]any{"kind": "session"}})
 		return
 	}
-	if err := o.d.Certs.InstallSession(ca.DER); err != nil {
+	if err := o.installSession(ca.DER); err != nil {
 		if o.undoFailedInstall(thumb) {
 			_ = ignoreNoChange(o.setState(func(st *store.State) { st.RemoveSessionCert(thumb) }))
 		}
@@ -268,4 +270,18 @@ func (o *Orchestrator) rotateSession(ctx context.Context, force bool) {
 	o.setSNIStatus()
 	_ = o.removeSessionCA(old)
 	o.log("fakesni", "FAKESNI_ROTATED", "domains", len(domains))
+}
+
+// installSession installs a session CA. On Linux an optional trust store
+// (Firefox, a user's NSS) may miss it: Fake SNI still works for the rest,
+// so that is a warning, not a failure.
+func (o *Orchestrator) installSession(der []byte) error {
+	err := o.d.Certs.InstallSession(der)
+	var p *certstore.PartialError
+	if errors.As(err, &p) {
+		o.AddWarning(AppError{Code: CodeCertPartial, Params: map[string]any{"target": strings.Join(p.Targets, ", ")}})
+		o.log("fakesni", CodeCertPartial, "target", strings.Join(p.Targets, ", "), "err", p.Err.Error())
+		return nil
+	}
+	return err
 }

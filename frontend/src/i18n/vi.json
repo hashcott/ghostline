@@ -637,6 +637,10 @@
     "PROXY_DESKTOP_UNSUPPORTED": {
       "message": "Ghostline không đổi được cài đặt proxy của desktop này",
       "action": "Tự đặt proxy HTTP về địa chỉ trên trang Proxy"
+    },
+    "CERT_PARTIAL": {
+      "message": "Hệ thống đã tin chứng chỉ Fake SNI, nhưng {{target}} thì chưa",
+      "action": "Trang web trong trình duyệt đó có thể báo lỗi chứng chỉ; chi tiết có trong nhật ký"
     }
   },
   "tray": {
