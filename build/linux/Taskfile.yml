@@ -9,6 +9,8 @@ vars:
   PKG: 'ghostline-{{.VERSION}}-linux-amd64'
   # Pinned: a release at least two weeks old when chosen (2026-10-09).
   NFPM: 'go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0'
+  # build/linux/appimage/runtime-x86_64, see RUNTIME.md there.
+  RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
 
 tasks:
   build:
@@ -25,6 +27,7 @@ tasks:
     cmds:
       - task: package:tarball
       - task: package:nfpm
+      - task: package:appimage
 
   package:tarball:
     summary: bin/ghostline-<ver>-linux-amd64.tar.gz with install.sh and uninstall.sh
@@ -46,3 +49,20 @@ tasks:
       - sed 's|@DAEMON@|/usr/lib/ghostline/ghostlined|g' internal/sysinstall/ghostline.service.tmpl > bin/linux/ghostline.service
       - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager deb --target bin/
       - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager rpm --target bin/
+
+  package:appimage:
+    summary: bin/Ghostline-<ver>-x86_64.AppImage on the system's GTK4 and WebKitGTK (needs squashfs-tools)
+    deps: [build]
+    cmds:
+      - echo "{{.RUNTIME_SHA256}}  build/linux/appimage/runtime-x86_64" | sha256sum -c --quiet
+      - rm -rf bin/linux/AppDir bin/linux/app.squashfs
+      - mkdir -p bin/linux/AppDir/usr/bin bin/linux/AppDir/usr/lib/ghostline
+      - install -m 0755 bin/linux/ghostline bin/linux/AppDir/usr/bin/ghostline
+      - install -m 0755 bin/linux/ghostlined bin/linux/AppDir/usr/lib/ghostline/ghostlined
+      - install -m 0755 build/linux/appimage/AppRun bin/linux/AppDir/AppRun
+      - install -m 0644 build/linux/ghostline.desktop bin/linux/AppDir/ghostline.desktop
+      - install -m 0644 build/appicon.png bin/linux/AppDir/ghostline.png
+      - ln -s ghostline.png bin/linux/AppDir/.DirIcon
+      - mksquashfs bin/linux/AppDir bin/linux/app.squashfs -root-owned -noappend -comp zstd -quiet
+      - cat build/linux/appimage/runtime-x86_64 bin/linux/app.squashfs > "bin/Ghostline-{{.VERSION}}-x86_64.AppImage"
+      - chmod 0755 "bin/Ghostline-{{.VERSION}}-x86_64.AppImage"
