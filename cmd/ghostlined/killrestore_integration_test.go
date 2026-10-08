@@ -21,11 +21,14 @@ func TestRoot_RestoreAfterKill(t *testing.T) {
 		t.Skip("needs root")
 	}
 	dir := t.TempDir()
-	bin := filepath.Join(dir, "ghostlined")
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Env = append(os.Environ(), "CGO_ENABLED=0")
-	out, err := build.CombinedOutput()
-	require.NoError(t, err, string(out))
+	bin := os.Getenv("GHOSTLINED_BIN") // prebuilt, so root need not run go build in a user's cache
+	if bin == "" {
+		bin = filepath.Join(dir, "ghostlined")
+		build := exec.Command("go", "build", "-o", bin, ".")
+		build.Env = append(os.Environ(), "CGO_ENABLED=0")
+		out, err := build.CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
 
 	data := filepath.Join(dir, "data")
 	require.NoError(t, os.MkdirAll(data, 0o700))
@@ -40,7 +43,7 @@ func TestRoot_RestoreAfterKill(t *testing.T) {
 	require.False(t, b.StillOurs(snap).Empty())
 
 	cmd := exec.Command(bin, "--restore", "--data-dir", dir)
-	out, err = cmd.CombinedOutput()
+	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 
 	got, err := store.NewStateStore(filepath.Join(data, "state.json"), nopLock{}).Load()
