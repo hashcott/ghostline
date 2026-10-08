@@ -77,6 +77,18 @@ Chạy trên Windows 11 x64, terminal **admin**. Đánh dấu từng mục; mụ
 - [ ] **Tường lửa và antivirus:** quét IP Cloudflare ở mặc định không làm Windows Defender Firewall hay antivirus cảnh báo.
 - [ ] **`Ghostline.exe --export x.json`** chạy trong PowerShell: hỏi UAC, ghi được file, in "settings exported to …" (hoặc lỗi) ra console và không mở cửa sổ.
 
+## Kiểm tra thủ công Linux (spec Linux §19.3, L5)
+
+CI đã cài, gỡ và purge gói deb và tar.gz trên runner, và chạy `makepkg` với PKGBUILD. Phần dưới cần máy (hoặc VM) có desktop.
+
+- [ ] **Ubuntu 24.04 GNOME (VM):** cài deb → dịch vụ chạy, mở app từ menu; Connect → `resolvectl query example.com` đi qua Ghostline, kiểm tra rò rỉ sạch; zapret2 mở được site bị chặn; proxy hệ thống GNOME bật/tắt đúng; Fake SNI với Firefox snap và Chrome (có `libnss3-tools`); chia sẻ LAN qua ufw; `apt remove` → DNS, proxy, chứng chỉ, ufw, bảng nft về như trước; CA biến mất khỏi profile Firefox snap (cả sau khi chỉ tắt Fake SNI).
+- [ ] **Fedora 41 (VM):** cài rpm; NetworkManager + resolved; firewalld; Fake SNI qua p11-kit; `dnf remove` gỡ sạch.
+- [ ] **Arch KDE (VM hoặc máy thật):** build từ PKGBUILD (`makepkg -si`), `systemctl enable --now ghostline` (hoặc nút "khởi động dịch vụ"); proxy KDE; tắt NetworkManager để thử resolv.conf thuần; `pacman -R` gỡ sạch.
+- [ ] **AppImage trên distro chưa cài gói:** mở → trang "dịch vụ nền chưa chạy" có nút "cài dịch vụ" → nhập mật khẩu → kết nối được; huỷ hộp thoại mật khẩu → hiện lệnh để chạy trong terminal.
+- [ ] **Khởi động cùng hệ thống:** bật → có `~/.config/autostart/ghostline.desktop`; reboot → tự kết nối và app nằm ở khay; tắt → file biến mất.
+- [ ] **Rút điện khi đang kết nối** → boot lại → DNS về như cũ (hoặc tự kết nối lại nếu bật khởi động cùng hệ thống).
+- [ ] **Steam Deck (tuỳ chọn, khi có máy):** spike §16.4 spec tổng — có `webkitgtk-6.0` và glibc ≥ 2.39 không, kernel có NFQUEUE/`nft_queue` không, `/etc` và `/var` còn sau một lần cập nhật SteamOS không; rồi AppImage → `passwd` → cài dịch vụ → Connect + DPI → Game Mode → reboot. Ghi kết quả vào README (bỏ "chưa kiểm chứng" nếu chạy).
+
 ## Cần xác minh trên máy thật (reviewer không kiểm chứng được)
 
 - [ ] **Luật firewall với đường dẫn có dấu cách và chữ có dấu** (`C:\Program Files\…`, `C:\Users\Đức Hạnh\…` cho bản portable): `netsh` tạo đúng luật `Ghostline Proxy` cho exe đó.
