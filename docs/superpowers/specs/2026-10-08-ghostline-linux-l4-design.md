@@ -65,6 +65,20 @@
 | Việc chờ phiên user | Hàng đợi trong `session` (`data/session-queue.json`), do backend proxy và NSS dùng; `app` và `CertsState` không đổi |
 | `state.json` | v5 (chỉ đổi snapshot proxy), migrate từ v4 |
 
+### Quyết định khi triển khai (L4)
+
+- `dpi.Interceptor.Prepare(dir)` nhận thư mục engine và chạy sau khi chép danh sách: interceptor Linux đặt quyền cho `nobody` ở đó. WinDivert giữ nguyên thứ tự gọi (Prepare của nó không làm gì).
+- Trên Linux autohostlist nằm trong `auto/` (thuộc `nobody`, `0700`); `nobody` không ghi được cạnh `nfqws2`. `/var/lib/ghostline` có `o+x`, `bin/` `0755`, thư mục engine `0750` root:group của `nobody`; `data/` vẫn `0700`.
+- `QueueNum`, `FWMark`, `DropUser` khai báo một lần trong `dpi`; `zapret2` dùng lại. Bảng pin của cả hai nền tảng nằm chung một file vì `fetchdpi` cần cả hai.
+- `DPIInfo` trả engine kèm tên file chạy (dòng xem trước lệnh). Settings nêu một engine máy không có (bản sao lưu từ Windows chọn GoodbyeDPI) thì chạy zapret2.
+- `Backend.Snapshot(ours)`: backend nào gặp lại địa chỉ của chính Ghostline (crash trước khi kịp ghi state) thì trả cấu hình mặc định; logic WinINET cũ chuyển vào backend.
+- Snapshot GNOME đọc bằng `dconf read` (chỉ key người dùng đã đặt); khôi phục `reset` các key còn lại, không ghim giá trị mặc định.
+- Code GNOME/KDE và NSS nằm trong `internal/sysproxy/desktop` và `internal/certstore/nss` (chỉ Linux): `sysproxy`, `certstore` có trong bản Windows, không được kéo `session` theo.
+- `platform.Deps` có `WatchSessions` trung lập thay cho kiểu `session.Sessions`; xử lý hàng đợi ghép theo tên tác vụ ở `platform_linux.go`. `core` chỉ gọi `Orchestrator.OnSessionNew`.
+- Desktop không hỗ trợ là cảnh báo, proxy vẫn chạy (như khi chưa có phiên).
+- Không có mã `FIREWALL_UNKNOWN`: backend "không có firewall" báo chain `input` policy `drop` qua `IsPublicNetwork`, trang Proxy hiện cảnh báo sẵn có (câu chữ Linux ở bộ chuỗi ghi đè).
+- Firewall Linux hỏi trước cổng đã mở chưa, chỉ ghi và mở cổng chưa mở; gỡ cổng đã đóng không lỗi.
+
 ## 4. Interface
 
 ### 4.1 DPI

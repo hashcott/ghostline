@@ -90,8 +90,10 @@ jobs:
           version: latest
       - name: Go tests
         run: go test ./...
-      - name: Root integration (system DNS backend, kill -9 recovery)
-        run: sudo -E env "PATH=$PATH" go test -tags integration_root ./internal/sysdns/ ./cmd/ghostlined/
+      - name: Root integration (system DNS, nftables queue + nfqws2 fail-open, kill -9 recovery)
+        run: |
+          sudo modprobe nfnetlink_queue nft_queue || true
+          sudo -E env "PATH=$PATH" go test -tags integration_root ./internal/sysdns/ ./internal/dpi/ ./cmd/ghostlined/
       - name: Go race tests (rules, proxy, app)
         env:
           CGO_ENABLED: "1"
