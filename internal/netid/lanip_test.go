@@ -19,8 +19,21 @@ func TestLANAddrs(t *testing.T) {
 		2: {mustCIDR("127.0.0.1/8")},
 		3: {mustCIDR("10.0.0.9/8")},
 	}
-	got := LANAddrs(ifs, func(i net.Interface) ([]net.Addr, error) { return addrs[i.Index], nil })
+	got := LANAddrs(ifs, func(i net.Interface) ([]net.Addr, error) { return addrs[i.Index], nil }, func(net.Interface) bool { return true })
 	require.Equal(t, []netip.Addr{netip.MustParseAddr("192.168.1.5"), netip.MustParseAddr("fd00::5")}, got)
+}
+
+// A container or VM bridge (docker0 172.17.0.1) is private but no other
+// device on the LAN can reach it: it is not offered.
+func TestLANAddrs_SkipsInterfacesOffTheLAN(t *testing.T) {
+	ifs := []net.Interface{
+		{Index: 1, Name: "wlan0", Flags: net.FlagUp},
+		{Index: 2, Name: "docker0", Flags: net.FlagUp},
+	}
+	addrs := map[int][]net.Addr{1: {mustCIDR("192.168.2.115/24")}, 2: {mustCIDR("172.17.0.1/16")}}
+	got := LANAddrs(ifs, func(i net.Interface) ([]net.Addr, error) { return addrs[i.Index], nil },
+		func(i net.Interface) bool { return i.Name != "docker0" })
+	require.Equal(t, []netip.Addr{netip.MustParseAddr("192.168.2.115")}, got)
 }
 
 func mustCIDR(s string) net.Addr {

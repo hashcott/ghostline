@@ -13,11 +13,12 @@ var privatePrefixes = []netip.Prefix{
 }
 
 // LANAddrs lists the private (RFC 1918 / ULA) addresses of interfaces that
-// are up and not loopback — what other devices can use to reach the proxy.
-func LANAddrs(ifaces []net.Interface, addrs func(net.Interface) ([]net.Addr, error)) []netip.Addr {
+// are up, not loopback and on the LAN (onLAN: not a container or VM
+// bridge) — what other devices can use to reach the proxy.
+func LANAddrs(ifaces []net.Interface, addrs func(net.Interface) ([]net.Addr, error), onLAN func(net.Interface) bool) []netip.Addr {
 	var out []netip.Addr
 	for _, i := range ifaces {
-		if i.Flags&net.FlagUp == 0 || i.Flags&net.FlagLoopback != 0 {
+		if i.Flags&net.FlagUp == 0 || i.Flags&net.FlagLoopback != 0 || !onLAN(i) {
 			continue
 		}
 		as, err := addrs(i)
@@ -85,7 +86,7 @@ func LocalLANAddrs() []netip.Addr {
 	if err != nil {
 		return nil
 	}
-	return LANAddrs(ifs, func(i net.Interface) ([]net.Addr, error) { return i.Addrs() })
+	return LANAddrs(ifs, func(i net.Interface) ([]net.Addr, error) { return i.Addrs() }, isOnLAN)
 }
 
 // IsPrivateOrLocal reports whether a is loopback, private (RFC 1918, ULA)
