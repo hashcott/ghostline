@@ -16,13 +16,36 @@ import (
 type backend struct {
 	s session.Sessions
 	q *session.Queue
+
+	mu  sync.Mutex
+	uid int // the user the last Snapshot was for: Apply, IsOurs and Watch stay with them
+	set bool
 }
 
 // NewBackend sets the system proxy of the graphical session's desktop;
 // restores for a user who is not logged in wait in q.
-func NewBackend(s session.Sessions, q *session.Queue) sysproxy.Backend { return backend{s: s, q: q} }
+func NewBackend(s session.Sessions, q *session.Queue) sysproxy.Backend { return &backend{s: s, q: q} }
 
-func (b backend) active() (session.User, error) {
+func (b *backend) pinned() (int, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.uid, b.set
+}
+
+// owner is the user whose proxy Ghostline changed (pinned at Snapshot), or
+// the session in front of the screen before any Snapshot.
+func (b *backend) owner() (session.User, error) {
+	if uid, ok := b.pinned(); ok {
+		u, ok := b.s.ByUID(uid)
+		if !ok {
+			return session.User{}, sysproxy.ErrNoSession
+		}
+		return u, nil
+	}
+	return b.active()
+}
+
+func (b *backend) active() (session.User, error) {
 	u, ok := b.s.Active()
 	if !ok {
 		return session.User{}, sysproxy.ErrNoSession
@@ -33,7 +56,7 @@ func (b backend) active() (session.User, error) {
 	return u, nil
 }
 
-func (b backend) Snapshot(ours string) (sysproxy.Snapshot, error) {
+func (b *backend) Snapshot(ours string) (sysproxy.Snapshot, error) {
 	u, err := b.active()
 	if err != nil {
 		return sysproxy.Snapshot{}, err
@@ -43,13 +66,16 @@ func (b backend) Snapshot(ours string) (sysproxy.Snapshot, error) {
 		return sysproxy.Snapshot{}, err
 	}
 	s.UID = u.UID
+	b.mu.Lock()
+	b.uid, b.set = u.UID, true
+	b.mu.Unlock()
 	return s, nil
 }
 
 func unquote(v string) string { return strings.Trim(v, "'") }
 
 // Existing reports a proxy server or PAC script the user had enabled.
-func (backend) Existing(s sysproxy.Snapshot) (server, pac string, has bool) {
+func (*backend) Existing(s sysproxy.Snapshot) (server, pac string, has bool) {
 	switch {
 	case s.KDE != nil:
 		v := s.KDE.Values
@@ -73,8 +99,8 @@ func (backend) Existing(s sysproxy.Snapshot) (server, pac string, has bool) {
 	return server, pac, server != "" || pac != ""
 }
 
-func (b backend) Apply(addr string) error {
-	u, err := b.active()
+func (b *backend) Apply(addr string) error {
+	u, err := b.owner()
 	if err != nil {
 		return err
 	}
@@ -91,8 +117,8 @@ func (b backend) Apply(addr string) error {
 	return nil
 }
 
-func (b backend) IsOurs(addr string) (bool, error) {
-	u, err := b.active()
+func (b *backend) IsOurs(addr string) (bool, error) {
+	u, err := b.owner()
 	if err != nil {
 		return false, err
 	}
@@ -108,7 +134,7 @@ type queuedRestore struct {
 
 // RestoreIfOurs restores for the user the snapshot was taken for. Not
 // logged in: the restore is queued (and counts as done here).
-func (b backend) RestoreIfOurs(addr string, s sysproxy.Snapshot) (bool, error) {
+func (b *backend) RestoreIfOurs(addr string, s sysproxy.Snapshot) (bool, error) {
 	u, ok := b.s.ByUID(s.UID)
 	if !ok {
 		if err := b.q.Add(s.UID, "proxy.restore", queuedRestore{Addr: addr, Snapshot: s}); err != nil {
@@ -149,17 +175,21 @@ func QueueHandler(s session.Sessions) func(task string, args json.RawMessage) er
 	}
 }
 
-// Watch follows the graphical session's proxy settings, and the next
-// session's after a login.
-func (b backend) Watch(onChange func()) (func(), error) {
+// Watch follows the proxy settings of the user Ghostline set them for
+// (restarted when that user logs in again).
+func (b *backend) Watch(onChange func()) (func(), error) {
 	var mu sync.Mutex
 	stopStream := func() {}
+	stopped := false
 	start := func() {
 		mu.Lock()
 		defer mu.Unlock()
+		if stopped {
+			return
+		}
 		stopStream()
 		stopStream = func() {}
-		if u, err := b.active(); err == nil {
+		if u, err := b.owner(); err == nil {
 			if stop, err := b.s.Stream(u, "proxy.watch", nil, func(json.RawMessage) { onChange() }); err == nil {
 				stopStream = stop
 			}
@@ -174,11 +204,12 @@ func (b backend) Watch(onChange func()) (func(), error) {
 		stopNew()
 		mu.Lock()
 		defer mu.Unlock()
+		stopped = true
 		stopStream()
 	}, nil
 }
 
-func (b backend) Info() sysproxy.Info {
+func (b *backend) Info() sysproxy.Info {
 	u, ok := b.s.Active()
 	if !ok {
 		return sysproxy.Info{}

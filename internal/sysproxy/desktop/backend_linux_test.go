@@ -116,3 +116,25 @@ func TestLinuxProxy_Info(t *testing.T) {
 	require.Equal(t, sysproxy.Info{Desktop: "KDE", Supported: true}, NewBackend(&fakeSessions{active: &kdeUser}, nil).Info())
 	require.Equal(t, sysproxy.Info{}, NewBackend(&fakeSessions{}, nil).Info())
 }
+
+// Review I3: the proxy belongs to the user it was snapshotted for. After a
+// switch to user B, Apply and IsOurs still talk to A — never to B.
+func TestLinuxProxy_ApplyAndIsOursUseSnapshotUser(t *testing.T) {
+	a, b := kdeUser, session.User{UID: 1001, Desktop: "KDE"}
+	f := &fakeSessions{active: &a, present: map[int]session.User{1000: a, 1001: b}, answer: func(task string) any {
+		if task == "proxy.snapshot" {
+			return model.ProxySnapshot{Backend: "kde", KDE: &model.KDEProxy{}}
+		}
+		return true
+	}}
+	be := NewBackend(f, session.NewQueue(filepath.Join(t.TempDir(), "q.json")))
+	_, err := be.Snapshot("127.0.0.1:8080")
+	require.NoError(t, err)
+	f.active = &b // A switched to B (e.g. during the override prompt)
+	require.NoError(t, be.Apply("127.0.0.1:8080"))
+	_, err = be.IsOurs("127.0.0.1:8080")
+	require.NoError(t, err)
+	for _, c := range f.calls {
+		require.Equal(t, 1000, c.uid, c.task)
+	}
+}
