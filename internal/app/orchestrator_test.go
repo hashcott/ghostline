@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var happy = []string{"sys.admin", "sys.listen", "pick", "build", "engine.start", "engine.selftest", "dns.select", "dns.snapshot",
+var happy = []string{"sys.admin", "sys.listen", "pick", "build", "engine.start", "engine.selftest", "dns.snapshot",
 	"state.dns_set", "safety.watchdog", "safety.task.create", "dns.apply", "dns.flush", "engine.expect", "resolve", "engine.saw"}
 
 func TestConnect_HappyPathOrder(t *testing.T) {
@@ -28,7 +28,7 @@ func TestConnect_HappyPathOrder(t *testing.T) {
 	st, _ := h.states.Load()
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
 	require.Equal(t, uint32(1234), st.PID)
-	require.Len(t, st.Snapshot, 1)
+	require.Len(t, st.DNS.Windows, 1)
 }
 
 func TestConnect_FailureAtEachStepRollsBack(t *testing.T) {

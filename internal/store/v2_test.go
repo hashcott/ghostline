@@ -99,7 +99,7 @@ func TestState_V1ReadsWithoutProxy(t *testing.T) {
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
 	require.Nil(t, st.SysProxy)
 	require.Nil(t, st.Firewall)
-	require.Equal(t, 3, store.CleanState().Version)
+	require.Equal(t, 4, store.CleanState().Version)
 	require.Equal(t, store.PhaseClean, store.CleanState().Phase)
 }
 

@@ -233,3 +233,19 @@ func TestEmitDoesNotBlockOnStuckClient(t *testing.T) {
 		t.Fatal("Emit blocked on a client that does not read")
 	}
 }
+
+// A result too large for one line is answered with an error, not dropped
+// (the caller would otherwise wait for its timeout).
+func TestReplyTooLargeIsAnError(t *testing.T) {
+	big := json.RawMessage(`"` + strings.Repeat("x", MaxLine) + `"`)
+	_, sock := serve(t, func(context.Context, string, []json.RawMessage) (json.RawMessage, error) { return big, nil }, acceptAll)
+	c := dial(t, sock)
+	done := make(chan error, 1)
+	go func() { done <- c.Call(context.Background(), "Big", nil) }()
+	select {
+	case err := <-done:
+		require.EqualError(t, err, "rpc: reply too large")
+	case <-time.After(5 * time.Second):
+		t.Fatal("the call hung")
+	}
+}

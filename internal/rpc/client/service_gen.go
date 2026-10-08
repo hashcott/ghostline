@@ -45,6 +45,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).Connect, 2539050987)
 	application.RegisterBindingMethodID((*Service).CountScanServers, 164162785)
 	application.RegisterBindingMethodID((*Service).CreateCFRules, 1469676265)
+	application.RegisterBindingMethodID((*Service).DNSInfo, 4235783306)
 	application.RegisterBindingMethodID((*Service).DPIEngineDir, 3287260203)
 	application.RegisterBindingMethodID((*Service).DPIStrategies, 995292599)
 	application.RegisterBindingMethodID((*Service).DecodeStamps, 1897304945)
@@ -240,6 +241,13 @@ func (s *Service) CreateCFRules(a0 []string, a1 []string) []rules.LineError {
 	var r []rules.LineError
 	err := s.call(context.Background(), "CreateCFRules", &r, a0, a1)
 	s.logErr("CreateCFRules", err)
+	return r
+}
+
+func (s *Service) DNSInfo() sysdns.Info {
+	var r sysdns.Info
+	err := s.call(context.Background(), "DNSInfo", &r)
+	s.logErr("DNSInfo", err)
 	return r
 }
 

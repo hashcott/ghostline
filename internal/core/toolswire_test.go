@@ -14,7 +14,7 @@ func snapWith(servers ...string) []model.AdapterSnapshot {
 }
 
 func TestISPResolvers_FromSnapshotWhenConnected(t *testing.T) {
-	st := store.State{Phase: "dns_set", Snapshot: snapWith("203.162.4.191")}
+	st := store.State{Phase: "dns_set", DNS: model.DNSSnapshot{Backend: "windows", Windows: snapWith("203.162.4.191")}}
 	live := []netid.LiveAdapter{{DNS: []string{"127.0.0.1"}, Gateway: "192.168.1.1"}}
 	require.Equal(t, []string{"203.162.4.191"}, ispResolvers(st, live))
 }
@@ -28,7 +28,7 @@ func TestISPResolvers_FromLiveAdaptersWhenClean(t *testing.T) {
 func TestISPResolvers_GatewayWhenNothingElse(t *testing.T) {
 	// Connected with a DHCP adapter: the snapshot has no static servers and
 	// the live DNS is Ghostline itself. The router usually forwards to the ISP.
-	st := store.State{Phase: "dns_set", Snapshot: []model.AdapterSnapshot{{GUID: "g", IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}}}
+	st := store.State{Phase: "dns_set", DNS: model.DNSSnapshot{Backend: "windows", Windows: []model.AdapterSnapshot{{GUID: "g", IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}}}}
 	live := []netid.LiveAdapter{{DNS: []string{"127.0.0.1", "::1"}, Gateway: "192.168.1.1"}}
 	require.Equal(t, []string{"192.168.1.1"}, ispResolvers(st, live))
 }

@@ -89,7 +89,6 @@ func New(o Options) (*Core, error) {
 	box := app.NewSettingsBox(paths.Settings, initial)
 
 	states := store.NewStateStore(paths.State, p.Lock)
-	dnsMgr := sysdns.NewManager(p.DNS, time.Sleep)
 	strats := newStrategyBox(paths, serverListKey(), log)
 	dpiMgr := NewDPIManager(paths, p, strats.get)
 	nid := p.NetID
@@ -144,7 +143,7 @@ func New(o Options) (*Core, error) {
 	dw := &dnsWiring{eng: eng, certs: cw}
 	var svc *app.Service // assigned below; ConfirmOverride runs only after startup
 	orch := app.New(app.Deps{
-		Engine: eng, DNS: dnsMgr, DPI: dpiMgr, Safety: safety{startup: p.Startup, startWatchdog: p.StartWatchdog}, System: system{procs: p.Procs},
+		Engine: eng, DNS: p.DNS, DPI: dpiMgr, Safety: safety{startup: p.Startup, startWatchdog: p.StartWatchdog}, System: system{procs: p.Procs},
 		Picker: picker, Scans: picker, Builder: build, Resolver: net.DefaultResolver,
 		Prober: probe.Prober{
 			Resolve: func(ctx context.Context, host string) ([]netipAddr, error) {
@@ -209,10 +208,11 @@ func New(o Options) (*Core, error) {
 	svc = app.NewService(orch, app.ServiceDeps{
 		Bus: bus, Paths: paths, Settings: box, Catalog: cat.get,
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
-		ListAdapters: p.DNS.Adapters,
+		ListAdapters: func() ([]sysdns.Adapter, error) { return p.DNS.Info().Adapters, nil },
+		DNSInfo:      p.DNS.Info,
 		StopService:  func(name string) error { return p.Procs.StopService(name, 10*time.Second) },
 		SetMode:      setMode,
-		RestoreNow:   func() error { return restoreNow(states, dnsMgr) },
+		RestoreNow:   func() error { return restoreNow(states, p.DNS) },
 		Info: func() app.AppInfo {
 			tag, url := update.get()
 			return app.AppInfo{Version: brand.Version, Portable: paths.Portable, UpdateTag: tag, UpdateURL: url, Author: brand.Author, RepoURL: brand.RepoURL}
@@ -301,10 +301,17 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 	} else if stop != nil {
 		stops = append(stops, stop)
 	}
-	if stop, err := c.p.WatchNetwork(func() { c.Orch.OnNetworkChange(context.Background()) }); err != nil {
+	if stop, err := c.p.DNS.Watch(func() { c.Orch.OnNetworkChange(context.Background()) }); err != nil {
 		c.log.Warn("network watch", "err", err)
 	} else if stop != nil {
 		stops = append(stops, stop)
+	}
+	if c.p.WatchResume != nil {
+		if stop, err := c.p.WatchResume(func() { go c.Orch.OnResume(context.Background()) }); err != nil {
+			c.log.Warn("resume watch", "err", err)
+		} else if stop != nil {
+			stops = append(stops, stop)
+		}
 	}
 	var wg sync.WaitGroup
 	loop := func(f func()) {
@@ -334,27 +341,19 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 // Shutdown disconnects cleanly, putting the system back as it was.
 func (c *Core) Shutdown(ctx context.Context) error { return c.Orch.Disconnect(ctx) }
 
-// restoreNow puts DNS back from state.json, or resets loopback adapters to
-// DHCP when there is no usable snapshot.
-func restoreNow(states *store.StateStore, mgr *sysdns.Manager) error {
+// restoreNow is "Restore DNS now" when there is no connection to undo: it
+// restores from state.json if a run left a snapshot, otherwise it undoes
+// whatever Ghostline configuration the backend still finds.
+func restoreNow(states *store.StateStore, dns sysdns.Backend) error {
 	st, err := states.Load()
-	if err == nil && len(st.Snapshot) > 0 {
-		if errs := mgr.Restore(st.Snapshot); len(errs) > 0 {
+	if err == nil && st.Phase != store.PhaseClean && !st.DNS.Empty() {
+		if errs := dns.Restore(st.DNS); len(errs) > 0 {
 			return errs[0]
 		}
 		return states.Reset()
 	}
-	ads, err := mgr.LoopbackAdapters()
-	if err != nil {
+	if err := dns.RestoreDefault(); err != nil {
 		return err
-	}
-	var snaps []model.AdapterSnapshot
-	for _, a := range ads {
-		snaps = append(snaps, model.AdapterSnapshot{GUID: a.GUID, IfIndex: a.IfIndex, Alias: a.Alias,
-			IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}, IPv6: model.FamilyDNS{Mode: model.DNSModeDHCP}})
-	}
-	if errs := mgr.Restore(snaps); len(errs) > 0 {
-		return errs[0]
 	}
 	return states.Reset()
 }

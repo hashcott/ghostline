@@ -39,7 +39,7 @@ func testDeps(t *testing.T) platform.Deps {
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
-		DNS: sysdns.Unsupported{}, WatchNetwork: watch,
+		DNS:      sysdns.UnsupportedBackend{},
 		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
 		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 

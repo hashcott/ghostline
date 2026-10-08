@@ -1,8 +1,8 @@
 package sysdns
 
 import (
+	"github.com/hashcott/ghostline/internal/netwatch"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/model"
@@ -125,7 +125,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 	if err != nil {
 		var out []RestoreError
 		for _, s := range snaps {
-			out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+			out = append(out, RestoreError{Target: s.Alias, Err: err})
 		}
 		return out
 	}
@@ -143,7 +143,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 				continue // nothing recorded for this family
 			}
 			if err := m.restoreFamily(a, f.v6, f.dns); err != nil {
-				out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+				out = append(out, RestoreError{Target: s.Alias, Err: err})
 			}
 		}
 	}
@@ -197,25 +197,7 @@ func (m *Manager) LoopbackAdapters() ([]Adapter, error) {
 // Flush clears the Windows DNS cache.
 func (m *Manager) Flush() error { return m.api.Flush() }
 
-// Debounce returns trigger, which calls f once d after the last trigger in a
-// burst, and stop, which cancels a pending call.
+// Debounce is netwatch.Debounce (kept here for the Windows watcher).
 func Debounce(d time.Duration, f func()) (trigger func(), stop func()) {
-	var mu sync.Mutex
-	var t *time.Timer
-	trigger = func() {
-		mu.Lock()
-		defer mu.Unlock()
-		if t != nil {
-			t.Stop()
-		}
-		t = time.AfterFunc(d, f)
-	}
-	stop = func() {
-		mu.Lock()
-		defer mu.Unlock()
-		if t != nil {
-			t.Stop()
-		}
-	}
-	return trigger, stop
+	return netwatch.Debounce(d, f)
 }

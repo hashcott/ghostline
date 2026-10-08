@@ -24,11 +24,34 @@ type fakeDNS struct {
 	loopback []sysdns.Adapter
 }
 
-func (f *fakeDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	f.restored = append(f.restored, s...)
+func (f *fakeDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
+	f.restored = append(f.restored, s.Windows...)
 	return nil
 }
-func (f *fakeDNS) LoopbackAdapters() ([]sysdns.Adapter, error) { return f.loopback, nil }
+
+// StillOurs keeps the adapters still on loopback, as the Windows backend does.
+func (f *fakeDNS) StillOurs(s sysdns.Snapshot) sysdns.Snapshot {
+	on := map[string]bool{}
+	for _, a := range f.loopback {
+		on[a.GUID] = true
+	}
+	out := sysdns.Snapshot{Backend: s.Backend}
+	for _, a := range s.Windows {
+		if on[a.GUID] {
+			out.Windows = append(out.Windows, a)
+		}
+	}
+	return out
+}
+
+// RestoreDefault resets loopback adapters to DHCP, as the Windows backend does.
+func (f *fakeDNS) RestoreDefault() error {
+	for _, a := range f.loopback {
+		f.restored = append(f.restored, model.AdapterSnapshot{GUID: a.GUID, Alias: a.Alias,
+			IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}, IPv6: model.FamilyDNS{Mode: model.DNSModeDHCP}})
+	}
+	return nil
+}
 
 var snap = model.AdapterSnapshot{GUID: "{A}", IfIndex: 3, Alias: "Wi-Fi",
 	IPv4: model.FamilyDNS{Mode: model.DNSModeStatic, Servers: []string{"9.9.9.9"}}, IPv6: model.FamilyDNS{Mode: model.DNSModeDHCP}}
@@ -51,7 +74,7 @@ func setup(t *testing.T, alive bool, st *store.State) (watchdog.Deps, *fakeDNS, 
 
 func dirty() *store.State {
 	return &store.State{Version: 1, Phase: store.PhaseDNSSet, PID: 42, PIDStartTime: time.Unix(100, 0),
-		Snapshot: []model.AdapterSnapshot{snap}, DPI: store.DPIState{Running: true, PID: 7}}
+		DNS: model.DNSSnapshot{Backend: "windows", Windows: []model.AdapterSnapshot{snap}}, DPI: store.DPIState{Running: true, PID: 7}}
 }
 
 func TestRestore_CleanDoesNothing(t *testing.T) {
@@ -79,7 +102,7 @@ func TestRestore_RestoresSnapshotStopsDPIMarksClean(t *testing.T) {
 	require.Equal(t, 1, *stops)
 	st, _ := d.States.Load()
 	require.Equal(t, store.PhaseClean, st.Phase)
-	require.Empty(t, st.Snapshot)
+	require.Empty(t, st.DNS.Windows)
 }
 
 func TestRestore_PIDReusedStillRestores(t *testing.T) {
@@ -128,8 +151,8 @@ func TestRunWatchdog_RestoresAfterParentExit(t *testing.T) {
 
 type failingDNS struct{ fakeDNS }
 
-func (f *failingDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	return []sysdns.RestoreError{{GUID: s[0].GUID, Alias: s[0].Alias, Err: os.ErrPermission}}
+func (f *failingDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
+	return []sysdns.RestoreError{{Target: s.Label(), Err: os.ErrPermission}}
 }
 
 func TestRestore_FailureKeepsSnapshotForLaterLayers(t *testing.T) {
@@ -140,7 +163,7 @@ func TestRestore_FailureKeepsSnapshotForLaterLayers(t *testing.T) {
 	require.Equal(t, watchdog.Restored, out)
 	st, _ := d.States.Load()
 	require.Equal(t, store.PhaseDNSSet, st.Phase)
-	require.Len(t, st.Snapshot, 1)
+	require.Len(t, st.DNS.Windows, 1)
 }
 
 func TestRestore_CorruptStateWithFailedResetStaysUnclean(t *testing.T) {
@@ -155,12 +178,11 @@ func TestRestore_CorruptStateWithFailedResetStaysUnclean(t *testing.T) {
 
 type failingLoopback struct{}
 
-func (failingLoopback) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	return []sysdns.RestoreError{{GUID: "{B}", Err: os.ErrPermission}}
+func (failingLoopback) Restore(sysdns.Snapshot) []sysdns.RestoreError {
+	return []sysdns.RestoreError{{Target: "{B}", Err: os.ErrPermission}}
 }
-func (failingLoopback) LoopbackAdapters() ([]sysdns.Adapter, error) {
-	return []sysdns.Adapter{{GUID: "{B}"}}, nil
-}
+func (failingLoopback) StillOurs(s sysdns.Snapshot) sysdns.Snapshot { return s }
+func (failingLoopback) RestoreDefault() error                       { return os.ErrPermission }
 
 func TestRunWatchdog_KeepsWaitingWhileParentAlive(t *testing.T) { // review minor
 	d, fd, _ := setup(t, false, dirty())
@@ -175,14 +197,15 @@ func TestRunWatchdog_KeepsWaitingWhileParentAlive(t *testing.T) { // review mino
 
 type brokenLookup struct{ fakeDNS }
 
-func (*brokenLookup) LoopbackAdapters() ([]sysdns.Adapter, error) { return nil, os.ErrPermission }
+// StillOurs cannot read the current DNS: the backend keeps everything.
+func (*brokenLookup) StillOurs(s sysdns.Snapshot) sysdns.Snapshot { return s }
 
 // An adapter the user re-configured by hand after a crash keeps their DNS;
 // only adapters still pointing at Ghostline's loopback are restored.
 func TestRestore_SkipsAdaptersNoLongerOnLoopback(t *testing.T) {
 	other := model.AdapterSnapshot{GUID: "{B}", Alias: "Ethernet", IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}
 	st := dirty()
-	st.Snapshot = append(st.Snapshot, other)
+	st.DNS.Windows = append(st.DNS.Windows, other)
 	d, fd, _ := setup(t, false, st)
 	fd.loopback = []sysdns.Adapter{{GUID: "{B}"}} // {A} was changed by the user
 	out, err := watchdog.RestoreIfOrphaned(d)
@@ -201,4 +224,35 @@ func TestRestore_LoopbackLookupFailureRestoresAll(t *testing.T) {
 	_, err := watchdog.RestoreIfOrphaned(d)
 	require.NoError(t, err)
 	require.Equal(t, []model.AdapterSnapshot{snap}, bl.restored)
+}
+
+// The restore uses the backend's StillOurs on the recorded snapshot.
+func TestRestore_OrphanedRestoresOnlyStillOurs(t *testing.T) {
+	other := model.AdapterSnapshot{GUID: "{B}", Alias: "Ethernet"}
+	st := dirty()
+	st.DNS.Windows = append(st.DNS.Windows, other)
+	d, fd, _ := setup(t, false, st)
+	fd.loopback = []sysdns.Adapter{{GUID: snap.GUID}}
+	_, err := watchdog.RestoreIfOrphaned(d)
+	require.NoError(t, err)
+	require.Equal(t, []model.AdapterSnapshot{snap}, fd.restored)
+}
+
+type defaultOnly struct {
+	fakeDNS
+	defaults int
+}
+
+func (d *defaultOnly) RestoreDefault() error { d.defaults++; return nil }
+
+func TestRestore_CorruptCallsRestoreDefault(t *testing.T) {
+	d, _, _ := setup(t, false, nil)
+	do := &defaultOnly{}
+	d.DNS = do
+	require.NoError(t, os.WriteFile(d.States.Path(), []byte("{bad"), 0o644))
+	out, err := watchdog.RestoreIfOrphaned(d)
+	require.NoError(t, err)
+	require.Equal(t, watchdog.RestoredFromCorrupt, out)
+	require.Equal(t, 1, do.defaults)
+	require.Empty(t, do.restored)
 }

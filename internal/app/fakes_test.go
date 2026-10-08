@@ -99,34 +99,70 @@ type fDNS struct {
 	r          *rec
 	adapters   []sysdns.Adapter
 	restoreErr bool
+	// reapply makes Reconcile report these targets as set again (Linux).
+	reapply []string
 }
 
-func (d *fDNS) Select(string, []string) ([]sysdns.Adapter, error) {
-	return d.adapters, d.r.add("dns.select")
-}
-func (d *fDNS) Snapshot(ads []sysdns.Adapter) ([]model.AdapterSnapshot, error) {
+func (d *fDNS) Name() string { return "fake" }
+func (d *fDNS) Snapshot(sysdns.Selection) (sysdns.Snapshot, error) {
 	var out []model.AdapterSnapshot
-	for _, a := range ads {
+	for _, a := range d.adapters {
 		out = append(out, model.AdapterSnapshot{GUID: a.GUID, Alias: a.Alias, IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}})
 	}
-	return out, d.r.add("dns.snapshot")
+	if err := d.r.add("dns.snapshot"); err != nil {
+		return sysdns.Snapshot{}, err
+	}
+	if len(out) == 0 {
+		return sysdns.Snapshot{}, errors.New("no connected adapters")
+	}
+	return sysdns.Snapshot{Backend: "windows", Windows: out}, nil
 }
-func (d *fDNS) ApplyLoopback(snaps []model.AdapterSnapshot, v6 bool) error {
+func (d *fDNS) Apply(s sysdns.Snapshot, v6 bool) error {
 	d.lastV6 = v6
 	name := "dns.apply"
-	if len(snaps) == 1 && snaps[0].GUID != "{A}" {
-		name = "dns.apply:" + snaps[0].GUID
+	if len(s.Windows) == 1 && s.Windows[0].GUID != "{A}" {
+		name = "dns.apply:" + s.Windows[0].GUID
 	}
 	return d.r.add(name)
 }
-func (d *fDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
+func (d *fDNS) Reconcile(s sysdns.Snapshot, _ sysdns.Selection) (sysdns.Snapshot, sysdns.Snapshot, []sysdns.Change, error) {
+	_ = d.r.add("dns.reconcile")
+	known := map[string]bool{}
+	for _, a := range s.Windows {
+		known[a.GUID] = true
+	}
+	next := s
+	next.Windows = append([]model.AdapterSnapshot(nil), s.Windows...)
+	toApply := sysdns.Snapshot{Backend: s.Backend}
+	var changes []sysdns.Change
+	for _, a := range d.adapters {
+		if !known[a.GUID] {
+			sn := model.AdapterSnapshot{GUID: a.GUID, Alias: a.Alias, IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}
+			next.Windows = append(next.Windows, sn)
+			toApply.Windows = append(toApply.Windows, sn)
+			changes = append(changes, sysdns.Change{Target: a.Alias, Added: true})
+		}
+	}
+	for _, t := range d.reapply {
+		toApply = next
+		changes = append(changes, sysdns.Change{Target: t})
+	}
+	return next, toApply, changes, nil
+}
+func (d *fDNS) StillOurs(s sysdns.Snapshot) sysdns.Snapshot { return s }
+func (d *fDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
 	_ = d.r.add("dns.restore")
 	if d.restoreErr {
-		return []sysdns.RestoreError{{GUID: s[0].GUID, Alias: s[0].Alias, Err: errBoom}}
+		return []sysdns.RestoreError{{Target: s.Label(), Err: errBoom}}
 	}
 	return nil
 }
-func (d *fDNS) Flush() error { return d.r.add("dns.flush") }
+func (d *fDNS) RestoreDefault() error        { return d.r.add("dns.restoredefault") }
+func (d *fDNS) Flush() error                 { return d.r.add("dns.flush") }
+func (d *fDNS) Watch(func()) (func(), error) { return func() {}, nil }
+func (d *fDNS) Info() sysdns.Info {
+	return sysdns.Info{Backend: "fake", AdapterPick: true, Adapters: d.adapters}
+}
 
 // fDPI runs no process but builds argv with the real engines, so tests can
 // check what would be launched.
@@ -318,7 +354,7 @@ func (f *fStates) Update(fn func(*store.State) error) error {
 		switch {
 		case st.Phase == store.PhaseClean:
 			return f.r.add("state.clean")
-		case before.Phase == store.PhaseDNSSet && len(st.Snapshot) > len(before.Snapshot):
+		case before.Phase == store.PhaseDNSSet && len(st.DNS.Windows) > len(before.DNS.Windows):
 			return f.r.add("state.append")
 		default:
 			return f.r.add("state.dns_set")

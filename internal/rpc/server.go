@@ -237,7 +237,11 @@ func (s *Server) call(sc *sconn, m Msg) {
 		}
 		out.Result = res
 	}
-	if werr := sc.send(out); werr != nil {
+	werr := sc.send(out)
+	if errors.Is(werr, ErrLineTooLong) {
+		werr = sc.send(Msg{ID: m.ID, Error: &Error{Message: "rpc: reply too large"}})
+	}
+	if werr != nil {
 		s.log.Warn("rpc: reply", "call", m.Call, "err", werr)
 	}
 }

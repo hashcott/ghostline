@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,11 +43,19 @@ func runDaemon(ctx context.Context, a Args) error {
 	if err := os.MkdirAll(filepath.Dir(p.Socket), 0o755); err != nil { // the state lock lives there too
 		return err
 	}
+	// One daemon at a time, decided before anything else is touched (no
+	// startup restore, no log rotation by a second instance).
+	unlock, err := lockDaemon(filepath.Join(filepath.Dir(p.Socket), "daemon.lock"))
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	log, logw, err := core.OpenLog(p.Paths)
 	if err != nil {
 		return err
 	}
 	defer logw.Close()
+	slog.SetDefault(log)
 	log.Info("start", "version", brand.Version, "socket", socket)
 
 	var extra []int

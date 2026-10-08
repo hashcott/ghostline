@@ -23,6 +23,7 @@ const svc = vi.hoisted(() => ({
   RestoreDNSNow: vi.fn(() => Promise.resolve()),
   StopConflictingService: vi.fn(() => Promise.resolve()),
   ListAdapters: vi.fn(() => Promise.resolve([])),
+  DNSInfo: vi.fn(() => Promise.resolve({ backend: "windows", chain: "Windows", interfaces: [], adapterPick: true, adapters: [] })),
 }));
 vi.mock("../../app/api", () => ({ Service: svc }));
 

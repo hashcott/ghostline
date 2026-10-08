@@ -15,3 +15,13 @@ func TestUnsupported(t *testing.T) {
 	require.ErrorIs(t, m.CreateRecovery(), errors.ErrUnsupported)
 	require.NoError(t, m.DeleteRecovery())
 }
+
+// A service manager (systemd) runs the daemon: it is the recovery step
+// itself; starting the GUI at logon is not registered here yet.
+func TestServiceManaged(t *testing.T) {
+	var m startup.Manager = startup.ServiceManaged{}
+	require.NoError(t, m.CreateRecovery())
+	require.NoError(t, m.DeleteRecovery())
+	require.NoError(t, m.SetAutostart(false))
+	require.ErrorIs(t, m.SetAutostart(true), errors.ErrUnsupported)
+}

@@ -26,8 +26,7 @@ type Deps struct {
 	// Socket is the daemon's control socket ("" where there is no daemon).
 	Socket string
 
-	DNS           sysdns.API
-	WatchNetwork  func(onChange func()) (stop func(), err error)
+	DNS           sysdns.Backend // also watches the network
 	SysProxy      sysproxy.API
 	WatchSysProxy func(onChange func()) (stop func(), err error)
 	Certs         certstore.Store
@@ -37,6 +36,10 @@ type Deps struct {
 	DPIServices dpi.Services
 	// DPIEngines lists the engines this OS can run, with their files.
 	DPIEngines func(list func() strategies.List) []dpi.Installed
+
+	// WatchResume reports the machine waking from sleep; nil where the GUI
+	// sees it itself (Windows: WM_POWERBROADCAST).
+	WatchResume func(onResume func()) (stop func(), err error)
 
 	Startup       startup.Manager
 	StartWatchdog func(pid uint32, start time.Time) (stop func() error, err error)

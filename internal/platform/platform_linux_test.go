@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -32,4 +33,17 @@ func TestClientSocket_EnvOverride(t *testing.T) {
 	require.Equal(t, "/run/ghostline/ctl.sock", ClientSocket())
 	t.Setenv("GHOSTLINE_SOCKET", "/tmp/x.sock")
 	require.Equal(t, "/tmp/x.sock", ClientSocket())
+}
+
+// Root run: Connect stopped at step 5 (safety). On Linux systemd is the
+// watchdog (ExecStopPost=--restore) and the boot restore (the daemon
+// restores before anything else), so both succeed without registering.
+func TestNewDev_SafetyIsSystemds(t *testing.T) {
+	d, err := NewDev(t.TempDir())
+	require.NoError(t, err)
+	stop, err := d.StartWatchdog(1, time.Unix(1, 0))
+	require.NoError(t, err)
+	require.NoError(t, stop())
+	require.NoError(t, d.Startup.CreateRecovery())
+	require.NoError(t, d.Startup.DeleteRecovery())
 }

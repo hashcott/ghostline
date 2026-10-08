@@ -65,7 +65,7 @@ func TestRecovery_WiresEveryCleanup(t *testing.T) {
 	require.NoError(t, roots.Install(session))
 	require.NoError(t, roots.Install(lan))
 	stopped := false
-	p := Deps{DNS: sysdns.Unsupported{}, SysProxy: px, Certs: roots, Firewall: fw, Procs: pr}
+	p := Deps{DNS: sysdns.UnsupportedBackend{}, SysProxy: px, Certs: roots, Firewall: fw, Procs: pr}
 
 	d := p.Recovery(store.NewStateStore(filepath.Join(t.TempDir(), "state.json"), nil), func() error { stopped = true; return nil }, slog.Default())
 

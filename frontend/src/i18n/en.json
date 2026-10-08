@@ -265,6 +265,7 @@
     "SWAPPED": "switched to {{servers}} new servers",
     "SWAP_FAILED": "could not switch servers",
     "ADAPTER_ADDED": "protected new adapter: {{adapter}}",
+    "DNS_REAPPLIED": "the system changed DNS; set it again ({{adapter}})",
     "SITES_BLOCKED": "{{count}} test sites blocked at TLS",
     "DPI_STARTED": "{{engine}} started (preset {{preset}})",
     "DPI_STOPPED": "DPI bypass stopped",
@@ -288,6 +289,7 @@
     "closeToTray": "close → minimise to tray",
     "adapters": "adapters",
     "adaptersManual": "manual",
+    "dnsBackend": "System DNS",
     "testDomain": "test domain",
     "bootstrap": "bootstrap (ip:port, one per line)",
     "maxUpstreams": "max servers",
@@ -356,6 +358,10 @@
     "testDomainMany": "Many domains are not recommended: {{count}} domains make every scan slower and can drop good servers. Use 1–2 (at most 5)."
   },
   "errors": {
+    "PORT53_NOT_OWNER": {
+      "message": "{{name}} does not hold port 53",
+      "action": "Refresh and pick the service shown"
+    },
     "DAEMON_UNREACHABLE": {
       "message": "Ghostline's background service is not running",
       "action": "Start it with: sudo systemctl start ghostline"

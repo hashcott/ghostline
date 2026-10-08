@@ -23,14 +23,14 @@ type API interface {
 	Flush() error
 }
 
-// RestoreError reports an adapter whose DNS could not be restored.
+// RestoreError reports something whose DNS could not be restored: an
+// adapter, "NetworkManager", "/etc/resolv.conf", ….
 type RestoreError struct {
-	GUID  string
-	Alias string
-	Err   error
+	Target string
+	Err    error
 }
 
-func (e RestoreError) Error() string { return "sysdns: restore " + e.Alias + ": " + e.Err.Error() }
+func (e RestoreError) Error() string { return "sysdns: restore " + e.Target + ": " + e.Err.Error() }
 
 const (
 	ifTypeEthernet = 6

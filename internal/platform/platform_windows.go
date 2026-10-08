@@ -35,8 +35,7 @@ func New(exe string) (Deps, error) {
 		Paths: store.WithMachineDir(store.ResolvePaths(exe, os.Getenv("APPDATA")), filepath.Join(os.Getenv("ProgramData"), brand.AppName)),
 		Lock:  lock,
 
-		DNS:           sysdns.NewWindowsAPI(),
-		WatchNetwork:  sysdns.Watch,
+		DNS:           sysdns.NewAdapterBackend(sysdns.NewWindowsAPI(), sysdns.Watch),
 		SysProxy:      sysproxy.NewWindowsAPI(),
 		WatchSysProxy: sysproxy.Watch,
 		Certs:         certstore.NewWindows(certstore.LocalMachine),

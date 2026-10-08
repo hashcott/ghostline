@@ -49,3 +49,11 @@ func TestFileLock_SharedAcrossGoroutines(t *testing.T) {
 	wg.Wait()
 	require.Equal(t, 160, counter)
 }
+
+// Root run: `ghostlined --restore` after a reboot finds no /run/ghostline
+// yet; the lock makes its own directory.
+func TestFileLock_CreatesItsDirectory(t *testing.T) {
+	l := newFileLock(filepath.Join(t.TempDir(), "run", "state.lock"))
+	require.NoError(t, l.Lock())
+	require.NoError(t, l.Unlock())
+}

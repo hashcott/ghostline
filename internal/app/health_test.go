@@ -72,7 +72,7 @@ func TestNetworkChange_NewAdapterSnapshottedBeforeApply(t *testing.T) {
 	after := h.r.list()[n:]
 	require.Less(t, indexOf(after, "state.append"), indexOf(after, "dns.apply:{B}"), after)
 	st, _ := h.states.Load()
-	require.Len(t, st.Snapshot, 2)
+	require.Len(t, st.DNS.Windows, 2)
 	// Disconnect restores both adapters.
 	require.NoError(t, h.o.Disconnect(context.Background()))
 }
@@ -207,3 +207,34 @@ func TestSetDPIEnabled_WhileDisconnectedOnlySaves(t *testing.T) {
 }
 
 var _ = store.DefaultSettings
+
+// Linux: the system changed DNS while connected and the backend set it
+// again. The log says so, naming what was set.
+func TestOnNetworkChange_ReappliedLogsDNSReapplied(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, h.o.Connect(context.Background()))
+	h.dns.reapply = []string{"NetworkManager"}
+	h.o.OnNetworkChange(context.Background())
+	var found bool
+	for _, e := range h.sink.events() {
+		if e.Code == CodeDNSReapplied && e.Params["adapter"] == "NetworkManager" {
+			found = true
+		}
+	}
+	require.True(t, found)
+	require.NoError(t, h.o.Disconnect(context.Background()))
+}
+
+// The new snapshot is in state.json before the backend applies it, so a
+// crash in between never leaves an unrecorded change.
+func TestOnNetworkChange_PersistsBeforeApplying(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, h.o.Connect(context.Background()))
+	h.dns.adapters = append(h.dns.adapters, sysdns.Adapter{GUID: "{C}", Alias: "USB", IfType: 6, Up: true, HasGateway: true})
+	n := len(h.r.list())
+	h.o.OnNetworkChange(context.Background())
+	after := h.r.list()[n:]
+	require.Less(t, indexOf(after, "dns.reconcile"), indexOf(after, "state.append"), after)
+	require.Less(t, indexOf(after, "state.append"), indexOf(after, "dns.apply:{C}"), after)
+	require.NoError(t, h.o.Disconnect(context.Background()))
+}

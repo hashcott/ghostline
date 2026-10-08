@@ -45,7 +45,7 @@ func testDeps(t *testing.T) platform.Deps {
 		Paths: store.ResolvePaths(filepath.Join(dir, "ghostline"), dir),
 		Lock:  &memLock{},
 
-		DNS: sysdns.Unsupported{}, WatchNetwork: watch,
+		DNS:      sysdns.UnsupportedBackend{},
 		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
 		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
@@ -61,10 +61,18 @@ func testDeps(t *testing.T) platform.Deps {
 	}
 }
 
-// noAdapters is a system DNS with no adapters to manage.
-type noAdapters struct{ sysdns.Unsupported }
+// noAdapters is a system DNS with nothing of Ghostline's to reset.
+type noAdapters struct{ sysdns.UnsupportedBackend }
 
-func (noAdapters) Adapters() ([]sysdns.Adapter, error) { return nil, nil }
+func (noAdapters) RestoreDefault() error { return nil }
+
+// watchedDNS counts Watch registrations and stops.
+type watchedDNS struct {
+	sysdns.UnsupportedBackend
+	watch func(func()) (func(), error)
+}
+
+func (w watchedDNS) Watch(f func()) (func(), error) { return w.watch(f) }
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
@@ -128,12 +136,12 @@ func TestStart_WatchesRegisteredBeforeReturn(t *testing.T) {
 	p := testDeps(t)
 	var mu sync.Mutex
 	registered, stopped := 0, 0
-	p.WatchNetwork = func(func()) (func(), error) {
+	p.DNS = watchedDNS{watch: func(func()) (func(), error) {
 		mu.Lock()
 		registered++
 		mu.Unlock()
 		return func() { mu.Lock(); stopped++; mu.Unlock() }, nil
-	}
+	}}
 	c := newCore(t, p, Options{})
 	ctx, cancel := context.WithCancel(context.Background())
 	wait := c.Start(ctx)
@@ -172,4 +180,23 @@ func TestNew_RemoteRefusesFileLists(t *testing.T) {
 	_, err = c.Svc.AddList(file)
 	require.Error(t, err)
 	require.NotErrorIs(t, err, lists.ErrFileListsOff)
+}
+
+// After sleep the engine is re-checked (Linux: logind's PrepareForSleep).
+func TestStart_RegistersResumeWatch(t *testing.T) {
+	p := testDeps(t)
+	var onResume func()
+	stopped := 0
+	p.WatchResume = func(f func()) (func(), error) {
+		onResume = f
+		return func() { stopped++ }, nil
+	}
+	c := newCore(t, p, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	wait := c.Start(ctx)
+	require.NotNil(t, onResume)
+	onResume() // disconnected: nothing to re-check, must not panic
+	cancel()
+	wait()
+	require.Equal(t, 1, stopped)
 }

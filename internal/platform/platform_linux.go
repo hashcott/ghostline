@@ -53,14 +53,15 @@ func ClientSocket() string {
 
 func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
+	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
 	unwatched := func(func()) (func(), error) { return nil, errUnsupported }
 	return Deps{
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
-		DNS:           sysdns.Unsupported{},
-		WatchNetwork:  unwatched,
+		DNS:           sysdns.DetectLinux(paths.DataDir),
+		WatchResume:   watchResume,
 		SysProxy:      sysproxy.Unsupported{},
 		WatchSysProxy: unwatched,
 		Certs:         certstore.Unsupported{},
@@ -70,13 +71,15 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		DPIServices: dpi.NoServices{},
 		DPIEngines:  func(func() strategies.List) []dpi.Installed { return nil },
 
-		Startup: startup.Unsupported{},
+		// systemd is the watchdog (ExecStopPost=--restore) and the boot
+		// restore, so Connect's safety step has nothing to start.
+		Startup: startup.ServiceManaged{},
 		StartWatchdog: func(uint32, time.Time) (func() error, error) {
-			return nil, errUnsupported
+			return func() error { return nil }, nil
 		},
 
-		UserSecrets:    secrets.Unsupported{},
-		MachineSecrets: secrets.Unsupported{},
+		UserSecrets:    secretKey,
+		MachineSecrets: secretKey,
 
 		NetID:         netid.Unsupported{},
 		Procs:         procs.NewLinux(),
