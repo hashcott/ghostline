@@ -14,8 +14,8 @@ jobs:
     permissions:
       contents: read
 
-  # Builds and publishes only when CI passed.
-  release:
+  # Windows installer and portable zip; published by the publish job.
+  windows:
     needs: ci
     runs-on: windows-latest
     steps:
@@ -60,18 +60,64 @@ jobs:
           $old = (Get-ChildItem prev -Filter *portable.zip | Select-Object -First 1).FullName
           go run ./tools/sizecheck -old $old -new "bin/Ghostline-$v-portable.zip" -entry ghostline.exe -max 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Checksums
-        shell: pwsh
+      - name: Keep the Windows files for publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            bin/*installer.exe
+            bin/*portable.zip
+
+  # deb, rpm, AppImage and tar.gz (spec Linux L5 §8.2).
+  linux:
+    needs: ci
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: GTK4, WebKitGTK and packaging tools
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev squashfs-tools
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.27
+      - name: Frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Package
+        run: wails3 task linux:package VERSION="${GITHUB_REF_NAME#v}"
+      - name: Keep the Linux files for publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            bin/*.deb
+            bin/*.rpm
+            bin/*.AppImage
+            bin/*.tar.gz
+
+  # One SHA256SUMS for every file, the PKGBUILD filled in, the release.
+  publish:
+    needs: [windows, linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums and PKGBUILD
         run: |
-          $files = Get-ChildItem bin -File | Where-Object { $_.Name -like "*installer.exe" -or $_.Name -like "*portable.zip" }
-          # LF line endings so `sha256sum -c` works too, not only Get-FileHash.
-          $lines = $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
-          [IO.File]::WriteAllText("$PWD/bin/SHA256SUMS", (($lines -join "`n") + "`n"), [Text.Encoding]::ASCII)
-          Get-Content bin/SHA256SUMS
+          v="${GITHUB_REF_NAME#v}"
+          sh build/linux/aur/render.sh "$v" "dist/ghostline-$v-linux-amd64.tar.gz" > dist/PKGBUILD
+          cp build/linux/aur/ghostline.install dist/
+          cd dist
+          sha256sum -- *installer.exe *portable.zip *.deb *.rpm *.AppImage *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
       - name: GitHub release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          $assets = Get-ChildItem bin -File | Where-Object { $_.Name -like "*installer.exe" -or $_.Name -like "*portable.zip" -or $_.Name -eq "SHA256SUMS" } | ForEach-Object { $_.FullName }
-          gh release create "${{ github.ref_name }}" @assets --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
