@@ -111,7 +111,7 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		WatchSessions: watchSessions,
 		SysProxy:      sysProxy,
 		Certs:         certs,
-		Firewall:      firewall.Unsupported{},
+		Firewall:      firewall.DetectLinux(paths.DataDir),
 
 		DPIRunner:      dpi.NewLinuxRunner(),
 		DPIInterceptor: dpi.NewNftables(zapret2.Filter),
