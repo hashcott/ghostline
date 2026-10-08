@@ -1,6 +1,11 @@
 package sysdns
 
-import "github.com/hashcott/ghostline/internal/model"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/hashcott/ghostline/internal/model"
+)
 
 // Snapshot is what a backend records before changing DNS (state.json).
 type Snapshot = model.DNSSnapshot
@@ -53,3 +58,16 @@ type Backend interface {
 	Watch(onChange func()) (stop func(), err error)
 	Info() Info
 }
+
+// ApplyError is an Apply that set some targets and failed on others.
+// Failed names those as Change.Target does.
+type ApplyError struct {
+	Failed []string
+	Err    error
+}
+
+func (e *ApplyError) Error() string {
+	return fmt.Sprintf("sysdns: could not set %s: %v", strings.Join(e.Failed, ", "), e.Err)
+}
+
+func (e *ApplyError) Unwrap() error { return e.Err }

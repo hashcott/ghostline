@@ -238,3 +238,37 @@ func TestOnNetworkChange_PersistsBeforeApplying(t *testing.T) {
 	require.Less(t, indexOf(after, "state.append"), indexOf(after, "dns.apply:{C}"), after)
 	require.NoError(t, h.o.Disconnect(context.Background()))
 }
+
+// Two adapters appear and one cannot be set: the other is still logged as
+// added, and the failure names the right adapter.
+func TestOnNetworkChange_OneFailedAdapterDoesNotHideTheOthers(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, h.o.Connect(context.Background()))
+	h.dns.adapters = append(h.dns.adapters,
+		sysdns.Adapter{GUID: "{B}", Alias: "Ethernet", IfType: 6, Up: true, HasGateway: true},
+		sysdns.Adapter{GUID: "{C}", Alias: "USB", IfType: 6, Up: true, HasGateway: true})
+	h.dns.applyFail = map[string]bool{"Ethernet": true}
+	h.o.OnNetworkChange(context.Background())
+	got := map[string]string{}
+	for _, e := range h.sink.events() {
+		if a, ok := e.Params["adapter"].(string); ok && (e.Code == CodeSetDNSFailed || e.Code == "ADAPTER_ADDED") {
+			got[a] = e.Code
+		}
+	}
+	require.Equal(t, map[string]string{"Ethernet": CodeSetDNSFailed, "USB": "ADAPTER_ADDED"}, got)
+	require.Contains(t, h.r.list(), "dns.flush")
+	require.NoError(t, h.o.Disconnect(context.Background()))
+}
+
+// The adapters could not be listed (a network flap): nothing was set, so
+// nothing failed; the next change tries again.
+func TestOnNetworkChange_ReconcileErrorIsNotASetFailure(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, h.o.Connect(context.Background()))
+	h.dns.reconcileErr = errBoom
+	h.o.OnNetworkChange(context.Background())
+	for _, e := range h.sink.events() {
+		require.NotEqual(t, CodeSetDNSFailed, e.Code)
+	}
+	require.NoError(t, h.o.Disconnect(context.Background()))
+}

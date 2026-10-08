@@ -17,6 +17,7 @@ type fakeAPI struct {
 	adaptersErr error
 	dns         map[string][]string // guid|v4 or guid|v6
 	setErr      error
+	setFail     map[string]bool // guids whose SetDNS fails
 	netshErr    error
 	netshDHCP   error
 	netshCalls  []string
@@ -39,6 +40,9 @@ func (f *fakeAPI) SetDNS(guid string, v6 bool, servers []string) error {
 	f.setCalls++
 	if f.setErr != nil {
 		return f.setErr
+	}
+	if f.setFail[guid] {
+		return errors.New("set failed")
 	}
 	f.dns[key(guid, v6)] = servers
 	return nil
@@ -130,6 +134,23 @@ func TestApplyLoopback_SkipsV6WhenDisabled(t *testing.T) {
 	snaps, _ := m.Snapshot(ads)
 	require.NoError(t, m.ApplyLoopback(snaps, false))
 	require.Empty(t, api.dns["{A}|v6"])
+}
+
+// One adapter that cannot be set does not keep the others on their DNS;
+// the error names the one that failed.
+func TestApplyLoopback_ContinuesPastFailedAdapter(t *testing.T) {
+	a, b := eth("{A}", 1), eth("{B}", 2)
+	a.Alias, b.Alias = "Wi-Fi", "Ethernet"
+	api := &fakeAPI{adapters: []sysdns.Adapter{a, b}, dns: map[string][]string{},
+		setFail: map[string]bool{"{A}": true}, netshErr: errors.New("netsh failed")}
+	m, _ := newMgr(api)
+	ads, _ := m.Select("auto", nil)
+	snaps, _ := m.Snapshot(ads)
+	err := m.ApplyLoopback(snaps, false)
+	var ae *sysdns.ApplyError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, []string{"Wi-Fi"}, ae.Failed)
+	require.Equal(t, []string{"127.0.0.1"}, api.dns["{B}|v4"])
 }
 
 func TestRestore_KeysByGUIDAndNetshUsesIfIndex(t *testing.T) { // Review Focus #3

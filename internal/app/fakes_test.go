@@ -101,6 +101,9 @@ type fDNS struct {
 	restoreErr bool
 	// reapply makes Reconcile report these targets as set again (Linux).
 	reapply []string
+	// applyFail makes Apply fail on these adapters (by alias) and set the rest.
+	applyFail    map[string]bool
+	reconcileErr error
 }
 
 func (d *fDNS) Name() string { return "fake" }
@@ -123,10 +126,25 @@ func (d *fDNS) Apply(s sysdns.Snapshot, v6 bool) error {
 	if len(s.Windows) == 1 && s.Windows[0].GUID != "{A}" {
 		name = "dns.apply:" + s.Windows[0].GUID
 	}
-	return d.r.add(name)
+	if err := d.r.add(name); err != nil {
+		return err
+	}
+	var failed []string
+	for _, a := range s.Windows {
+		if d.applyFail[a.Alias] {
+			failed = append(failed, a.Alias)
+		}
+	}
+	if failed != nil {
+		return &sysdns.ApplyError{Failed: failed, Err: errBoom}
+	}
+	return nil
 }
 func (d *fDNS) Reconcile(s sysdns.Snapshot, _ sysdns.Selection) (sysdns.Snapshot, sysdns.Snapshot, []sysdns.Change, error) {
 	_ = d.r.add("dns.reconcile")
+	if d.reconcileErr != nil {
+		return s, sysdns.Snapshot{}, nil, d.reconcileErr
+	}
 	known := map[string]bool{}
 	for _, a := range s.Windows {
 		known[a.GUID] = true

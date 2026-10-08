@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/engine"
@@ -195,10 +196,9 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 	o.mu.Lock()
 	cur, v6 := o.dnsSnap, o.v6
 	o.mu.Unlock()
-	next, toApply, changes, err := o.d.DNS.Reconcile(cur, sysdns.Selection{Mode: s.Adapters, IDs: s.AdapterGUIDs})
-	if err != nil {
-		o.log("system", CodeSetDNSFailed, "adapter", cur.Label())
-	}
+	// A Reconcile error (the adapters could not be listed mid-flap) set
+	// nothing: the next change tries again.
+	next, toApply, changes, _ := o.d.DNS.Reconcile(cur, sysdns.Selection{Mode: s.Adapters, IDs: s.AdapterGUIDs})
 	if len(changes) > 0 {
 		if err := o.d.States.Update(func(st *store.State) error {
 			st.DNS = next
@@ -207,18 +207,7 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 			o.mu.Lock()
 			o.dnsSnap = next
 			o.mu.Unlock()
-			if err := o.d.DNS.Apply(toApply, v6); err != nil {
-				o.log("system", CodeSetDNSFailed, "adapter", toApply.Label())
-			} else {
-				_ = o.d.DNS.Flush()
-				for _, c := range changes {
-					code := CodeDNSReapplied
-					if c.Added {
-						code = "ADAPTER_ADDED"
-					}
-					o.log("system", code, "adapter", c.Target)
-				}
-			}
+			o.applyChanges(toApply, changes, v6)
 		}
 	}
 	// Another network has its own ranking: use it, or build one.
@@ -229,6 +218,36 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 		}
 		o.ApplyBest(context.Background())
 	}()
+}
+
+// applyChanges applies what Reconcile found and logs each change: set, or
+// failed. A backend that sets some targets and not others says which in
+// an *sysdns.ApplyError; any other error fails them all.
+func (o *Orchestrator) applyChanges(toApply sysdns.Snapshot, changes []sysdns.Change, v6 bool) {
+	failed := map[string]bool{}
+	if err := o.d.DNS.Apply(toApply, v6); err != nil {
+		var ae *sysdns.ApplyError
+		if !errors.As(err, &ae) {
+			for _, c := range changes {
+				o.log("system", CodeSetDNSFailed, "adapter", c.Target)
+			}
+			return
+		}
+		for _, t := range ae.Failed {
+			failed[t] = true
+		}
+	}
+	_ = o.d.DNS.Flush()
+	for _, c := range changes {
+		code := CodeDNSReapplied
+		switch {
+		case failed[c.Target]:
+			code = CodeSetDNSFailed
+		case c.Added:
+			code = "ADAPTER_ADDED"
+		}
+		o.log("system", code, "adapter", c.Target)
+	}
 }
 
 // OnResume checks the engine after sleep and heals immediately on failure.

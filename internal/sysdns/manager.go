@@ -1,6 +1,7 @@
 package sysdns
 
 import (
+	"errors"
 	"github.com/hashcott/ghostline/internal/netwatch"
 	"slices"
 	"time"
@@ -78,27 +79,40 @@ func (m *Manager) Snapshot(ads []Adapter) ([]model.AdapterSnapshot, error) {
 }
 
 // ApplyLoopback points every snapshotted adapter at 127.0.0.1 (and ::1 when
-// v6 is true and the adapter has IPv6).
+// v6 is true and the adapter has IPv6). An adapter that cannot be set does
+// not stop the others: the *ApplyError names it.
 func (m *Manager) ApplyLoopback(snaps []model.AdapterSnapshot, v6 bool) error {
 	ads, err := m.byGUID()
 	if err != nil {
 		return err
 	}
+	var failed []string
+	var errs []error
 	for _, s := range snaps {
 		a, ok := ads[s.GUID]
 		if !ok {
 			continue
 		}
-		if err := m.api.SetDNS(s.GUID, false, []string{"127.0.0.1"}); err != nil {
-			if err := m.api.NetshSetDNS(a.IfIndex, false, []string{"127.0.0.1"}); err != nil {
-				return err
-			}
+		if err := m.setLoopback(a, v6); err != nil {
+			failed, errs = append(failed, s.Alias), append(errs, err)
 		}
-		if v6 && a.HasIPv6 {
-			if err := m.api.SetDNS(s.GUID, true, []string{"::1"}); err != nil {
-				if err := m.api.NetshSetDNS(a.IfIndex, true, []string{"::1"}); err != nil {
-					return err
-				}
+	}
+	if failed != nil {
+		return &ApplyError{Failed: failed, Err: errors.Join(errs...)}
+	}
+	return nil
+}
+
+func (m *Manager) setLoopback(a Adapter, v6 bool) error {
+	if err := m.api.SetDNS(a.GUID, false, []string{"127.0.0.1"}); err != nil {
+		if err := m.api.NetshSetDNS(a.IfIndex, false, []string{"127.0.0.1"}); err != nil {
+			return err
+		}
+	}
+	if v6 && a.HasIPv6 {
+		if err := m.api.SetDNS(a.GUID, true, []string{"::1"}); err != nil {
+			if err := m.api.NetshSetDNS(a.IfIndex, true, []string{"::1"}); err != nil {
+				return err
 			}
 		}
 	}
