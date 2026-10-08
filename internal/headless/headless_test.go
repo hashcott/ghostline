@@ -1,6 +1,8 @@
 package headless
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -96,4 +98,34 @@ func TestRun_RestoreAfterKillCleansCapture(t *testing.T) {
 	got, err := store.NewStateStore(p.Paths.State, &memLock{}).Load()
 	require.NoError(t, err)
 	require.Equal(t, store.PhaseClean, got.Phase)
+}
+
+// failDNS cannot put the system's DNS back.
+type failDNS struct{ sysdns.UnsupportedBackend }
+
+func (failDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
+	return []sysdns.RestoreError{{Target: "eth0", Err: errors.New("bus gone")}}
+}
+
+// systemd's journal shows ExecStopPost's stderr: a failed --restore says
+// why there, not only in Ghostline's own log file.
+func TestRun_RestoreFailurePrintsToStderr(t *testing.T) {
+	p := testDeps(t)
+	p.DNS = failDNS{}
+	st := store.CleanState()
+	st.Phase, st.PID = store.PhaseDNSSet, 999999999
+	st.DNS = sysdns.Snapshot{Backend: "resolved"}
+	require.NoError(t, os.MkdirAll(p.Paths.DataDir, 0o755))
+	require.NoError(t, store.WriteJSONAtomic(p.Paths.State, st))
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	prev := os.Stderr
+	os.Stderr = w
+	code := Run(cli.Mode{Kind: cli.KindRestore}, p)
+	os.Stderr = prev
+	require.NoError(t, w.Close())
+	out, _ := io.ReadAll(r)
+	require.Equal(t, 1, code)
+	require.Contains(t, string(out), "bus gone")
 }

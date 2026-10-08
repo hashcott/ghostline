@@ -54,6 +54,8 @@ func Run(mode cli.Mode, p platform.Deps) int {
 	}
 	if err != nil {
 		logger.Error("recovery failed", "err", err)
+		// systemd's journal shows stderr (Windows has no console: a no-op).
+		fmt.Fprintln(os.Stderr, "Ghostline: recovery failed:", err)
 		return 1
 	}
 	return 0

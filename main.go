@@ -31,6 +31,7 @@ func main() {
 		if mode.Kind == cli.KindUI || mode.Kind == cli.KindAutostart {
 			shell.Fatal(err)
 		}
+		fmt.Fprintln(os.Stderr, "Ghostline:", err)
 		os.Exit(1)
 	}
 	switch mode.Kind {
