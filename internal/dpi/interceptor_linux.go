@@ -47,6 +47,9 @@ func prepareEngineDirAs(dir, exe string, uid, gid int) error {
 		if err != nil {
 			return err
 		}
+		if !d.IsDir() && !d.Type().IsRegular() {
+			return nil // a link or pipe left by the engine: never chmod through it
+		}
 		mode := os.FileMode(0o644)
 		switch {
 		case d.IsDir():
@@ -69,6 +72,9 @@ func prepareEngineDirAs(dir, exe string, uid, gid int) error {
 	err = filepath.WalkDir(auto, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if !d.IsDir() && !d.Type().IsRegular() {
+			return nil
 		}
 		return errors.Join(os.Lchown(p, uid, gid), os.Chmod(p, map[bool]os.FileMode{true: 0o700, false: 0o644}[d.IsDir()]))
 	})

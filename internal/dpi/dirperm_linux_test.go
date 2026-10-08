@@ -31,3 +31,19 @@ func TestPrepareEngineDir_Modes(t *testing.T) {
 	require.NotZero(t, mode(root)&0o001, "the data root is traversable")
 	require.Zero(t, mode(root)&0o004, "but not listable")
 }
+
+// Review C1: nobody owns auto/, so it can plant a symlink there; root must
+// never chmod or chown through it.
+func TestPrepareEngineDir_NeverFollowsLinks(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "ghostline")
+	dir := filepath.Join(root, "bin", "zapret2")
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "auto"), 0o700))
+	victim := filepath.Join(t.TempDir(), "shadow")
+	require.NoError(t, os.WriteFile(victim, []byte("secret"), 0o600))
+	require.NoError(t, os.Symlink(victim, filepath.Join(dir, "auto", "x")))
+	require.NoError(t, os.Symlink(victim, filepath.Join(dir, "y")))
+	require.NoError(t, prepareEngineDirAs(dir, "nfqws2", os.Getuid(), os.Getgid()))
+	fi, err := os.Stat(victim)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o600), fi.Mode().Perm(), "the link's target was not touched")
+}

@@ -210,7 +210,7 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, blacklistName), b, 0o644); err != nil {
+		if err := writeEngineList(filepath.Join(dir, blacklistName), b); err != nil {
 			return p, err
 		}
 		p.Blacklist = blacklistName
@@ -224,7 +224,7 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return p, err
 		}
-		if err := os.WriteFile(dst, b, 0o644); err != nil {
+		if err := writeEngineList(dst, b); err != nil {
 			return p, err
 		}
 		p.AutoHostlist = autoHostlistName
@@ -264,7 +264,7 @@ func (m *Manager) stopLocked() error {
 	if m.proc != nil {
 		if m.plan.AutoHostlist != "" {
 			// Keep what the engine learned; it only lives in its directory.
-			if b, err := os.ReadFile(filepath.Join(m.dir(m.running), filepath.FromSlash(autoHostlistName))); err == nil {
+			if b, err := readEngineList(filepath.Join(m.dir(m.running), filepath.FromSlash(autoHostlistName))); err == nil {
 				errs = append(errs, os.WriteFile(m.plan.AutoHostlist, b, 0o644))
 			}
 		}
