@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -74,11 +75,54 @@ func readKIO(read func() ([]byte, error)) (map[string]string, []string, error) {
 		}
 		k = strings.TrimSuffix(strings.TrimSpace(k), "[$e]")
 		if slices.Contains(kdeKeys, k) {
-			vals[k] = v
+			vals[k] = kconfigUnescape(v)
 			present = append(present, k)
 		}
 	}
 	return vals, present, nil
+}
+
+// kconfigUnescape decodes a value as KConfig reads it (printableToString):
+// \s \t \n \r \\ and \xNN; \; and \, stay as they are (list
+// separators), as does any other backslash. kwriteconfig takes the decoded
+// value and escapes it again.
+func kconfigUnescape(v string) string {
+	if !strings.Contains(v, `\`) {
+		return v
+	}
+	var b strings.Builder
+	for i := 0; i < len(v); i++ {
+		if v[i] != '\\' || i+1 == len(v) {
+			b.WriteByte(v[i])
+			continue
+		}
+		i++
+		switch c := v[i]; c {
+		case 's':
+			b.WriteByte(' ')
+		case 't':
+			b.WriteByte('\t')
+		case 'n':
+			b.WriteByte('\n')
+		case 'r':
+			b.WriteByte('\r')
+		case '\\':
+			b.WriteByte('\\')
+		case 'x':
+			if i+2 < len(v) {
+				if n, err := strconv.ParseUint(v[i+1:i+3], 16, 8); err == nil {
+					b.WriteByte(byte(n))
+					i += 2
+					continue
+				}
+			}
+			b.WriteString(`\x`)
+		default:
+			b.WriteByte('\\')
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 // kdeAddr is how kioslaverc spells a proxy: "http://host port".

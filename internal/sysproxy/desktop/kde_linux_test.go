@@ -2,6 +2,7 @@ package desktop
 
 import (
 	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -38,10 +39,33 @@ func (f *fakeKwrite) read() ([]byte, error) {
 	b.WriteString("[General]\nfoo=bar\n\n[Proxy Settings]\n")
 	for _, k := range kdeKeys {
 		if v, ok := f.keys[k]; ok {
-			b.WriteString(k + "=" + v + "\n")
+			b.WriteString(k + "=" + kconfigEscape(v) + "\n")
 		}
 	}
 	return []byte(b.String()), nil
+}
+
+// kconfigEscape writes a value the way KConfig does (backslash, control
+// characters, and spaces at either end).
+func kconfigEscape(v string) string {
+	var b strings.Builder
+	for i, r := range v {
+		switch {
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r == '\t':
+			b.WriteString(`\t`)
+		case r == '\r':
+			b.WriteString(`\r`)
+		case r == ' ' && (i == 0 || i == len(v)-1):
+			b.WriteString(`\s`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func fakeKDE(f *fakeKwrite) kde {
@@ -117,4 +141,25 @@ func TestKDE_WatchSeesWrite(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("kioslaverc change not seen")
 	}
+}
+
+// kioslaverc holds values escaped; kwriteconfig takes them plain and
+// escapes them itself. Restore hands it what the user had, not an escaped
+// copy that would gain a backslash every round.
+func TestKDE_RoundTripKeepsEscapedValues(t *testing.T) {
+	orig := map[string]string{"ProxyType": "2", "Proxy Config Script": `file:///home/u/a\b.pac`, "NoProxyFor": " localhost,\t.lan "}
+	f := &fakeKwrite{keys: maps.Clone(orig)}
+	k := fakeKDE(f)
+	s, err := k.snapshot("127.0.0.1:8080")
+	require.NoError(t, err)
+	require.Equal(t, orig["Proxy Config Script"], s.KDE.Values["Proxy Config Script"])
+	require.NoError(t, k.apply("127.0.0.1:8080"))
+	require.NoError(t, k.restore(s))
+	require.Equal(t, orig, f.keys)
+}
+
+func TestKConfigUnescape(t *testing.T) {
+	require.Equal(t, " local\\hostA\\;\\,\\q\t\n\r", kconfigUnescape(`\slocal\\host\x41\;\,\q\t\n\r`))
+	require.Equal(t, "plain", kconfigUnescape("plain"))
+	require.Equal(t, "end\\", kconfigUnescape(`end\`), "a lone trailing backslash stays")
 }
