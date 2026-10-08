@@ -814,3 +814,25 @@ func RunStats(s *Service, ctx context.Context, ticks <-chan time.Time) {
 		s.x.Bus.Emit(EventStats, ev)
 	}
 }
+
+// InstallInfo is how the GUI was installed (Linux): which service buttons
+// it shows when the daemon cannot be reached.
+type InstallInfo struct {
+	Kind    string `json:"kind"` // "appimage", "package", "tarball"; "" without service buttons
+	Unit    bool   `json:"unit"`
+	SteamOS bool   `json:"steamos"`
+}
+
+// ServiceInstall is answered by the Linux GUI itself (internal/rpc/client):
+// here, in the daemon and on Windows, there are no service buttons.
+func (s *Service) ServiceInstall() InstallInfo { return InstallInfo{} }
+
+// InstallService installs the background service; only the Linux GUI can.
+func (s *Service) InstallService() error {
+	return &AppError{Code: CodeServiceActionUnsupported}
+}
+
+// StartService starts the background service; only the Linux GUI can.
+func (s *Service) StartService() error {
+	return &AppError{Code: CodeServiceActionUnsupported}
+}

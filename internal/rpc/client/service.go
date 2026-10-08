@@ -43,13 +43,14 @@ type Service struct {
 	conn   *Conn
 	log    *slog.Logger
 	onMode func(mode string)
+	inst   *installer
 }
 
 // New returns the proxy and its connection. onMode runs after a successful
 // SetMode (the window resizes); nil for none.
 func New(socket string, log *slog.Logger, onMode func(mode string)) (*Service, *Conn) {
 	c := &Conn{socket: socket, log: log}
-	return &Service{conn: c, log: log, onMode: onMode}, c
+	return &Service{conn: c, log: log, onMode: onMode, inst: newInstaller()}, c
 }
 
 // OnEvent sets the handler for the daemon's events. When the connection

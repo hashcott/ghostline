@@ -273,3 +273,12 @@ func TestStopConflictingService_OnlyThePortOwner(t *testing.T) {
 	require.NoError(t, sh.svc.StopConflictingService("dnsmasq.service"))
 	require.Equal(t, []string{"dnsmasq.service"}, stopped)
 }
+
+// The service buttons are the GUI's own (internal/rpc/client); the daemon
+// and Windows have none.
+func TestService_InstallActionsAreNotTheDaemons(t *testing.T) {
+	s := &Service{}
+	require.Equal(t, InstallInfo{}, s.ServiceInstall())
+	require.ErrorContains(t, s.InstallService(), CodeServiceActionUnsupported)
+	require.ErrorContains(t, s.StartService(), CodeServiceActionUnsupported)
+}

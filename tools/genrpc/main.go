@@ -38,7 +38,9 @@ func main() {
 }
 
 // defaultSkip lists the methods written by hand in the client package.
-func defaultSkip() map[string]bool { return map[string]bool{"SetMode": true, "GetSnapshot": true} }
+func defaultSkip() map[string]bool {
+	return map[string]bool{"SetMode": true, "GetSnapshot": true, "ServiceInstall": true, "InstallService": true, "StartService": true}
+}
 
 // appMethods are app.Service's exported methods, sorted by name.
 func appMethods() []reflect.Method {

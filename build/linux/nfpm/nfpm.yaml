@@ -1,0 +1,66 @@
+# deb and rpm, built by `wails3 task linux:package:nfpm` from the repo root
+# (paths are relative to it). VERSION comes from the environment; the task
+# renders bin/linux/ghostline.service from the unit template.
+name: ghostline
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: Harry Nguyen <duchanhstyle@gmail.com>
+description: |
+  Encrypted DNS and DPI bypass.
+  Ghostline sends the system's DNS over an encrypted resolver it picks
+  automatically, gets past deep packet inspection with zapret2, and offers
+  a local proxy, rules and a DNS server for the LAN. A background service
+  (ghostlined) keeps protecting after the window closes.
+vendor: Ghostline
+homepage: https://github.com/hashcott/ghostline
+license: GPL-3.0-only
+
+contents:
+  - src: bin/linux/ghostline
+    dst: /usr/bin/ghostline
+    file_info: { mode: 0755 }
+  - src: bin/linux/ghostlined
+    dst: /usr/lib/ghostline/ghostlined
+    file_info: { mode: 0755 }
+  - src: bin/linux/ghostline.service
+    dst: /usr/lib/systemd/system/ghostline.service
+    file_info: { mode: 0644 }
+  - src: build/linux/sysusers.d/ghostline.conf
+    dst: /usr/lib/sysusers.d/ghostline.conf
+    file_info: { mode: 0644 }
+  - src: build/linux/ghostline.desktop
+    dst: /usr/share/applications/ghostline.desktop
+    file_info: { mode: 0644 }
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/512x512/apps/ghostline.png
+    file_info: { mode: 0644 }
+  - src: build/linux/io.github.hashcott.ghostline.metainfo.xml
+    dst: /usr/share/metainfo/io.github.hashcott.ghostline.metainfo.xml
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/doc/ghostline/LICENSE
+    file_info: { mode: 0644 }
+  - src: NOTICE
+    dst: /usr/share/doc/ghostline/NOTICE
+    file_info: { mode: 0644 }
+
+scripts:
+  postinstall: build/linux/nfpm/scripts/postinst.sh
+  preremove: build/linux/nfpm/scripts/prerm.sh
+  postremove: build/linux/nfpm/scripts/postrm.sh
+
+deb:
+  compression: xz
+rpm:
+  compression: zstd
+
+overrides:
+  deb:
+    depends: [libgtk-4-1, libwebkitgtk-6.0-4]
+    recommends: [libnss3-tools]
+  rpm:
+    depends: [gtk4, webkitgtk6.0]
+    recommends: [nss-tools]

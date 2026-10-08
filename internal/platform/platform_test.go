@@ -16,7 +16,7 @@ func TestNew_FillsEveryField(t *testing.T) {
 	v := reflect.ValueOf(d)
 	for i := 0; i < v.NumField(); i++ {
 		name := v.Type().Field(i).Name
-		if name == "SecureDir" || name == "OwnedByAdmins" || name == "UsesDaemon" || name == "WatchResume" {
+		if name == "SecureDir" || name == "OwnedByAdmins" || name == "UsesDaemon" || name == "WatchResume" || name == "WatchSessions" {
 			continue // documented as optional
 		}
 		f := v.Field(i)

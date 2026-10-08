@@ -1,0 +1,18 @@
+#!/bin/sh
+# Starts the Ghostline window from the AppImage. GTK 4 and WebKitGTK 6.0
+# come from the system, not the AppImage: when they are missing, say which
+# package to install instead of failing with a loader error.
+HERE=$(dirname "$(readlink -f "$0")")
+export APPDIR="${APPDIR:-$HERE}"
+libs=$( (command -v ldconfig >/dev/null && ldconfig -p || /sbin/ldconfig -p) 2>/dev/null)
+# No ldconfig cache (NixOS…): let the loader decide.
+if [ -n "$libs" ] && ! printf '%s\n' "$libs" | grep -q 'libwebkitgtk-6.0.so.4'; then
+	msg="Ghostline needs GTK 4 and WebKitGTK 6.0. Install them:
+  Ubuntu/Debian: sudo apt install libwebkitgtk-6.0-4
+  Fedora: sudo dnf install webkitgtk6.0
+  Arch: sudo pacman -S webkitgtk-6.0"
+	echo "$msg" >&2
+	command -v notify-send >/dev/null && notify-send "Ghostline" "$msg"
+	exit 1
+fi
+exec "$APPDIR/usr/bin/ghostline" "$@"

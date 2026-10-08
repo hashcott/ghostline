@@ -4,13 +4,13 @@
 
 # Ghostline
 
-**One-click encrypted DNS and DPI bypass for Windows.**
+**One-click encrypted DNS and DPI bypass for Windows and Linux.**
 
 [![CI](https://github.com/hashcott/ghostline/actions/workflows/ci.yml/badge.svg)](https://github.com/hashcott/ghostline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hashcott/ghostline?include_prereleases)](https://github.com/hashcott/ghostline/releases)
 [![Downloads](https://img.shields.io/github/downloads/hashcott/ghostline/total)](https://github.com/hashcott/ghostline/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64%20%7C%20Linux%20x86__64-blue)
 
 English · [Tiếng Việt](README.vi.md)
 
@@ -111,6 +111,23 @@ Get-FileHash .\Ghostline-0.1.0-portable.zip -Algorithm SHA256
 > Releases are not code-signed yet, so SmartScreen shows "Windows protected your PC". After checking the SHA-256, choose **More info → Run anyway**.
 > Some antivirus products flag the WinDivert driver used by zapret2 and GoodbyeDPI. Ghostline verifies the engine's hash before every start; if your antivirus blocks zapret2, Ghostline runs GoodbyeDPI for now and the DPI page shows the `bin\zapret2` folder to add to the exclusions.
 
+### Linux (x86_64)
+
+| Distribution | File | Install |
+| --- | --- | --- |
+| Ubuntu 24.04+, Debian 13+ | `ghostline_<version>_amd64.deb` | `sudo apt install ./ghostline_<version>_amd64.deb` |
+| Fedora 41+ | `ghostline-<version>-1.x86_64.rpm` | `sudo dnf install ./ghostline-<version>-1.x86_64.rpm` |
+| Arch, CachyOS, Manjaro | `ghostline-<version>-linux-amd64.tar.gz` | Unpack it and run `sudo ./install.sh`, or build `ghostline-bin` from the `PKGBUILD` attached to the release (`makepkg -si`) |
+| Other distributions | `Ghostline-<version>-x86_64.AppImage` | `chmod +x` and run it; it offers to install the background service |
+
+Verify the downloads: `sha256sum -c SHA256SUMS --ignore-missing`.
+
+Ghostline on Linux is two parts: a background service (`ghostline.service`, root) that changes DNS, runs zapret2 and keeps protecting with the window closed and after a reboot, and the window, which runs as your user. Members of `wheel`, `sudo`, `admin` or the `ghostline` group can control it; to allow another account: `sudo usermod -aG ghostline <user>`, then log in again. The deb and rpm start the service right away; on Arch start it once with `sudo systemctl enable --now ghostline` (or the button in the window).
+
+**Requirements:** systemd, GTK 4 and WebKitGTK 6.0 (the packages pull them in; the AppImage and the tar.gz use the system's).
+
+**Uninstall:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz and AppImage: `sudo ./uninstall.sh [--purge]` or `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, the system proxy, certificates, firewall rules and the nftables table are restored first. rpm and Arch keep the settings: `sudo rm -rf /var/lib/ghostline /var/log/ghostline` removes them.
+
 ## Usage
 
 > 📖 A detailed user guide covering every screen, unblocking sites and troubleshooting: **[docs/user-guide.md](docs/user-guide.md)** ([Tiếng Việt](docs/huong-dan-su-dung.md))
@@ -159,6 +176,16 @@ Design details live in [`docs/superpowers/specs`](docs/superpowers/specs).
 - **Fake SNI** works only for browsers on this PC going through the proxy, only for domains with an `sni=` rule, and breaks apps that pin certificates. Firefox may need `security.enterprise_roots.enabled`.
 - **Devices using this PC's DNS lose the internet when it is off or disconnected.** iOS has no fallback: with the DoH profile, the iPhone has no internet on your home Wi-Fi until you choose *Automatic* in *Settings › General › VPN & Device Management › DNS* (mobile data is not affected). Disconnect asks first while LAN devices use the DNS server; if this PC is often off, set the iPhone's DNS manually instead of using the profile. Android's Private DNS cannot use Ghostline; set a static DNS for your Wi-Fi instead.
 
+### Linux
+
+- GNOME has no tray by default: closing the window quits it, and protection keeps running in the background service.
+- The system proxy is set automatically only on GNOME and KDE; on other desktops set `127.0.0.1:<port>` by hand.
+- Fake SNI in Chrome and Chromium on Ubuntu and Debian needs `libnss3-tools` (`certutil`).
+- A kernel without NFQUEUE (`nfnetlink_queue`, `nft_queue`) has no DPI bypass; the proxy's fragmentation still works.
+- No GoodbyeDPI (it is Windows-only); zapret2 is the engine.
+- Packages are not GPG-signed yet: check `SHA256SUMS`.
+- SteamOS (Steam Deck) is not verified yet.
+
 ## Building from source
 
 **Prerequisites:** Go 1.26+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, and [NSIS](https://nsis.sourceforge.io) for the installer.
@@ -170,6 +197,13 @@ wails3 dev                     # live-reload dev build (connecting for real need
 wails3 build                   # bin/ghostline.exe
 wails3 package                 # NSIS installer
 wails3 task windows:portable   # portable zip
+```
+
+On Linux (GTK 4 and WebKitGTK 6.0 development packages, plus `squashfs-tools` for the AppImage):
+
+```bash
+wails3 task linux:build                     # bin/linux/ghostline and bin/linux/ghostlined
+wails3 task linux:package VERSION=0.6.0     # deb, rpm, AppImage and tar.gz in bin/
 ```
 
 **Tests:**

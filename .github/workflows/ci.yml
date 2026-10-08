@@ -72,8 +72,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: GTK4 and WebKitGTK
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: GTK4, WebKitGTK and packaging tools
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev squashfs-tools rpm
       - name: Install wails3
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.27
       - name: Frontend deps
@@ -114,3 +114,45 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: go build -o /dev/null ./cmd/ghostlined
+      - name: Linux packages (deb, rpm, AppImage, tar.gz)
+        run: wails3 task linux:package VERSION=0.0.0-ci
+      - name: Package scripts
+        run: bash build/linux/nfpm/scripts/scripts_test.sh
+      - name: Package contents
+        run: |
+          dpkg-deb -I bin/ghostline_*_amd64.deb
+          dpkg-deb -c bin/ghostline_*_amd64.deb
+          rpm -qip bin/ghostline-*.x86_64.rpm
+          rpm -qlp bin/ghostline-*.x86_64.rpm
+          mkdir -p /tmp/appimage && cd /tmp/appimage && "$GITHUB_WORKSPACE"/bin/Ghostline-0.0.0-ci-x86_64.AppImage --appimage-extract >/dev/null
+          ls -la /tmp/appimage/squashfs-root /tmp/appimage/squashfs-root/usr/bin /tmp/appimage/squashfs-root/usr/lib/ghostline
+      - name: Install, connect, remove and purge (deb)
+        run: bash build/linux/ci/smoke.sh deb
+      - name: Install, connect and uninstall (tar.gz)
+        run: bash build/linux/ci/smoke.sh tarball
+      - name: Keep the tar.gz for the PKGBUILD check
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tarball
+          path: bin/ghostline-0.0.0-ci-linux-amd64.tar.gz
+
+  # The PKGBUILD (AUR ghostline-bin) still builds from the tar.gz.
+  pkgbuild:
+    needs: linux
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-tarball
+          path: bin
+      - name: makepkg
+        run: |
+          useradd -m builder
+          mkdir /tmp/aur
+          cp bin/ghostline-0.0.0-ci-linux-amd64.tar.gz build/linux/aur/ghostline.install /tmp/aur/
+          sh build/linux/aur/render.sh 0.0.0-ci /tmp/aur/ghostline-0.0.0-ci-linux-amd64.tar.gz --local > /tmp/aur/PKGBUILD
+          chown -R builder /tmp/aur
+          su builder -c 'cd /tmp/aur && makepkg --nodeps --noconfirm'
+          bsdtar -tf /tmp/aur/ghostline-bin-*.pkg.tar.zst

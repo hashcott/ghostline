@@ -645,6 +645,18 @@
     "CERT_NSS_TOOL_MISSING": {
       "message": "Chrome and Chromium do not trust the Fake SNI certificate yet: certutil is missing",
       "action": "Install libnss3-tools (sudo apt install libnss3-tools), then turn Fake SNI off and on"
+    },
+    "PKEXEC_FAILED": {
+      "message": "Could not run as administrator; run this in a terminal",
+      "action": "Run the command in brackets in a terminal"
+    },
+    "SERVICE_INSTALL_MANUAL": {
+      "message": "This build installs the service with install.sh",
+      "action": "Run: sudo ./install.sh in the extracted folder"
+    },
+    "SERVICE_ACTION_UNSUPPORTED": {
+      "message": "This build cannot install the service itself",
+      "action": "Reinstall Ghostline from your system's package"
     }
   },
   "tray": {
@@ -1067,5 +1079,12 @@
       "speedTest": "download speed test",
       "rechecking": "checking…"
     }
+  },
+  "service": {
+    "start": "start the service",
+    "install": "install the service",
+    "update": "update the service",
+    "packageUpdate": "Update Ghostline with your package manager",
+    "steamosHint": "On a Steam Deck, set a password first: open Konsole and run passwd"
   }
 }

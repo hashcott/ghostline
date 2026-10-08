@@ -13,6 +13,12 @@ const (
 	CodeDaemonProtocol    = "DAEMON_PROTOCOL_MISMATCH"
 	CodeNotAuthorized     = "NOT_AUTHORIZED"
 	CodeNoUI              = "NO_UI"
+	// The GUI's service buttons (Linux): pkexec failed (the cause is the
+	// command to run in a terminal); the tar.gz installs with install.sh;
+	// the daemon and Windows have no such buttons.
+	CodePkexecFailed             = "PKEXEC_FAILED"
+	CodeServiceInstallManual     = "SERVICE_INSTALL_MANUAL"
+	CodeServiceActionUnsupported = "SERVICE_ACTION_UNSUPPORTED"
 	// Log code: the system changed DNS and Ghostline set it again (Linux).
 	CodeDNSReapplied         = "DNS_REAPPLIED"
 	CodePort53Busy           = "PORT53_BUSY"

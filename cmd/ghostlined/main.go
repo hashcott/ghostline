@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashcott/ghostline/internal/headless"
 	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/rpc"
+	"github.com/hashcott/ghostline/internal/sysinstall"
 )
 
 func main() {
@@ -39,6 +41,8 @@ func main() {
 			fmt.Fprintln(os.Stderr, "ghostlined:", err)
 			os.Exit(1)
 		}
+	case "install-system", "uninstall-system":
+		os.Exit(runSystemInstall(a))
 	case "restore", "remove-certs", "export":
 		p, err := depsFor(a)
 		if err != nil {
@@ -89,6 +93,42 @@ func runCLI(a Args) int {
 		err = c.Call(ctx, "Connect", nil)
 	case "disconnect":
 		err = c.Call(ctx, "Disconnect", nil)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ghostlined:", err)
+		return 1
+	}
+	return 0
+}
+
+// runSystemInstall installs or removes the background service for the
+// AppImage and the tar.gz (packages do this in their scripts).
+func runSystemInstall(a Args) int {
+	if os.Geteuid() != 0 {
+		fmt.Fprintf(os.Stderr, "ghostlined: --%s needs root (sudo)\n", a.Command)
+		return 1
+	}
+	self, err := os.Executable()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ghostlined:", err)
+		return 1
+	}
+	in := sysinstall.Installer{Root: "/", Self: self, Sys: sysinstall.NewSystem()}
+	if a.Command == "install-system" {
+		err = in.Install()
+	} else {
+		err = in.Uninstall(a.Purge, func() error {
+			// What a package's prerm runs: DNS, proxy, certificates,
+			// firewall and the nftables table back as before.
+			p, err := depsFor(a)
+			if err != nil {
+				return err
+			}
+			if headless.Run(cli.Mode{Kind: cli.KindRemoveCerts}, p) != 0 {
+				return errors.New("restoring the system failed (see above)")
+			}
+			return nil
+		})
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ghostlined:", err)

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.hashcott.ghostline</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Ghostline</name>
+  <summary>Encrypted DNS and DPI bypass</summary>
+  <description>
+    <p>
+      Ghostline sends every DNS query of the system over an encrypted
+      resolver it picks automatically, gets past deep packet inspection
+      with zapret2, and offers a local proxy, rules and a DNS server for
+      the LAN. Turning it off puts the network back exactly as it was.
+    </p>
+  </description>
+  <launchable type="desktop-id">ghostline.desktop</launchable>
+  <url type="homepage">https://github.com/hashcott/ghostline</url>
+  <url type="bugtracker">https://github.com/hashcott/ghostline/issues</url>
+  <developer id="io.github.hashcott">
+    <name>Harry Nguyen</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>Network</category>
+    <category>Security</category>
+  </categories>
+</component>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysproxy"
 	"github.com/stretchr/testify/require"
 )
@@ -52,11 +53,11 @@ func TestProxyPhase_SessionWarningsClearWhenNotWanted(t *testing.T) {
 			h.sp.snapErr = err
 			require.NoError(t, h.o.Connect(context.Background()))
 			require.Contains(t, warningCodes(h.o.Snapshot()), code)
-			h.settings.Proxy.SystemProxy = false
+			h.setSettings(func(s *store.Settings) { s.Proxy.SystemProxy = false })
 			require.NoError(t, h.o.ReapplyProxy(context.Background()))
 			require.NotContains(t, warningCodes(h.o.Snapshot()), code, "system proxy turned off")
 
-			h.settings.Proxy.SystemProxy = true
+			h.setSettings(func(s *store.Settings) { s.Proxy.SystemProxy = true })
 			require.NoError(t, h.o.ReapplyProxy(context.Background()))
 			require.Contains(t, warningCodes(h.o.Snapshot()), code)
 			require.NoError(t, h.o.Disconnect(context.Background()))

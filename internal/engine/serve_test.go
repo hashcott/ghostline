@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/netip"
@@ -115,11 +116,16 @@ func TestServe_DoHGetPost(t *testing.T) {
 // to UDP may be refused for TCP (WSAEACCES), which broke Swap on CI.
 func freeDualPort(t *testing.T) uint16 {
 	t.Helper()
-	for range 50 {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
-		require.NoError(t, err)
-		port := l.Addr().(*net.TCPAddr).Port
-		pc, err := net.ListenPacket("udp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	// Not the dynamic range (49152+): Windows runners reserve large parts
+	// of it (Hyper-V, WinNAT), for TCP and UDP separately.
+	for range 200 {
+		port := 20000 + rand.IntN(12000)
+		addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			continue
+		}
+		pc, err := net.ListenPacket("udp", addr)
 		_ = l.Close()
 		if err == nil {
 			_ = pc.Close()
