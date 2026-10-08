@@ -50,6 +50,8 @@ func TestManager_NotReadyKillsAndFails(t *testing.T) {
 	require.ErrorIs(t, err, ErrStartFailed)
 	require.True(t, r.procs[0].killed)
 	require.False(t, m.Running())
+	// Root run: a failed start left the nftables table behind.
+	require.Equal(t, "cleanup", ic.c.log[len(ic.c.log)-1], "a failed start removes the capture it prepared")
 }
 
 func TestManager_StopKillsThenCleansUp(t *testing.T) {

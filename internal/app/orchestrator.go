@@ -510,7 +510,10 @@ func (o *Orchestrator) disconnectLocked(ctx context.Context) []sysdns.RestoreErr
 	if healthStop != nil {
 		healthStop()
 	}
-	if o.d.DPI.Running() {
+	// An engine that died (kill -9) is not running, but its capture
+	// (WinDivert services, the nftables table) is still there: stop
+	// whatever this run started.
+	if st, err := o.d.States.Load(); o.d.DPI.Running() || (err == nil && st.DPI.Running) {
 		_ = o.d.DPI.Stop()
 	}
 	_ = o.d.Engine.Stop(ctx)

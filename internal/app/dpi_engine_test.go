@@ -394,3 +394,15 @@ func TestSaveSettings_TestDomainMustBeADomain(t *testing.T) {
 	require.NoError(t, s.svc.SaveSettings(st))
 	require.Equal(t, "cloudflare.com", s.box.Get().TestDomain)
 }
+
+// Root run: kill -9 of nfqws2, then Disconnect left the nftables table,
+// because a dead engine is not "running". Disconnect stops any engine it
+// started, dead or alive, so the capture is cleaned up.
+func TestDisconnect_StopsAnEngineThatDied(t *testing.T) {
+	h := zapretHarness(t)
+	require.NoError(t, h.o.SetDPIEnabled(context.Background(), true))
+	h.dpi.setRunning("") // the process died
+	n := len(h.r.list())
+	require.NoError(t, h.o.Disconnect(context.Background()))
+	require.Contains(t, h.r.list()[n:], "dpi.stop")
+}

@@ -167,6 +167,12 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 	if err := m.ic.Prepare(dir); err != nil {
 		return 0, err
 	}
+	started := false
+	defer func() {
+		if !started {
+			_ = m.ic.Cleanup() // remove the capture prepared for nothing
+		}
+	}()
 	args, err := in.Engine.Args(rel)
 	if err != nil {
 		return 0, err
@@ -190,6 +196,7 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 		return 0, fmt.Errorf("%w: %s not capturing", ErrStartFailed, m.ic.Info().Mechanism)
 	}
 	m.proc, m.running, m.plan = proc, engine, p
+	started = true
 	return proc.PID(), nil
 }
 
