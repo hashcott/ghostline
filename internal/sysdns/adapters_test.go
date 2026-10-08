@@ -111,3 +111,17 @@ func TestAdapterBackend_StillOursKeepsAllWhenUnreadable(t *testing.T) {
 	s := model.DNSSnapshot{Backend: "windows", Windows: []model.AdapterSnapshot{{GUID: "{A}"}, {GUID: "{B}"}}}
 	require.Equal(t, s, b.StillOurs(s))
 }
+
+// The Settings page's adapter list gets the error, not an empty list that
+// looks like a machine without adapters.
+func TestAdapterBackend_ListAdaptersReportsError(t *testing.T) {
+	b := sysdns.NewAdapterBackend(&fakeAPI{adaptersErr: errors.New("access denied"), dns: map[string][]string{}}, noWatch)
+	_, err := sysdns.ListAdapters(b)
+	require.ErrorContains(t, err, "access denied")
+	ads, err := sysdns.ListAdapters(sysdns.NewAdapterBackend(&fakeAPI{adapters: []sysdns.Adapter{wifi("{A}", 1)}, dns: map[string][]string{}}, noWatch))
+	require.NoError(t, err)
+	require.Len(t, ads, 1)
+	ads, err = sysdns.ListAdapters(sysdns.UnsupportedBackend{})
+	require.NoError(t, err, "a backend without adapters has none to list")
+	require.Empty(t, ads)
+}

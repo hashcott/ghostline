@@ -71,3 +71,12 @@ func (e *ApplyError) Error() string {
 }
 
 func (e *ApplyError) Unwrap() error { return e.Err }
+
+// ListAdapters lists the adapters a user can pick from, with the error
+// Info leaves out; a backend without adapters has none.
+func ListAdapters(b Backend) ([]Adapter, error) {
+	if l, ok := b.(interface{ Adapters() ([]Adapter, error) }); ok {
+		return l.Adapters()
+	}
+	return b.Info().Adapters, nil
+}

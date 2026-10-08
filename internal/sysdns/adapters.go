@@ -114,6 +114,8 @@ func (b *adapterBackend) Flush() error { return b.m.Flush() }
 
 func (b *adapterBackend) Watch(onChange func()) (func(), error) { return b.watch(onChange) }
 
+func (b *adapterBackend) Adapters() ([]Adapter, error) { return b.api.Adapters() }
+
 func (b *adapterBackend) Info() Info {
 	ads, _ := b.api.Adapters()
 	names := []string{}

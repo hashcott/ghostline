@@ -208,7 +208,7 @@ func New(o Options) (*Core, error) {
 	svc = app.NewService(orch, app.ServiceDeps{
 		Bus: bus, Paths: paths, Settings: box, Catalog: cat.get,
 		LoadCustom: cat.loadCustom, SaveCustom: cat.saveCustom,
-		ListAdapters: func() ([]sysdns.Adapter, error) { return p.DNS.Info().Adapters, nil },
+		ListAdapters: func() ([]sysdns.Adapter, error) { return sysdns.ListAdapters(p.DNS) },
 		DNSInfo:      p.DNS.Info,
 		DPIInfo:      func() app.DPIInfo { return dpiInfo(dpiMgr.Engines(), dpiMgr.Info()) },
 		SysProxyInfo: p.SysProxy.Info,

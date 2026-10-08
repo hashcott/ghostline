@@ -747,7 +747,10 @@ func (s *Service) DNSInfo() sysdns.Info {
 
 // ListAdapters lists network adapters for manual selection.
 func (s *Service) ListAdapters() []sysdns.Adapter {
-	ads, _ := s.x.ListAdapters()
+	ads, err := s.x.ListAdapters()
+	if err != nil {
+		slog.Warn("ui: listing network adapters failed", "err", err)
+	}
 	return ads
 }
 
