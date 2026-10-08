@@ -2,6 +2,7 @@
 export * as Service from "../../bindings/github.com/hashcott/ghostline/internal/app/service";
 export type {
   AppError,
+  InstallInfo,
   AppInfo,
   AutotuneProgress,
   LogEvent,

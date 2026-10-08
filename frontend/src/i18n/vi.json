@@ -645,6 +645,18 @@
     "CERT_NSS_TOOL_MISSING": {
       "message": "Chrome và Chromium chưa tin chứng chỉ Fake SNI: thiếu certutil",
       "action": "Cài libnss3-tools (sudo apt install libnss3-tools), rồi tắt và bật lại Fake SNI"
+    },
+    "PKEXEC_FAILED": {
+      "message": "Không chạy được với quyền quản trị; chạy lệnh này trong terminal",
+      "action": "Chạy lệnh trong ngoặc bằng terminal"
+    },
+    "SERVICE_INSTALL_MANUAL": {
+      "message": "Bản này cài dịch vụ bằng install.sh",
+      "action": "Chạy: sudo ./install.sh trong thư mục đã giải nén"
+    },
+    "SERVICE_ACTION_UNSUPPORTED": {
+      "message": "Bản này không tự cài được dịch vụ",
+      "action": "Cài lại Ghostline từ gói của hệ điều hành"
     }
   },
   "tray": {
@@ -1067,5 +1079,12 @@
       "speedTest": "đo tốc độ tải",
       "rechecking": "đang kiểm tra…"
     }
+  },
+  "service": {
+    "start": "khởi động dịch vụ",
+    "install": "cài dịch vụ",
+    "update": "cập nhật dịch vụ",
+    "packageUpdate": "Cập nhật Ghostline bằng trình quản lý gói",
+    "steamosHint": "Trên Steam Deck, đặt mật khẩu trước: mở Konsole và chạy passwd"
   }
 }
