@@ -22,7 +22,7 @@ var Rules = []Rule{
 	{GOOS: "windows", Pkg: "./internal/app", Forbid: wails, Why: "internal/app is shared by the GUI and the daemon"},
 	{GOOS: "linux", Pkg: "./internal/app", Forbid: append(wails, mod+"/internal/winutil", "golang.org/x/sys/windows"), Why: "internal/app is shared by the GUI and the daemon"},
 	{GOOS: "windows", Pkg: ".", Forbid: []string{"github.com/google/nftables", "github.com/godbus/dbus",
-		mod + "/internal/rpc", mod + "/internal/daemon", mod + "/internal/sessionagent"},
+		mod + "/internal/rpc", mod + "/internal/daemon", mod + "/internal/session"},
 		Why: "Linux-only code must not reach the Windows exe"},
 	{GOOS: "linux", Pkg: ".", Forbid: []string{mod + "/internal/winutil", mod + "/assets/goodbyedpi", "golang.org/x/sys/windows"},
 		Why: "Windows-only code must not reach the Linux binary"},
