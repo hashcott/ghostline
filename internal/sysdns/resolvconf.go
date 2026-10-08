@@ -113,10 +113,21 @@ func (b *resolvConfBackend) Reconcile(s Snapshot, _ Selection) (Snapshot, Snapsh
 	if b.ours() {
 		return s, Snapshot{}, nil, nil
 	}
-	next, err := b.Snapshot(Selection{})
+	rf, servers, err := b.current()
 	if err != nil {
 		return s, Snapshot{}, nil, err
 	}
+	if rf.Symlink == "" && len(bytes.TrimSpace(rf.Content)) == 0 {
+		// Missing or empty: a tool between its remove (or truncate) and
+		// its write. Its write is the next change.
+		return s, Snapshot{}, nil, nil
+	}
+	if old := s.Linux; rf.Symlink == "" && old != nil && old.ResolvConf != nil && old.ResolvConf.Symlink != "" {
+		// A tool wrote in place over Ghostline's file, where it would have
+		// written through the link: the link is still the original.
+		rf = &model.ResolvConfFile{Symlink: old.ResolvConf.Symlink}
+	}
+	next := Snapshot{Backend: b.Name(), Linux: &model.LinuxDNS{ResolvConf: rf, Servers: servers}}
 	return next, next, []Change{{Target: b.path}}, nil
 }
 

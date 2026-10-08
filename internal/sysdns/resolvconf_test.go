@@ -118,3 +118,49 @@ func TestResolvConf_SnapshotNeverRecordsOwnFile(t *testing.T) {
 	_, err = b.Snapshot(Selection{})
 	require.Error(t, err)
 }
+
+// A tool that writes resolv.conf in place while Ghostline's file is there
+// leaves a regular file: the original stays the symlink, with the new
+// servers, so Disconnect puts the link back.
+func TestResolvConf_ReconcileKeepsSymlinkOriginal(t *testing.T) {
+	b, path, _ := newTestResolvConf(t)
+	stub := filepath.Join(filepath.Dir(path), "stub-resolv.conf")
+	require.NoError(t, os.WriteFile(stub, []byte("nameserver 127.0.0.53\n"), 0o644))
+	require.NoError(t, os.Symlink("stub-resolv.conf", path))
+	s, _ := b.Snapshot(Selection{})
+	require.NoError(t, b.Apply(s, false))
+
+	require.NoError(t, os.WriteFile(path, []byte("nameserver 10.0.0.1\n"), 0o644))
+	next, toApply, changes, err := b.Reconcile(s, Selection{})
+	require.NoError(t, err)
+	require.Len(t, changes, 1)
+	require.Equal(t, "stub-resolv.conf", next.Linux.ResolvConf.Symlink)
+	require.Equal(t, []string{"10.0.0.1"}, next.Servers())
+	require.NoError(t, b.Apply(toApply, false))
+	require.Empty(t, b.Restore(next))
+	target, err := os.Readlink(path)
+	require.NoError(t, err)
+	require.Equal(t, "stub-resolv.conf", target)
+}
+
+// A file caught between a tool's remove (or truncate) and its write is
+// not an original: Reconcile waits for the next change.
+func TestResolvConf_ReconcileIgnoresFileMidReplace(t *testing.T) {
+	for name, prep := range map[string]func(string) error{
+		"missing": os.Remove,
+		"empty":   func(p string) error { return os.WriteFile(p, nil, 0o644) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			b, path, _ := newTestResolvConf(t)
+			require.NoError(t, os.WriteFile(path, []byte(ispConf), 0o644))
+			s, _ := b.Snapshot(Selection{})
+			require.NoError(t, b.Apply(s, false))
+			require.NoError(t, prep(path))
+			next, toApply, changes, err := b.Reconcile(s, Selection{})
+			require.NoError(t, err)
+			require.Empty(t, changes)
+			require.True(t, toApply.Empty())
+			require.Equal(t, s, next)
+		})
+	}
+}
