@@ -1,6 +1,7 @@
 package netwatch
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -34,11 +35,9 @@ func Watch(onChange func()) (func(), error) {
 		defer wg.Done()
 		buf := make([]byte, 64<<10)
 		for !done.Load() {
-			n, _, err := unix.Recvfrom(fd, buf, 0)
-			if err != nil || n == 0 {
-				continue // timeout (EAGAIN) or interrupted: check done again
+			if n, _, err := unix.Recvfrom(fd, buf, 0); recvTriggers(n, err) {
+				trigger()
 			}
-			trigger()
 		}
 	}()
 	var once sync.Once
@@ -50,4 +49,15 @@ func Watch(onChange func()) (func(), error) {
 			unix.Close(fd)
 		})
 	}, nil
+}
+
+// recvTriggers reports whether a receive means the network changed: a
+// message, or ENOBUFS (the kernel dropped messages, so a change went
+// unseen). A timeout (EAGAIN) or an interrupt only lets the reader check
+// for stop.
+func recvTriggers(n int, err error) bool {
+	if err != nil {
+		return errors.Is(err, unix.ENOBUFS)
+	}
+	return n > 0
 }
