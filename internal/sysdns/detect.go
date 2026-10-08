@@ -11,10 +11,10 @@ import (
 // at reboot).
 const resolvedDropInDir = "/run/systemd/resolved.conf.d"
 
-// detect picks the first usable backend: NetworkManager (running, in
-// charge of DNS, and its result reaching the system), systemd-resolved
-// (running), then fallback (resolv.conf). nm or resolved may be nil when
-// D-Bus is unavailable.
+// detect picks the first usable backend: NetworkManager (running and
+// writing the system's DNS itself), systemd-resolved (running), then
+// fallback (resolv.conf). nm or resolved may be nil when D-Bus is
+// unavailable.
 //
 // Recovery goes through the backend a snapshot names, which may not be the
 // one picked now (NM restarting, or switched to dns=none since): the
@@ -24,11 +24,7 @@ func detect(nm nmAPI, resolved resolvedAPI, units unitAPI, fallback Backend, flu
 	r := &router{byName: map[string]Backend{fallback.Name(): fallback}}
 	var nmb, rb Backend
 	if nm != nil {
-		chain := "NetworkManager"
-		if resolvedUp {
-			chain += " → systemd-resolved"
-		}
-		nmb = newNM(nm, flush, watch, chain)
+		nmb = newNM(nm, flush, watch, "NetworkManager")
 		r.byName[nmb.Name()] = nmb
 	}
 	if resolved != nil {
@@ -46,15 +42,15 @@ func detect(nm nmAPI, resolved resolvedAPI, units unitAPI, fallback Backend, flu
 	return r
 }
 
-// nmInCharge reports whether NM's global DNS reaches the system: NM
-// handles DNS, and either hands it to resolved or writes resolv.conf.
+// nmInCharge reports whether NM's global DNS reaches the system: NM writes
+// resolv.conf itself (default, dnsmasq). With dns=systemd-resolved NM keeps
+// the global configuration to itself and resolved never sees it (root run,
+// NM 1.58), so resolved is driven directly; with dns=none or
+// rc-manager=unmanaged nothing is written at all.
 func nmInCharge(nm nmAPI) bool {
 	mode, err := nm.DNSMode()
-	if err != nil || mode == "none" {
+	if err != nil || mode == "none" || mode == "systemd-resolved" {
 		return false
-	}
-	if mode == "systemd-resolved" {
-		return true
 	}
 	rc, err := nm.RcManager()
 	return err == nil && rc != "unmanaged"

@@ -37,7 +37,7 @@ func (f *fakeNM) DNSServers() ([]string, error) {
 func (f *fakeNM) Watch(func()) (func(), error) { return func() {}, nil }
 
 func newTestNM(f *fakeNM) Backend {
-	b := newNM(f, func() error { return nil }, nil, "NetworkManager → systemd-resolved").(*nmBackend)
+	b := newNM(f, func() error { return nil }, nil, "NetworkManager").(*nmBackend)
 	b.sleep = func(time.Duration) {}
 	return b
 }

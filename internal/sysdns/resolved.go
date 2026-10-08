@@ -60,7 +60,10 @@ func dropInContent(v6 bool) []byte {
 	if v6 {
 		dns += " ::1"
 	}
-	return []byte(marker + "\n[Resolve]\nDNS=" + dns + "\nDomains=~.\n")
+	// No Domains=~.: global servers already take every query no link's
+	// domain claims once the links' DefaultRoute is off, and resolved keeps
+	// a global ~. after the drop-in is removed and it reloads.
+	return []byte(marker + "\n[Resolve]\nDNS=" + dns + "\n")
 }
 
 func (b *resolvedBackend) Apply(s Snapshot, v6 bool) error {

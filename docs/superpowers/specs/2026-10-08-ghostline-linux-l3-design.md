@@ -158,7 +158,8 @@ type LinuxSnapshot struct {
 
 ### 5.1 `networkmanager`
 
-- **Khả dụng:** tên `org.freedesktop.NetworkManager` có chủ trên system bus, và `DnsManager.Mode` khác `none`.
+- **Khả dụng:** tên `org.freedesktop.NetworkManager` có chủ trên system bus, NM tự ghi `resolv.conf` (`DnsManager.Mode` khác `none` và `systemd-resolved`, `RcManager` khác `unmanaged`).
+- **Không dùng khi `dns=systemd-resolved`:** lần chạy root trên NM 1.58 cho thấy NM giữ `GlobalDnsConfiguration` cho riêng nó (hiện trong `DnsManager.Configuration`) nhưng không đẩy sang resolved; không truy vấn nào tới `127.0.0.1`. Khi đó dùng backend `resolved` (§5.2).
 - **Snapshot:** đọc `GlobalDnsConfiguration`. Server gốc lấy từ `DnsManager.Configuration[].nameservers`.
 - **Apply:** đặt `GlobalDnsConfiguration = {"domains": {"*": {"servers": ["127.0.0.1"(, "::1")]}}}`, giữ `searches` cũ. Sau đó đọc lại `DnsManager.Configuration`; sai thì báo `SET_DNS_FAILED` (orchestrator rollback như hiện nay).
 - **Reconcile:** giá trị hiện tại khác giá trị đã áp → áp lại, trả về `["NetworkManager"]`.
@@ -169,10 +170,10 @@ type LinuxSnapshot struct {
 
 ### 5.2 `resolved`
 
-- **Khả dụng:** `org.freedesktop.resolve1` có chủ (và backend NM không khả dụng).
+- **Khả dụng:** `org.freedesktop.resolve1` có chủ (và backend NM không khả dụng, kể cả khi NM chạy `dns=systemd-resolved`).
 - **Snapshot:** các link có DNS, cùng cờ `DefaultRoute` của chúng. Server gốc lấy từ `DNS` của link.
 - **Apply:**
-  1. Ghi `/run/systemd/resolved.conf.d/ghostline.conf` (`[Resolve]`, `DNS=127.0.0.1 ::1`, `Domains=~.`).
+  1. Ghi `/run/systemd/resolved.conf.d/ghostline.conf` (`[Resolve]`, `DNS=127.0.0.1 ::1`). Không có `Domains=~.`: server global đã nhận mọi truy vấn không khớp domain của link nào khi `DefaultRoute` của các link tắt, còn `~.` thì resolved (systemd 262) vẫn giữ trong Global sau khi xoá drop-in và reload.
   2. `ReloadUnit("systemd-resolved.service", "replace")` qua D-Bus của systemd.
   3. `SetLinkDefaultRoute(ifindex, false)` cho từng link trong snapshot.
 - **Reconcile:** link nào có DNS mà `DefaultRoute` bật lại (do networkd đẩy) → tắt; link mới → thêm vào snapshot rồi tắt.

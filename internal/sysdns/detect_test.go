@@ -32,10 +32,15 @@ func TestDetect_Order(t *testing.T) {
 	fallback := newResolvConf(t.TempDir()+"/resolv.conf", t.TempDir(), flush, nil)
 	pick := func(nm nmAPI, r resolvedAPI) Backend { return detect(nm, r, &fakeUnits{}, fallback, flush, nil) }
 
-	b := pick(&modeNM{running: true, mode: "default"}, &upResolved{running: true})
+	b := pick(&modeNM{running: true, mode: "default", rc: "symlink"}, &upResolved{running: true})
 	require.Equal(t, "networkmanager", b.Name())
-	require.Equal(t, "NetworkManager → systemd-resolved", b.Info().Chain)
-	require.Equal(t, "NetworkManager", pick(&modeNM{running: true, mode: "default"}, &upResolved{}).Info().Chain)
+	require.Equal(t, "NetworkManager", b.Info().Chain)
+
+	// Root run (NM 1.58): with dns=systemd-resolved NM keeps its global DNS
+	// to itself and resolved never sees it, so resolved is driven directly.
+	b = pick(&modeNM{running: true, mode: "systemd-resolved"}, &upResolved{running: true})
+	require.Equal(t, "resolved", b.Name())
+	require.Equal(t, "systemd-resolved", b.Info().Chain)
 
 	require.Equal(t, "resolved", pick(&modeNM{running: true, mode: "none"}, &upResolved{running: true}).Name())
 	require.Equal(t, "resolved", pick(&modeNM{running: true, modeErr: errors.New("old NM")}, &upResolved{running: true}).Name())
@@ -88,6 +93,6 @@ func TestDetect_SkipsNMThatLeavesResolvConfAlone(t *testing.T) {
 	fallback := newResolvConf(t.TempDir()+"/resolv.conf", t.TempDir(), flush, nil)
 	pick := func(nm nmAPI) Backend { return detect(nm, nil, &fakeUnits{}, fallback, flush, nil) }
 	require.Equal(t, "resolvconf", pick(&modeNM{running: true, mode: "default", rc: "unmanaged"}).Name())
-	require.Equal(t, "networkmanager", pick(&modeNM{running: true, mode: "systemd-resolved", rc: "unmanaged"}).Name())
+	require.Equal(t, "resolvconf", pick(&modeNM{running: true, mode: "systemd-resolved", rc: "symlink"}).Name(), "resolved is not running")
 	require.Equal(t, "networkmanager", pick(&modeNM{running: true, mode: "default", rc: "symlink"}).Name())
 }
