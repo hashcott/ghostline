@@ -60,6 +60,26 @@ Compare the result with the matching line in `SHA256SUMS` on the Releases page. 
 
 **Antivirus.** zapret2 and GoodbyeDPI use the **WinDivert** driver, which antivirus products often flag by mistake. Ghostline checks the engine's hash before every start. If zapret2 is blocked, Ghostline runs GoodbyeDPI for now and the DPI page shows the `bin\zapret2` folder to add to Windows Defender's exclusions.
 
+### Linux
+
+Pick the file for your distribution on the Releases page (see the table in the README): a `.deb` for Ubuntu and Debian, an `.rpm` for Fedora, the `tar.gz` (or the attached `PKGBUILD`) for Arch, the AppImage for anything else. Check it with `sha256sum -c SHA256SUMS --ignore-missing`.
+
+- **Two parts.** The background service `ghostline.service` runs as root: it changes DNS, runs zapret2 and the proxy, and keeps protecting with the window closed, after a reboot and while you are logged out. The window runs as your user and only talks to the service. It never needs `sudo`.
+- **Who may control it.** Members of `wheel`, `sudo`, `admin` or `ghostline`. For another account: `sudo usermod -aG ghostline <user>`, then log in again. Others see "your account may not control Ghostline".
+- **The service is not running.** The window says so and offers **start the service** (deb, rpm, Arch) or **install the service** (AppImage, tar.gz); both ask for your password through the system's dialog. In a terminal: `sudo systemctl enable --now ghostline`.
+- **Start with the system.** In Settings, *start with the system* connects at boot (with *connect automatically*) and opens Ghostline in the tray when you log in.
+
+### Steam Deck (SteamOS) — not verified yet
+
+Ghostline has not been tested on a Steam Deck. The intended way, in Desktop Mode:
+
+1. Open Konsole and set a password for the `deck` user once: `passwd`. The service install asks for it.
+2. Download the AppImage, make it executable (*Properties → Permissions*) and open it.
+3. Press **install the service** and enter the password. Connect.
+4. Switch to Game Mode: the service keeps protecting; the window is not needed.
+
+If the AppImage says WebKitGTK 6.0 is missing, this SteamOS image cannot run the window yet; please open an issue with your SteamOS version.
+
 ## 3. Quick start: one button
 
 <p align="center"><img src="screenshots/simple-en.png" width="320" alt="Simple interface"></p>
@@ -513,6 +533,7 @@ Work through these in order and stop as soon as the site opens:
 
 - **Installer build:** Settings → Apps → Ghostline → Uninstall. The uninstaller restores your DNS and removes the startup tasks, the WinDivert driver and every Ghostline certificate.
 - **Portable build:** in the app click **Disconnect**, turn off **start with windows**, quit from the tray, then delete the folder.
+- **Linux:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; AppImage and tar.gz: `sudo ./uninstall.sh [--purge]` from the unpacked folder, or `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, the system proxy, certificates (also in Firefox profiles), firewall rules and the nftables table come back first. rpm and Arch keep `/var/lib/ghostline` and `/var/log/ghostline`; delete them to remove everything.
 
 ## 9. FAQ
 

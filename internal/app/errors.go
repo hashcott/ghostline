@@ -7,23 +7,49 @@ import (
 
 // Error and warning codes (spec §10). The UI translates them.
 const (
-	CodeNotAdmin          = "NOT_ADMIN"
-	CodePort53Busy        = "PORT53_BUSY"
-	CodeNoServers         = "NO_SERVERS"
-	CodeEngineSelfTest    = "ENGINE_SELFTEST_FAILED"
-	CodeSetDNSFailed      = "SET_DNS_FAILED"
-	CodeVerifyLeak        = "VERIFY_LEAK"
-	CodeRestoreFailed     = "RESTORE_FAILED"
-	CodeDPIStartFailed    = "DPI_START_FAILED"
-	CodeDPIBlockedByAV    = "DPI_BLOCKED_BY_AV"
-	CodeDPIDriverBusy     = "DPI_DRIVER_BUSY"
-	CodeDPIHashMismatch   = "DPI_HASH_MISMATCH"
-	CodeServerListBadSig  = "SERVERLIST_BAD_SIGNATURE"
-	CodeUpdateCheckFailed = "UPDATE_CHECK_FAILED"
-	CodeAutotuneNoPreset  = "AUTOTUNE_NO_PRESET"
-	CodeInternal          = "INTERNAL"
-	CodeSettingsReset     = "SETTINGS_RESET"
-	CodeNotConnected      = "NOT_CONNECTED"
+	CodeNotAdmin = "NOT_ADMIN"
+	// Linux GUI ↔ daemon (the same strings as in internal/rpc).
+	CodeDaemonUnreachable = "DAEMON_UNREACHABLE"
+	CodeDaemonProtocol    = "DAEMON_PROTOCOL_MISMATCH"
+	CodeNotAuthorized     = "NOT_AUTHORIZED"
+	CodeNoUI              = "NO_UI"
+	// The GUI's service buttons (Linux): pkexec failed (the cause is the
+	// command to run in a terminal); the tar.gz installs with install.sh;
+	// the daemon and Windows have no such buttons.
+	CodePkexecFailed             = "PKEXEC_FAILED"
+	CodeServiceInstallManual     = "SERVICE_INSTALL_MANUAL"
+	CodeServiceActionUnsupported = "SERVICE_ACTION_UNSUPPORTED"
+	// Log code: the system changed DNS and Ghostline set it again (Linux).
+	CodeDNSReapplied         = "DNS_REAPPLIED"
+	CodePort53Busy           = "PORT53_BUSY"
+	CodePort53NotOwner       = "PORT53_NOT_OWNER"
+	CodeNoServers            = "NO_SERVERS"
+	CodeEngineSelfTest       = "ENGINE_SELFTEST_FAILED"
+	CodeSetDNSFailed         = "SET_DNS_FAILED"
+	CodeVerifyLeak           = "VERIFY_LEAK"
+	CodeRestoreFailed        = "RESTORE_FAILED"
+	CodeDPIStartFailed       = "DPI_START_FAILED"
+	CodeDPIBlockedByAV       = "DPI_BLOCKED_BY_AV"
+	CodeDPIKernelUnsupported = "DPI_KERNEL_UNSUPPORTED"
+	CodeDPIDriverBusy        = "DPI_DRIVER_BUSY"
+	// CodeSessionPending: the system proxy waits for a user's desktop
+	// session (Linux, before login).
+	CodeSessionPending = "SESSION_PENDING"
+	// CodeProxyDesktopUnsupported: Ghostline cannot set this desktop's proxy.
+	CodeProxyDesktopUnsupported = "PROXY_DESKTOP_UNSUPPORTED"
+	// CodeCertPartial: a Fake SNI root is in the system store but not in
+	// every browser's (Linux: Firefox's policy or a user's NSS database).
+	CodeCertPartial = "CERT_PARTIAL"
+	// CodeCertNSSToolMissing: Chrome's per-user store needs certutil
+	// (Ubuntu: libnss3-tools).
+	CodeCertNSSToolMissing = "CERT_NSS_TOOL_MISSING"
+	CodeDPIHashMismatch    = "DPI_HASH_MISMATCH"
+	CodeServerListBadSig   = "SERVERLIST_BAD_SIGNATURE"
+	CodeUpdateCheckFailed  = "UPDATE_CHECK_FAILED"
+	CodeAutotuneNoPreset   = "AUTOTUNE_NO_PRESET"
+	CodeInternal           = "INTERNAL"
+	CodeSettingsReset      = "SETTINGS_RESET"
+	CodeNotConnected       = "NOT_CONNECTED"
 
 	// Phase 2A (spec 2A section 10).
 	CodeProxyPortBusy     = "PROXY_PORT_BUSY"

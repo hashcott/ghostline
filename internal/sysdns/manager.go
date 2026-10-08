@@ -1,10 +1,12 @@
 package sysdns
 
 import (
+	"errors"
 	"log/slog"
 	"slices"
 	"strings"
-	"sync"
+
+	"github.com/hashcott/ghostline/internal/netwatch"
 	"time"
 
 	"github.com/hashcott/ghostline/internal/model"
@@ -80,31 +82,44 @@ func (m *Manager) Snapshot(ads []Adapter) ([]model.AdapterSnapshot, error) {
 }
 
 // ApplyLoopback points every snapshotted adapter at 127.0.0.1 (and ::1 when
-// v6 is true and the adapter has IPv6).
+// v6 is true and the adapter has IPv6). An adapter that cannot be set does
+// not stop the others: the *ApplyError names it.
 func (m *Manager) ApplyLoopback(snaps []model.AdapterSnapshot, v6 bool) error {
 	ads, err := m.byGUID()
 	if err != nil {
 		return err
 	}
+	var failed []string
+	var errs []error
 	for _, s := range snaps {
 		a, ok := ads[s.GUID]
 		if !ok {
 			continue
 		}
-		if err := m.api.SetDNS(s.GUID, false, []string{"127.0.0.1"}); err != nil {
-			slog.Warn("sysdns: SetDNS loopback failed; trying netsh", "err", err,
-				"adapter", a.Alias, "guid", a.GUID, "ifIndex", a.IfIndex, "family", "ipv4")
-			if err := m.api.NetshSetDNS(a.IfIndex, false, []string{"127.0.0.1"}); err != nil {
-				return err
-			}
+		if err := m.setLoopback(a, v6); err != nil {
+			failed, errs = append(failed, s.Alias), append(errs, err)
 		}
-		if v6 && a.HasIPv6 {
-			if err := m.api.SetDNS(s.GUID, true, []string{"::1"}); err != nil {
-				slog.Warn("sysdns: SetDNS loopback failed; trying netsh", "err", err,
-					"adapter", a.Alias, "guid", a.GUID, "ifIndex", a.IfIndex, "family", "ipv6")
-				if err := m.api.NetshSetDNS(a.IfIndex, true, []string{"::1"}); err != nil {
-					return err
-				}
+	}
+	if failed != nil {
+		return &ApplyError{Failed: failed, Err: errors.Join(errs...)}
+	}
+	return nil
+}
+
+func (m *Manager) setLoopback(a Adapter, v6 bool) error {
+	if err := m.api.SetDNS(a.GUID, false, []string{"127.0.0.1"}); err != nil {
+		slog.Warn("sysdns: SetDNS loopback failed; trying netsh", "err", err,
+			"adapter", a.Alias, "guid", a.GUID, "ifIndex", a.IfIndex, "family", "ipv4")
+		if err := m.api.NetshSetDNS(a.IfIndex, false, []string{"127.0.0.1"}); err != nil {
+			return err
+		}
+	}
+	if v6 && a.HasIPv6 {
+		if err := m.api.SetDNS(a.GUID, true, []string{"::1"}); err != nil {
+			slog.Warn("sysdns: SetDNS loopback failed; trying netsh", "err", err,
+				"adapter", a.Alias, "guid", a.GUID, "ifIndex", a.IfIndex, "family", "ipv6")
+			if err := m.api.NetshSetDNS(a.IfIndex, true, []string{"::1"}); err != nil {
+				return err
 			}
 		}
 	}
@@ -131,7 +146,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 	if err != nil {
 		var out []RestoreError
 		for _, s := range snaps {
-			out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+			out = append(out, RestoreError{Target: s.Alias, Err: err})
 		}
 		return out
 	}
@@ -149,7 +164,7 @@ func (m *Manager) Restore(snaps []model.AdapterSnapshot) []RestoreError {
 				continue // nothing recorded for this family
 			}
 			if err := m.restoreFamily(a, f.v6, f.dns); err != nil {
-				out = append(out, RestoreError{GUID: s.GUID, Alias: s.Alias, Err: err})
+				out = append(out, RestoreError{Target: s.Alias, Err: err})
 			}
 		}
 	}
@@ -265,25 +280,7 @@ func (m *Manager) Report() ([]AdapterDNS, error) {
 // Flush clears the Windows DNS cache.
 func (m *Manager) Flush() error { return m.api.Flush() }
 
-// Debounce returns trigger, which calls f once d after the last trigger in a
-// burst, and stop, which cancels a pending call.
+// Debounce is netwatch.Debounce (kept here for the Windows watcher).
 func Debounce(d time.Duration, f func()) (trigger func(), stop func()) {
-	var mu sync.Mutex
-	var t *time.Timer
-	trigger = func() {
-		mu.Lock()
-		defer mu.Unlock()
-		if t != nil {
-			t.Stop()
-		}
-		t = time.AfterFunc(d, f)
-	}
-	stop = func() {
-		mu.Lock()
-		defer mu.Unlock()
-		if t != nil {
-			t.Stop()
-		}
-	}
-	return trigger, stop
+	return netwatch.Debounce(d, f)
 }

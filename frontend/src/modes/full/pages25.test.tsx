@@ -7,6 +7,7 @@ import { useGhost } from "../../app/store";
 import { initI18n } from "../../i18n";
 
 const svc = vi.hoisted(() => ({
+  DPIInfo: vi.fn(() => Promise.resolve({ engines: [{ id: "zapret2", exe: "winws2.exe" }, { id: "goodbyedpi", exe: "goodbyedpi.exe" }], mechanism: "WinDivert", avExclusions: true })),
   ListCerts: vi.fn(() => Promise.resolve([])),
   SaveSettings: vi.fn(() => Promise.resolve()),
   SetDPIEnabled: vi.fn(() => Promise.resolve()),
@@ -23,6 +24,7 @@ const svc = vi.hoisted(() => ({
   RestoreDNSNow: vi.fn(() => Promise.resolve()),
   StopConflictingService: vi.fn(() => Promise.resolve()),
   ListAdapters: vi.fn(() => Promise.resolve([])),
+  DNSInfo: vi.fn(() => Promise.resolve({ backend: "windows", chain: "Windows", interfaces: [], adapterPick: true, adapters: [] })),
 }));
 vi.mock("../../app/api", () => ({ Service: svc }));
 

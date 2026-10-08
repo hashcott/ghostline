@@ -49,7 +49,13 @@ func (o *Orchestrator) verifyLeakError(lookupErr error, ips []netip.Addr, saw bo
 		kv = append(kv, "reason", verifyNotSeen)
 	}
 
-	report, err := o.d.DNS.Report()
+	// Only a backend with adapters (Windows) can say which ones bypass
+	// Ghostline; elsewhere the reason alone is reported.
+	rep, ok := o.d.DNS.(DNSReporter)
+	if !ok {
+		return appErr(CodeVerifyLeak, lookupErr, kv...)
+	}
+	report, err := rep.Report()
 	if err != nil {
 		kv = append(kv, "reportError", err.Error())
 		return appErr(CodeVerifyLeak, lookupErr, kv...)

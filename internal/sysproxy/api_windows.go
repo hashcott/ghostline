@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/hashcott/ghostline/internal/store"
+	"github.com/hashcott/ghostline/internal/model"
 	"golang.org/x/sys/windows"
 )
 
@@ -50,14 +50,14 @@ type winAPI struct{}
 // NewWindowsAPI returns the WinINET implementation.
 func NewWindowsAPI() API { return winAPI{} }
 
-func (winAPI) Query() (store.SysProxySnapshot, error) {
+func (winAPI) Query() (model.WinINETProxy, error) {
 	opts := []perConnOption{{option: perConnFlags}, {option: perConnProxyServer}, {option: perConnProxyBypass}, {option: perConnAutoconfigURL}}
 	list := perConnOptionList{optionCount: uint32(len(opts)), options: &opts[0]}
 	list.size = uint32(unsafe.Sizeof(list))
 	size := list.size
 	r, _, err := procQueryOption.Call(0, optPerConnection, uintptr(unsafe.Pointer(&list)), uintptr(unsafe.Pointer(&size)))
 	if r == 0 {
-		return store.SysProxySnapshot{}, fmt.Errorf("sysproxy: InternetQueryOption: %w", err)
+		return model.WinINETProxy{}, fmt.Errorf("sysproxy: InternetQueryOption: %w", err)
 	}
 	// The OS wrote LocalAlloc'd string pointers into the union; read them as
 	// pointers (not via a uintptr conversion) and free them.
@@ -70,7 +70,7 @@ func (winAPI) Query() (store.SysProxySnapshot, error) {
 		_, _, _ = procGlobalFree.Call(o.value)
 		return s
 	}
-	return store.SysProxySnapshot{
+	return model.WinINETProxy{
 		Flags:         uint32(opts[0].value),
 		Server:        str(&opts[1]),
 		Bypass:        str(&opts[2]),
@@ -78,7 +78,7 @@ func (winAPI) Query() (store.SysProxySnapshot, error) {
 	}, nil
 }
 
-func (winAPI) Set(s store.SysProxySnapshot) error {
+func (winAPI) Set(s model.WinINETProxy) error {
 	ptr := func(v string) (*uint16, uintptr) {
 		if v == "" {
 			return nil, 0

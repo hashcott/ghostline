@@ -171,7 +171,7 @@ func (o *Orchestrator) swapTo(ctx context.Context, picked []model.Server) {
 		o.logErr("engine", "SWAP_FAILED", err)
 		if errs := o.disconnectLocked(ctx); len(errs) > 0 {
 			o.update(func(s *Snapshot) {
-				s.Status, s.Error = StatusError, &AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": errs[0].Alias}}
+				s.Status, s.Error = StatusError, &AppError{Code: CodeRestoreFailed, Params: map[string]any{"adapter": errs[0].Target}}
 			})
 			return
 		}
@@ -189,8 +189,10 @@ func (o *Orchestrator) swapTo(ctx context.Context, picked []model.Server) {
 	o.log("ok", "SWAPPED", "servers", len(picked))
 }
 
-// OnNetworkChange snapshots and redirects adapters that appeared while
-// connected. The snapshot is persisted before the adapter is changed.
+// OnNetworkChange lets the DNS backend catch up with the network: a new
+// adapter is recorded and redirected (Windows), a configuration the
+// system changed is set again (Linux). The updated snapshot is persisted
+// before anything is applied.
 func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 	o.opMu.Lock()
 	defer o.opMu.Unlock()
@@ -198,48 +200,28 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 		return
 	}
 	s := o.d.Settings()
-	ads, err := o.d.DNS.Select(s.Adapters, s.AdapterGUIDs)
-	if err != nil {
-		slog.Warn("system: listing adapters after a network change failed", "err", err)
-		return
-	}
+
 	o.mu.Lock()
-	known := map[string]bool{}
-	for _, sn := range o.snaps {
-		known[sn.GUID] = true
-	}
+	cur, v6 := o.dnsSnap, o.v6
 	o.mu.Unlock()
-	for _, a := range ads {
-		if known[a.GUID] {
-			continue
-		}
-		snaps, err := o.d.DNS.Snapshot([]sysdns.Adapter{a})
-		if err != nil {
-			slog.Warn("system: snapshotting a new adapter failed", "adapter", a.Alias, "err", err)
-			continue
-		}
-		if len(snaps) == 0 {
-			continue
-		}
+	// A Reconcile error (the adapters could not be listed mid-flap) set
+	// nothing: the next change tries again. It goes to the file log only.
+	next, toApply, changes, err := o.d.DNS.Reconcile(cur, sysdns.Selection{Mode: s.Adapters, IDs: s.AdapterGUIDs})
+	if err != nil {
+		slog.Warn("system: reconciling DNS after a network change failed", "err", err)
+	}
+	if len(changes) > 0 {
 		if err := o.d.States.Update(func(st *store.State) error {
-			st.Snapshot = append(st.Snapshot, snaps...)
+			st.DNS = next
 			return nil
 		}); err != nil {
-			slog.Warn("system: recording a new adapter's snapshot failed", "adapter", a.Alias, "err", err)
-			continue
+			slog.Warn("system: recording the updated DNS snapshot failed", "err", err)
+		} else {
+			o.mu.Lock()
+			o.dnsSnap = next
+			o.mu.Unlock()
+			o.applyChanges(toApply, changes, v6)
 		}
-		o.mu.Lock()
-		o.snaps = append(o.snaps, snaps...)
-		o.mu.Unlock()
-		o.mu.Lock()
-		v6 := o.v6
-		o.mu.Unlock()
-		if err := o.d.DNS.ApplyLoopback(snaps, v6); err != nil {
-			o.logErr("system", CodeSetDNSFailed, err, "adapter", a.Alias)
-			continue
-		}
-		warnIgnored("dns flush", o.d.DNS.Flush())
-		o.log("system", "ADAPTER_ADDED", "adapter", a.Alias)
 	}
 	// Another network has its own ranking: use it, or build one.
 	go func() {
@@ -249,6 +231,36 @@ func (o *Orchestrator) OnNetworkChange(ctx context.Context) {
 		}
 		o.ApplyBest(context.Background())
 	}()
+}
+
+// applyChanges applies what Reconcile found and logs each change: set, or
+// failed. A backend that sets some targets and not others says which in
+// an *sysdns.ApplyError; any other error fails them all.
+func (o *Orchestrator) applyChanges(toApply sysdns.Snapshot, changes []sysdns.Change, v6 bool) {
+	failed := map[string]bool{}
+	if err := o.d.DNS.Apply(toApply, v6); err != nil {
+		var ae *sysdns.ApplyError
+		if !errors.As(err, &ae) {
+			for _, c := range changes {
+				o.log("system", CodeSetDNSFailed, "adapter", c.Target)
+			}
+			return
+		}
+		for _, t := range ae.Failed {
+			failed[t] = true
+		}
+	}
+	warnIgnored("dns flush", o.d.DNS.Flush())
+	for _, c := range changes {
+		code := CodeDNSReapplied
+		switch {
+		case failed[c.Target]:
+			code = CodeSetDNSFailed
+		case c.Added:
+			code = "ADAPTER_ADDED"
+		}
+		o.log("system", code, "adapter", c.Target)
+	}
 }
 
 // OnResume checks the engine after sleep and heals immediately on failure.

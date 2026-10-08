@@ -35,12 +35,16 @@ export function Proxy() {
   const [draft, setDraft] = useState<UpstreamProxy | null>(null);
   const [password, setPassword] = useState("");
   const [testResult, setTestResult] = useState<Record<string, string>>({});
+  const [sysInfo, setSysInfo] = useState<{ desktop: string; supported: boolean } | null>(null);
 
   const proxy = settings?.proxy;
   const shareLan = !!proxy?.shareLan;
 
   useEffect(() => {
     void Service.GetFragCache().then((c) => setCache(c ?? []));
+    Service.SysProxyInfo()
+      .then((i) => setSysInfo(i ?? null))
+      .catch(() => setSysInfo(null));
     // Live proxy:stats events win over this initial fetch.
     void Service.GetProxyStats().then((s) => s && !useGhost.getState().proxyStats && useGhost.getState().setProxyStats(s));
   }, []);
@@ -131,6 +135,12 @@ export function Proxy() {
           <span>{t("proxy.systemProxy")}</span>
           <Toggle label={t("proxy.systemProxy")} checked={proxy.systemProxy} onChange={(v) => setProxy({ systemProxy: v })} />
         </div>
+        {sysInfo?.desktop &&
+          (sysInfo.supported ? (
+            <div className={css.dim}>{t("proxy.systemProxyDesktop", { desktop: sysInfo.desktop })}</div>
+          ) : (
+            <div className={css.warn}>{t("proxy.systemProxyManual", { desktop: sysInfo.desktop, addr: `127.0.0.1:${proxy.port}` })}</div>
+          ))}
         <div className={css.setting}>
           <span>{t("proxy.shareLan")}</span>
           <Toggle label={t("proxy.shareLan")} checked={proxy.shareLan} onChange={(v) => setProxy({ shareLan: v })} />

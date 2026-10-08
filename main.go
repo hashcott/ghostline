@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	goodbyedpi "github.com/hashcott/ghostline/assets/goodbyedpi"
-	zapret2 "github.com/hashcott/ghostline/assets/zapret2"
 	"github.com/hashcott/ghostline/internal/cli"
+	"github.com/hashcott/ghostline/internal/headless"
+	"github.com/hashcott/ghostline/internal/platform"
 	"github.com/hashcott/ghostline/internal/shell"
 )
 
@@ -22,15 +22,23 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	switch mode.Kind {
-	case cli.KindWatchdog, cli.KindRestore, cli.KindRemoveCerts, cli.KindExport:
-		os.Exit(runHeadless(mode))
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		os.Exit(1)
 	}
-	if err := shell.Run(shell.Options{Mode: mode, Assets: assets, GoodbyeDPIAssets: goodbyedpi.FS, Zapret2Assets: zapret2.FS, Executable: exe}); err != nil {
+	p, err := platform.New(exe)
+	if err != nil {
+		if mode.Kind == cli.KindUI || mode.Kind == cli.KindAutostart {
+			shell.Fatal(err)
+		}
+		fmt.Fprintln(os.Stderr, "Ghostline:", err)
+		os.Exit(1)
+	}
+	switch mode.Kind {
+	case cli.KindWatchdog, cli.KindRestore, cli.KindRemoveCerts, cli.KindExport:
+		os.Exit(headless.Run(mode, p))
+	}
+	if err := shell.Run(shell.Options{Mode: mode, Assets: assets, Executable: exe, Platform: p}); err != nil {
 		os.Exit(1)
 	}
 }

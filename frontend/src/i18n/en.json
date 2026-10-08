@@ -240,7 +240,8 @@
       "clear": "remove all"
     },
     "blacklistSavedReload": "saved — zapret2 loaded the new list",
-    "autotuneDone": "✓ auto-tune picked {{preset}} ({{engine}})"
+    "autotuneDone": "✓ auto-tune picked {{preset}} ({{engine}})",
+    "mechanism": "Packet capture: {{mechanism}}"
   },
   "logs": {
     "title": "LOGS",
@@ -265,6 +266,7 @@
     "SWAPPED": "switched to {{servers}} new servers",
     "SWAP_FAILED": "could not switch servers",
     "ADAPTER_ADDED": "protected new adapter: {{adapter}}",
+    "DNS_REAPPLIED": "the system changed DNS; set it again ({{adapter}})",
     "SITES_BLOCKED": "{{count}} test sites blocked at TLS",
     "DPI_STARTED": "{{engine}} started (preset {{preset}})",
     "DPI_STOPPED": "DPI bypass stopped",
@@ -288,6 +290,7 @@
     "closeToTray": "close → minimise to tray",
     "adapters": "adapters",
     "adaptersManual": "manual",
+    "dnsBackend": "System DNS",
     "testDomain": "test domain",
     "bootstrap": "bootstrap (ip:port, one per line)",
     "maxUpstreams": "max servers",
@@ -356,6 +359,26 @@
     "testDomainMany": "Many domains are not recommended: {{count}} domains make every scan slower and can drop good servers. Use 1–2 (at most 5)."
   },
   "errors": {
+    "PORT53_NOT_OWNER": {
+      "message": "{{name}} does not hold port 53",
+      "action": "Refresh and pick the service shown"
+    },
+    "DAEMON_UNREACHABLE": {
+      "message": "Ghostline's background service is not running",
+      "action": "Start it with: sudo systemctl start ghostline"
+    },
+    "DAEMON_PROTOCOL_MISMATCH": {
+      "message": "The background service is a different version",
+      "action": "Update Ghostline so the app and the service match"
+    },
+    "NOT_AUTHORIZED": {
+      "message": "Your account may not control Ghostline",
+      "action": "Run: sudo usermod -aG ghostline $USER, then log in again"
+    },
+    "NO_UI": {
+      "message": "This needs the Ghostline window",
+      "action": "Open Ghostline and try again"
+    },
     "NOT_ADMIN": {
       "message": "Ghostline needs administrator rights to change DNS",
       "action": "Restart Ghostline as administrator"
@@ -607,6 +630,38 @@
     "TEST_DOMAIN_NO_ADDRESS": {
       "message": "This test domain has no IPv4 address (A record), so every server would fail. Use a site with a real address, for example store.steampowered.com instead of steam.com",
       "action": ""
+    },
+    "DPI_KERNEL_UNSUPPORTED": {
+      "message": "This Linux kernel cannot pass packets to the DPI engine (nfnetlink_queue or nft_queue is missing)",
+      "action": "Install your distribution's netfilter queue modules, or turn on the proxy: its fragmentation does not need them"
+    },
+    "SESSION_PENDING": {
+      "message": "The system proxy will be set when you log in to your desktop",
+      "action": "Nothing to do: protection is already on"
+    },
+    "PROXY_DESKTOP_UNSUPPORTED": {
+      "message": "Ghostline cannot change this desktop's proxy settings",
+      "action": "Set an HTTP proxy to the address on the Proxy page by hand"
+    },
+    "CERT_PARTIAL": {
+      "message": "The Fake SNI certificate is trusted by the system, but not by {{target}}",
+      "action": "Sites in that browser may show a certificate warning; the details are in the log"
+    },
+    "CERT_NSS_TOOL_MISSING": {
+      "message": "Chrome and Chromium do not trust the Fake SNI certificate yet: certutil is missing",
+      "action": "Install libnss3-tools (sudo apt install libnss3-tools), then turn Fake SNI off and on"
+    },
+    "PKEXEC_FAILED": {
+      "message": "Could not run as administrator; run this in a terminal",
+      "action": "Run the command in brackets in a terminal"
+    },
+    "SERVICE_INSTALL_MANUAL": {
+      "message": "This build installs the service with install.sh",
+      "action": "Run: sudo ./install.sh in the extracted folder"
+    },
+    "SERVICE_ACTION_UNSUPPORTED": {
+      "message": "This build cannot install the service itself",
+      "action": "Reinstall Ghostline from your system's package"
     }
   },
   "tray": {
@@ -681,7 +736,9 @@
     },
     "hint": {
       "goodbyedpi": "{{count}} connections were blocked even fragmented — try the DPI bypass on the DPI page"
-    }
+    },
+    "systemProxyDesktop": "Sets the proxy in {{desktop}}'s settings",
+    "systemProxyManual": "Ghostline cannot change {{desktop}}'s proxy settings: set an HTTP proxy to {{addr}} by hand"
   },
   "rules": {
     "title": "RULES",
@@ -1027,5 +1084,12 @@
       "speedTest": "download speed test",
       "rechecking": "checking…"
     }
+  },
+  "service": {
+    "start": "start the service",
+    "install": "install the service",
+    "update": "update the service",
+    "packageUpdate": "Update Ghostline with your package manager",
+    "steamosHint": "On a Steam Deck, set a password first: open Konsole and run passwd"
   }
 }

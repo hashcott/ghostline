@@ -357,3 +357,15 @@ func TestFetch_RejectsUnsafeID(t *testing.T) {
 	require.True(t, lists.ValidID("hagezi-pro-plus"))
 	require.True(t, lists.ValidID("my_list-01ab9f"))
 }
+
+// C2: the Linux daemon runs as root for other users; it must never read a
+// path a client named (e.g. /etc/shadow as a "hosts" list).
+func TestFetch_NoFilesRefusesFileLists(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "secret.txt")
+	require.NoError(t, os.WriteFile(p, []byte("root:x:0:0\n"), 0o600))
+	f := newFetcher(t, nil)
+	f.NoFiles = true
+	l := lists.List{ID: "f", Source: "file", Path: p, Format: "hosts", Action: "block"}
+	_, err := f.Fetch(context.Background(), &l)
+	require.ErrorIs(t, err, lists.ErrFileListsOff)
+}

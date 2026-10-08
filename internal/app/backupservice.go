@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -105,7 +106,7 @@ func (s *Service) currentBackupDataLocked() (backup.Data, error) {
 }
 
 // ExportSettings saves the chosen sections through the save dialog.
-func (s *Service) ExportSettings(sections []string) (err error) {
+func (s *Service) ExportSettings(ctx context.Context, sections []string) (err error) {
 	defer func() {
 		if err != nil {
 			slog.Warn("backup: export failed", "err", err)
@@ -119,7 +120,7 @@ func (s *Service) ExportSettings(sections []string) (err error) {
 	if err != nil {
 		return err
 	}
-	if err := s.x.SaveFile(backup.FileName(s.clock()), b); err != nil {
+	if err := s.x.SaveFile(ctx, backup.FileName(s.clock()), b); err != nil {
 		return appErr(CodeExportWriteFailed, err, "detail", err.Error())
 	}
 	return nil
@@ -139,23 +140,20 @@ func (s *Service) backupValidators() backup.Validators {
 
 // PreviewImport asks for a backup file and returns what importing it would
 // do. Nothing changes until ApplyImport.
-func (s *Service) PreviewImport() (ImportPreview, error) {
+func (s *Service) PreviewImport(ctx context.Context) (ImportPreview, error) {
 	if s.x.OpenFile == nil {
 		return ImportPreview{}, errors.New("no file dialog")
 	}
-	path, err := s.x.OpenFile(brand.AppName)
-	if err != nil || path == "" {
-		return ImportPreview{}, err // cancelled
-	}
 	invalid := func(detail string, cause error) error { return appErr(CodeImportInvalid, cause, "detail", detail) }
-	if fi, err := os.Stat(path); err != nil {
-		return ImportPreview{}, invalid(err.Error(), err)
-	} else if fi.Size() > backup.MaxSize {
-		return ImportPreview{}, invalid("too_large", nil)
-	}
-	b, err := os.ReadFile(path)
+	name, b, err := s.x.OpenFile(ctx, brand.AppName)
 	if err != nil {
-		return ImportPreview{}, invalid(err.Error(), err)
+		return ImportPreview{}, invalid(err.Error(), err) // could not read it
+	}
+	if name == "" {
+		return ImportPreview{}, nil // cancelled
+	}
+	if len(b) > backup.MaxSize {
+		return ImportPreview{}, invalid("too_large", nil)
 	}
 	cur, err := s.currentBackupData()
 	if err != nil {
@@ -174,7 +172,7 @@ func (s *Service) PreviewImport() (ImportPreview, error) {
 	s.mu.Lock()
 	s.imp = t // a new preview replaces the previous one
 	s.mu.Unlock()
-	return ImportPreview{Token: t.token, Path: path, Preview: plan.Preview}, nil
+	return ImportPreview{Token: t.token, Path: name, Preview: plan.Preview}, nil
 }
 
 // ApplyImport imports the chosen sections of the previewed file. It is

@@ -28,6 +28,7 @@ const svc = vi.hoisted(() => ({
   StartAutotune: vi.fn(() => Promise.resolve()),
   CancelAutotune: vi.fn(() => Promise.resolve()),
   SetMode: vi.fn(() => Promise.resolve()),
+  SysProxyInfo: vi.fn(() => Promise.resolve({ desktop: "", supported: true })),
 }));
 vi.mock("../../../app/api", () => ({ Service: svc }));
 vi.mock("@wailsio/runtime", () => ({ Browser: { OpenURL: vi.fn() } }));

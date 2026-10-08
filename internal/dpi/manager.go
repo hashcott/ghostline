@@ -21,20 +21,16 @@ var (
 	ErrBlockedByAV   = errors.New("dpi: DPI engine was blocked (antivirus?)")
 	ErrDriverInUse   = errors.New("dpi: the WinDivert driver is in use by another program")
 	ErrUnknownEngine = errors.New("dpi: unknown engine")
+	// ErrKernelUnsupported: the Linux kernel cannot queue packets to the
+	// engine (nfnetlink_queue / nft_queue missing).
+	ErrKernelUnsupported = errors.New("dpi: the kernel cannot queue packets (nfnetlink_queue/nft_queue)")
 )
-
-// driverService is the WinDivert 2.x service name. WinDivert 1.x (shipped
-// with GoodbyeDPI 0.2.2) used a versioned name ("WinDivert1.4"), so cleanup
-// looks for the prefix.
-const driverService = "WinDivert"
 
 // List files are copied into the engine directory under these names: the
 // engines read argv as ANSI (GoodbyeDPI) or through Cygwin (winws2), so a
 // path with Vietnamese letters (C:\Users\Đức…) would be mangled.
-const (
-	blacklistName    = "blacklist.txt"
-	autoHostlistName = "autohostlist.txt"
-)
+// autoHostlistName is per OS (lists_<os>.go).
+const blacklistName = "blacklist.txt"
 
 func extractWith(src fs.FS, dir string, pins map[string]string) error {
 	for name, want := range pins {
@@ -90,17 +86,6 @@ type Runner interface {
 	Start(exe string, args []string, dir string) (Process, error)
 }
 
-// Services controls Windows services.
-type Services interface {
-	Find(prefix string) ([]string, error)
-	Running(name string) (bool, error)
-	// Active reports whether a service exists and is not fully stopped
-	// (running, paused, or mid-transition). A missing service is not active.
-	Active(name string) (bool, error)
-	Stop(name string) error
-	Delete(name string) error
-}
-
 // Installed pairs an engine with the embedded files it is extracted from.
 type Installed struct {
 	Engine Engine
@@ -112,8 +97,9 @@ type Installed struct {
 type Manager struct {
 	binDir  string
 	engines map[string]Installed
+	order   []string // engine IDs as given
 	runner  Runner
-	svc     Services
+	ic      Interceptor
 	sleep   func(time.Duration)
 
 	mu      sync.Mutex
@@ -123,15 +109,25 @@ type Manager struct {
 }
 
 // NewManager manages the given engines, extracted under binDir.
-func NewManager(binDir string, engines []Installed, r Runner, s Services, sleep func(time.Duration)) *Manager {
+func NewManager(binDir string, engines []Installed, r Runner, ic Interceptor, sleep func(time.Duration)) *Manager {
 	if sleep == nil {
 		sleep = time.Sleep
 	}
-	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, svc: s, sleep: sleep}
+	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, ic: ic, sleep: sleep}
 	for _, e := range engines {
 		m.engines[e.Engine.ID()] = e
+		m.order = append(m.order, e.Engine.ID())
 	}
 	return m
+}
+
+// Engines lists this OS's engines in the order they were given.
+func (m *Manager) Engines() []Engine {
+	out := make([]Engine, 0, len(m.order))
+	for _, id := range m.order {
+		out = append(out, m.engines[id].Engine)
+	}
+	return out
 }
 
 // Get returns an engine by ID.
@@ -142,10 +138,10 @@ func (m *Manager) Get(engine string) (Engine, bool) {
 
 func (m *Manager) dir(engine string) string { return filepath.Join(m.binDir, engine) }
 
-// Start stops whatever runs, removes leftover WinDivert services, verifies
-// (re-extracting if needed) and launches the engine. It is running when,
-// after 2s, the process is alive and the WinDivert driver is up. p's list
-// paths are absolute.
+// Start stops whatever runs (cleaning up its capture), verifies
+// (re-extracting if needed), prepares the capture and launches the engine.
+// It is running when, after 2s, the process is alive and the Interceptor
+// says it captures. p's list paths are absolute.
 func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -155,13 +151,6 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 	}
 	if err := m.stopLocked(); err != nil {
 		return 0, fmt.Errorf("%w: cleanup: %v", ErrStartFailed, err)
-	}
-	// A WinDivert service still active after cleanup is held by another DPI
-	// tool the user runs outside Ghostline (a standalone GoodbyeDPI or zapret).
-	// An in-use kernel driver can't be claimed, so ask the user to close it
-	// instead of fighting over it and failing cryptically below.
-	if m.driverInUse() {
-		return 0, ErrDriverInUse
 	}
 	dir, pins := m.dir(engine), in.Engine.Files()
 	if err := verifyWith(dir, pins); err != nil {
@@ -180,6 +169,15 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 	if err != nil {
 		return 0, fmt.Errorf("%w: lists: %v", ErrStartFailed, err)
 	}
+	if err := m.ic.Prepare(dir); err != nil {
+		return 0, err
+	}
+	started := false
+	defer func() {
+		if !started {
+			_ = m.ic.Cleanup() // remove the capture prepared for nothing
+		}
+	}()
 	args, err := in.Engine.Args(rel)
 	if err != nil {
 		return 0, err
@@ -200,17 +198,15 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 		}
 		return 0, ErrStartFailed
 	}
-	if ok, err := m.svc.Running(driverService); !ok {
-		if err != nil {
-			slog.Warn("dpi: query WinDivert driver state failed", "err", err, "service", driverService)
-		}
-		slog.Warn("dpi: WinDivert driver not running after start; killing engine", "engine", engine, "pid", proc.PID())
+	if !m.ic.Ready(proc.PID()) {
+		slog.Warn("dpi: capture not ready after start; killing engine", "engine", engine, "pid", proc.PID(), "mechanism", m.ic.Info().Mechanism)
 		if err := proc.Kill(); err != nil {
 			slog.Warn("dpi: kill engine failed", "err", err, "engine", engine, "pid", proc.PID())
 		}
-		return 0, fmt.Errorf("%w: WinDivert driver not running", ErrStartFailed)
+		return 0, fmt.Errorf("%w: %s not capturing", ErrStartFailed, m.ic.Info().Mechanism)
 	}
 	m.proc, m.running, m.plan = proc, engine, p
+	started = true
 	return proc.PID(), nil
 }
 
@@ -224,7 +220,7 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, blacklistName), b, 0o644); err != nil {
+		if err := writeEngineList(filepath.Join(dir, blacklistName), b); err != nil {
 			return p, err
 		}
 		p.Blacklist = blacklistName
@@ -234,7 +230,11 @@ func copyLists(dir string, p Plan) (Plan, error) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return p, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, autoHostlistName), b, 0o644); err != nil {
+		dst := filepath.Join(dir, filepath.FromSlash(autoHostlistName))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return p, err
+		}
+		if err := writeEngineList(dst, b); err != nil {
 			return p, err
 		}
 		p.AutoHostlist = autoHostlistName
@@ -262,7 +262,7 @@ func isAppControlBlock(err error) bool {
 		bytes.Contains([]byte(err.Error()), []byte("virus"))
 }
 
-// Stop kills the engine and removes every WinDivert service.
+// Stop kills the engine and cleans up its capture.
 func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -274,8 +274,8 @@ func (m *Manager) stopLocked() error {
 	if m.proc != nil {
 		if m.plan.AutoHostlist != "" {
 			// Keep what the engine learned; it only lives in its directory.
-			src := filepath.Join(m.dir(m.running), autoHostlistName)
-			if b, err := os.ReadFile(src); err == nil {
+			src := filepath.Join(m.dir(m.running), filepath.FromSlash(autoHostlistName))
+			if b, err := readEngineList(src); err == nil {
 				errs = append(errs, os.WriteFile(m.plan.AutoHostlist, b, 0o644))
 			} else if !errors.Is(err, fs.ErrNotExist) {
 				slog.Warn("dpi: read learned auto-hostlist failed", "err", err, "path", src)
@@ -286,33 +286,8 @@ func (m *Manager) stopLocked() error {
 		}
 		m.proc, m.running, m.plan = nil, "", Plan{}
 	}
-	names, err := m.svc.Find(driverService)
-	errs = append(errs, err)
-	for _, n := range names {
-		errs = append(errs, m.svc.Stop(n), m.svc.Delete(n))
-	}
+	errs = append(errs, m.ic.Cleanup())
 	return errors.Join(errs...)
-}
-
-// driverInUse reports whether a WinDivert service is still active after
-// stopLocked tried to remove it. stopLocked waits out our own just-killed
-// driver, so anything still active here is held by another live process.
-func (m *Manager) driverInUse() bool {
-	names, err := m.svc.Find(driverService)
-	if err != nil {
-		slog.Warn("dpi: list WinDivert services failed", "err", err)
-	}
-	for _, n := range names {
-		ok, err := m.svc.Active(n)
-		if err != nil {
-			slog.Warn("dpi: query WinDivert service state failed", "err", err, "service", n)
-		}
-		if ok {
-			slog.Warn("dpi: WinDivert service still active after cleanup; held by another program", "service", n)
-			return true
-		}
-	}
-	return false
 }
 
 // Running reports whether the managed process is alive.
@@ -331,3 +306,6 @@ func (m *Manager) Engine() string {
 	}
 	return m.running
 }
+
+// Info describes the packet capture for the UI.
+func (m *Manager) Info() InterceptorInfo { return m.ic.Info() }

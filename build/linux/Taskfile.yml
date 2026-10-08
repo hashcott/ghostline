@@ -1,0 +1,76 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+vars:
+  VERSION: '{{.VERSION | default "dev"}}'
+  LDFLAGS: '-s -w -X github.com/hashcott/ghostline/internal/brand.Version={{.VERSION}}'
+  PKG: 'ghostline-{{.VERSION}}-linux-amd64'
+  # Pinned: a release at least two weeks old when chosen (2026-10-09).
+  NFPM: 'go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0'
+  # build/linux/appimage/runtime-x86_64, see RUNTIME.md there.
+  RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+
+tasks:
+  build:
+    summary: Builds the window (GTK4/WebKitGTK, cgo) and ghostlined (static) for Linux x86_64
+    deps:
+      - task: common:build:frontend
+    cmds:
+      - mkdir -p bin/linux
+      - CGO_ENABLED=1 go build -tags production -trimpath -buildvcs=false -ldflags="{{.LDFLAGS}}" -o bin/linux/ghostline .
+      - CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="{{.LDFLAGS}}" -o bin/linux/ghostlined ./cmd/ghostlined
+
+  package:
+    summary: Builds every Linux release file into bin/
+    cmds:
+      - task: package:tarball
+      - task: package:nfpm
+      - task: package:appimage
+
+  package:tarball:
+    summary: bin/ghostline-<ver>-linux-amd64.tar.gz with install.sh and uninstall.sh
+    deps: [build, unit]
+    cmds:
+      - rm -rf "bin/{{.PKG}}" && mkdir -p "bin/{{.PKG}}"
+      - cp bin/linux/ghostline bin/linux/ghostlined build/linux/tarball/install.sh build/linux/tarball/uninstall.sh "bin/{{.PKG}}/"
+      - cp build/linux/ghostline.desktop build/linux/io.github.hashcott.ghostline.metainfo.xml LICENSE NOTICE "bin/{{.PKG}}/"
+      - cp build/appicon.png "bin/{{.PKG}}/ghostline.png"
+      # For packagers (the PKGBUILD): the unit for /usr/lib/ghostline and the group.
+      - mkdir -p "bin/{{.PKG}}/packaging"
+      - cp bin/linux/ghostline.service "bin/{{.PKG}}/packaging/ghostline.service"
+      - cp build/linux/sysusers.d/ghostline.conf "bin/{{.PKG}}/packaging/ghostline-sysusers.conf"
+      - chmod 0755 "bin/{{.PKG}}/ghostline" "bin/{{.PKG}}/ghostlined" "bin/{{.PKG}}/install.sh" "bin/{{.PKG}}/uninstall.sh"
+      - tar -C bin --owner=0 --group=0 -czf "bin/{{.PKG}}.tar.gz" "{{.PKG}}"
+      - rm -rf "bin/{{.PKG}}"
+
+  unit:
+    summary: bin/linux/ghostline.service, the unit for a package install
+    cmds:
+      - mkdir -p bin/linux
+      - sed 's|@DAEMON@|/usr/lib/ghostline/ghostlined|g' internal/sysinstall/ghostline.service.tmpl > bin/linux/ghostline.service
+
+  package:nfpm:
+    summary: bin/ghostline_<ver>_amd64.deb and bin/ghostline-<ver>-1.x86_64.rpm
+    deps: [build, unit]
+    cmds:
+      - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager deb --target bin/
+      - VERSION={{.VERSION}} {{.NFPM}} package --config build/linux/nfpm/nfpm.yaml --packager rpm --target bin/
+
+  package:appimage:
+    summary: bin/Ghostline-<ver>-x86_64.AppImage on the system's GTK4 and WebKitGTK (needs squashfs-tools)
+    deps: [build]
+    cmds:
+      - echo "{{.RUNTIME_SHA256}}  build/linux/appimage/runtime-x86_64" | sha256sum -c --quiet
+      - rm -rf bin/linux/AppDir bin/linux/app.squashfs
+      - mkdir -p bin/linux/AppDir/usr/bin bin/linux/AppDir/usr/lib/ghostline
+      - install -m 0755 bin/linux/ghostline bin/linux/AppDir/usr/bin/ghostline
+      - install -m 0755 bin/linux/ghostlined bin/linux/AppDir/usr/lib/ghostline/ghostlined
+      - install -m 0755 build/linux/appimage/AppRun bin/linux/AppDir/AppRun
+      - install -m 0644 build/linux/ghostline.desktop bin/linux/AppDir/ghostline.desktop
+      - install -m 0644 build/appicon.png bin/linux/AppDir/ghostline.png
+      - ln -s ghostline.png bin/linux/AppDir/.DirIcon
+      - mksquashfs bin/linux/AppDir bin/linux/app.squashfs -root-owned -noappend -comp zstd -quiet
+      - cat build/linux/appimage/runtime-x86_64 bin/linux/app.squashfs > "bin/Ghostline-{{.VERSION}}-x86_64.AppImage"
+      - chmod 0755 "bin/Ghostline-{{.VERSION}}-x86_64.AppImage"

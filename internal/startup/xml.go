@@ -1,4 +1,3 @@
-// Package startup manages Ghostline's Task Scheduler tasks.
 package startup
 
 import (

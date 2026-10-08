@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/engine"
 	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/scanner"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
@@ -257,4 +258,27 @@ func TestSaveSettings_KeepsSimpleCustom(t *testing.T) {
 	st.Simple.Custom = &store.SimpleCustom{DPI: true, Proxy: true}
 	require.NoError(t, s.svc.SaveSettings(st))
 	require.Equal(t, st.Simple, s.box.Get().Simple)
+}
+
+// Only the service that holds port 53 may be stopped: the name comes from
+// the UI, which any member of the ghostline group can drive.
+func TestStopConflictingService_OnlyThePortOwner(t *testing.T) {
+	sh := newSvc(t)
+	var stopped []string
+	sh.svc.x.StopService = func(n string) error { stopped = append(stopped, n); return nil }
+	sh.sys.owners = []procs.PortOwner{{PID: 9, Name: "dnsmasq", Service: "dnsmasq.service", Proto: "udp"}}
+	err := sh.svc.StopConflictingService("sshd.service")
+	require.Equal(t, CodePort53NotOwner, code(t, err))
+	require.Empty(t, stopped)
+	require.NoError(t, sh.svc.StopConflictingService("dnsmasq.service"))
+	require.Equal(t, []string{"dnsmasq.service"}, stopped)
+}
+
+// The service buttons are the GUI's own (internal/rpc/client); the daemon
+// and Windows have none.
+func TestService_InstallActionsAreNotTheDaemons(t *testing.T) {
+	s := &Service{}
+	require.Equal(t, InstallInfo{}, s.ServiceInstall())
+	require.ErrorContains(t, s.InstallService(), CodeServiceActionUnsupported)
+	require.ErrorContains(t, s.StartService(), CodeServiceActionUnsupported)
 }

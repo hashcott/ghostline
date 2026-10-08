@@ -4,11 +4,9 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/engine"
 	"github.com/hashcott/ghostline/internal/proxy"
 	"github.com/hashcott/ghostline/internal/scanner"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // UI event names.
@@ -77,25 +75,6 @@ type UpdateCheck struct {
 type UpdateInfo struct {
 	Tag string `json:"tag"`
 	URL string `json:"url"`
-}
-
-func init() {
-	application.RegisterEvent[Snapshot](EventState)
-	application.RegisterEvent[StatsEvent](EventStats)
-	application.RegisterEvent[LogEvent](EventLog)
-	application.RegisterEvent[engine.QueryEvent](EventQuery)
-	application.RegisterEvent[ScanProgress](EventScan)
-	application.RegisterEvent[AutotuneProgress](EventAutotune)
-	application.RegisterEvent[UpdateInfo](EventUpdate)
-	application.RegisterEvent[proxy.Stats](EventProxyStats)
-	application.RegisterEvent[proxy.ConnEvent](EventProxyConn)
-	application.RegisterEvent[RulesCompiled](EventRulesCompiled)
-	application.RegisterEvent[ListsProgress](EventListsProgress)
-	application.RegisterEvent[engine.ServeStats](EventDNSServerStats)
-	application.RegisterEvent[[]certstore.Cert](EventCertsChanged)
-	application.RegisterEvent[SetupCountdown](EventSetupCountdown)
-	application.RegisterEvent[AdvScanProgress](EventToolsScan)
-	application.RegisterEvent[CFProgress](EventToolsCFScan)
 }
 
 // Emitter sends events to the UI.

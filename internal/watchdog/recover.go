@@ -6,19 +6,24 @@ package watchdog
 import (
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/model"
 	"log/slog"
 	"slices"
 	"time"
 
-	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 )
 
-// Restorer is the part of sysdns.Manager recovery needs.
+// Restorer is the part of a DNS backend recovery needs (sysdns.Backend).
 type Restorer interface {
-	Restore([]model.AdapterSnapshot) []sysdns.RestoreError
-	LoopbackAdapters() ([]sysdns.Adapter, error)
+	Restore(sysdns.Snapshot) []sysdns.RestoreError
+	// StillOurs keeps what Ghostline's configuration still holds, so a
+	// change the user made after a crash is kept.
+	StillOurs(sysdns.Snapshot) sysdns.Snapshot
+	// RestoreDefault undoes Ghostline's configuration without a snapshot.
+	RestoreDefault() error
 }
 
 // Deps wires recovery to the system.
@@ -31,7 +36,7 @@ type Deps struct {
 	Sleep   func(time.Duration) // default time.Sleep
 	// RestoreSysProxy puts the system proxy back if it is still Ghostline's
 	// (sysproxy.Manager.RestoreIfOurs); nil skips it.
-	RestoreSysProxy func(ours string, snap store.SysProxySnapshot) (bool, error)
+	RestoreSysProxy func(ours string, snap model.ProxySnapshot) (bool, error)
 	// DeleteRule removes an inbound firewall rule by name (idempotent);
 	// nil skips firewall cleanup.
 	DeleteRule func(name string) error
@@ -44,7 +49,7 @@ type Deps struct {
 }
 
 // AllFirewallRules are the rule names a corrupt state may have left.
-var AllFirewallRules = []string{"Ghostline Proxy", "Ghostline DNS (TCP)", "Ghostline DNS (UDP)", "Ghostline Setup", "Ghostline Block Public"}
+var AllFirewallRules = firewall.AllRuleNames
 
 // Outcome says what RestoreIfOrphaned did.
 type Outcome int
@@ -82,16 +87,7 @@ func RestoreIfOrphaned(d Deps) (Outcome, error) {
 			}
 			// No thumbprints to go by: the sweep removes every session CA.
 			defer d.sweep()
-			ads, lerr := d.DNS.LoopbackAdapters()
-			if lerr != nil {
-				return lerr
-			}
-			var snaps []model.AdapterSnapshot
-			for _, a := range ads {
-				snaps = append(snaps, model.AdapterSnapshot{GUID: a.GUID, LUID: a.LUID, IfIndex: a.IfIndex, Alias: a.Alias,
-					IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}, IPv6: model.FamilyDNS{Mode: model.DNSModeDHCP}})
-			}
-			rerr := joinRestore(d.DNS.Restore(snaps))
+			rerr := d.DNS.RestoreDefault()
 			if d.StopDPI != nil {
 				if err := d.StopDPI(); err != nil {
 					d.log().Warn("watchdog: stop DPI engine failed", "err", err)
@@ -128,7 +124,7 @@ func RestoreIfOrphaned(d Deps) (Outcome, error) {
 		// Order: session CAs, system proxy, firewall, DNS (spec 2B 6.5).
 		cerr := removeSessionCerts(d, st)
 		perr := restoreProxy(d, st)
-		rerr := joinRestore(d.DNS.Restore(stillOurs(d.DNS, st.Snapshot, d.log())))
+		rerr := joinRestore(d.DNS.Restore(d.DNS.StillOurs(st.DNS)))
 		if st.DPI.Running && d.StopDPI != nil {
 			if err := d.StopDPI(); err != nil {
 				d.log().Warn("watchdog: stop DPI engine failed", "err", err)
@@ -196,28 +192,6 @@ func (d Deps) sweep() {
 	if err := d.SweepSession(nil); err != nil {
 		d.log().Warn("sweeping Fake SNI certificates failed", "err", err)
 	}
-}
-
-// stillOurs keeps the snapshots of adapters whose DNS still points at
-// loopback. An adapter the user re-configured after a crash keeps their
-// settings. If the current DNS cannot be read, everything is restored.
-func stillOurs(dns Restorer, snaps []model.AdapterSnapshot, log *slog.Logger) []model.AdapterSnapshot {
-	ads, err := dns.LoopbackAdapters()
-	if err != nil {
-		log.Warn("watchdog: read current adapter DNS failed; restoring every snapshot", "err", err)
-		return snaps
-	}
-	on := make(map[string]bool, len(ads))
-	for _, a := range ads {
-		on[a.GUID] = true
-	}
-	var out []model.AdapterSnapshot
-	for _, s := range snaps {
-		if on[s.GUID] {
-			out = append(out, s)
-		}
-	}
-	return out
 }
 
 func joinRestore(errs []sysdns.RestoreError) error {

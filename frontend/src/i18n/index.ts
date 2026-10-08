@@ -2,6 +2,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import vi from "./vi.json";
 import en from "./en.json";
+import viLinux from "./vi.linux.json";
+import enLinux from "./en.linux.json";
 
 export type Lang = "vi" | "en";
 
@@ -14,6 +16,22 @@ export function initI18n(lang: Lang) {
     interpolation: { escapeValue: false }, // React escapes
     returnNull: false,
   });
+}
+
+// Wording that differs by OS: the backend's platform picks a bundle that
+// overrides the base strings; components never branch on the OS.
+const platformBundles: Record<string, Record<Lang, object>> = {
+  linux: { vi: viLinux, en: enLinux },
+};
+let platformApplied = "";
+
+/** applyPlatform loads the wording for the backend's OS, once. */
+export function applyPlatform(platform: string | undefined) {
+  if (!platform || platform === platformApplied) return;
+  platformApplied = platform;
+  const b = platformBundles[platform];
+  if (!b) return;
+  for (const lang of ["vi", "en"] as Lang[]) i18n.addResourceBundle(lang, "translation", b[lang], true, true);
 }
 
 /**

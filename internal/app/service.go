@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -97,6 +98,9 @@ type ServiceDeps struct {
 	LoadCustom   func() ([]model.Server, error)
 	SaveCustom   func([]model.Server) error
 	ListAdapters func() ([]sysdns.Adapter, error)
+	DNSInfo      func() sysdns.Info   // the system DNS backend, for Settings
+	DPIInfo      func() DPIInfo       // the DPI engines and packet capture, for the DPI page
+	SysProxyInfo func() sysproxy.Info // whose system proxy settings Ghostline changes, for the Proxy page
 	StopService  func(name string) error
 	SetMode      func(mode string)
 	RestoreNow   func() error
@@ -128,15 +132,26 @@ type ServiceDeps struct {
 	CurrentSSID  func() string
 	// WifiNames lists Wi-Fi networks this PC knows (saved and in range).
 	WifiNames func() []string
-	// SaveFile asks where to save data (native dialog) and writes it.
-	SaveFile func(name string, data []byte) error
+	// SaveFile asks where to save data (native dialog) and writes it. ctx
+	// is the bound call's: the Linux daemon uses it to reach the GUI that
+	// asked.
+	SaveFile func(ctx context.Context, name string, data []byte) error
+	// NoFileLists refuses lists from a local file: the service runs as
+	// root for clients in other processes (the Linux daemon).
+	NoFileLists bool
+	// LANDNSClients counts LAN devices that used the DNS server in the last
+	// 10 minutes (0 while it is off).
+	LANDNSClients func() int
 
 	// Phase 3 tools.
 	BuildUpstream func(model.Server) (upstream.Upstream, error)
 	PlainUpstream func(ip string) (upstream.Upstream, error)                        // plain UDP 53: Ghostline's own engine and the ISP lookup source only
 	DialDirect    func(ctx context.Context, network, addr string) (net.Conn, error) // clean-IP scan: straight out, not via the proxy
-	OpenFile      func(title string) (string, error)                                // native open dialog; "" when cancelled
-	ISPResolvers  func() []string                                                   // this PC's DNS before Ghostline took over
+	// OpenFile asks for a file (native dialog) and returns its name and
+	// contents, read by the GUI; name "" when cancelled. Ghostline never
+	// opens a path the user picked with its own privileges.
+	OpenFile     func(ctx context.Context, title string) (name string, data []byte, err error)
+	ISPResolvers func() []string // this PC's DNS before Ghostline took over
 }
 
 // Service is bound to the frontend by Wails; its exported methods are the
@@ -676,14 +691,78 @@ func (s *Service) RestoreDNSNow() error {
 	return s.o.RestoreNow(context.Background(), s.x.RestoreNow)
 }
 
-// StopConflictingService stops a Windows service holding port 53. The UI
-// calls it only after the user confirmed in-page.
-func (s *Service) StopConflictingService(name string) error { return s.x.StopService(name) }
+// StopConflictingService stops the service holding port 53. The UI calls
+// it only after the user confirmed in-page; the name must be one of the
+// port's current owners, so the call cannot stop anything else.
+func (s *Service) StopConflictingService(name string) error {
+	owners, err := s.o.d.System.PortOwners(53)
+	if err != nil {
+		return err
+	}
+	for _, o := range owners {
+		if name != "" && o.Service == name {
+			return s.x.StopService(name)
+		}
+	}
+	return appErr(CodePort53NotOwner, nil, "name", name)
+}
+
+// DPIEngineInfo names an engine and the program it runs.
+type DPIEngineInfo struct {
+	ID  string `json:"id"`
+	Exe string `json:"exe"`
+}
+
+// DPIInfo is what the DPI page shows about this OS: its engines, how
+// packets reach them, and whether antivirus exclusions matter.
+type DPIInfo struct {
+	Engines      []DPIEngineInfo `json:"engines"`
+	Mechanism    string          `json:"mechanism"`
+	AVExclusions bool            `json:"avExclusions"`
+}
+
+// DPIInfo describes this OS's DPI engines (empty when unknown).
+func (s *Service) DPIInfo() DPIInfo {
+	if s.x.DPIInfo == nil {
+		return DPIInfo{}
+	}
+	return s.x.DPIInfo()
+}
+
+// SysProxyInfo says which desktop's proxy settings "use for this machine"
+// changes (Proxy page); empty when unknown.
+func (s *Service) SysProxyInfo() sysproxy.Info {
+	if s.x.SysProxyInfo == nil {
+		return sysproxy.Info{}
+	}
+	return s.x.SysProxyInfo()
+}
+
+// DNSInfo describes how Ghostline changes this system's DNS (Settings
+// shows the adapter choice, or the backend chain).
+func (s *Service) DNSInfo() sysdns.Info {
+	if s.x.DNSInfo == nil {
+		return sysdns.Info{Interfaces: []string{}}
+	}
+	return s.x.DNSInfo()
+}
 
 // ListAdapters lists network adapters for manual selection.
 func (s *Service) ListAdapters() []sysdns.Adapter {
-	ads, _ := s.x.ListAdapters()
+	ads, err := s.x.ListAdapters()
+	if err != nil {
+		slog.Warn("ui: listing network adapters failed", "err", err)
+	}
 	return ads
+}
+
+// LANDNSClients counts LAN devices that used the DNS server in the last 10
+// minutes (the tray asks before cutting them off).
+func (s *Service) LANDNSClients() int {
+	if s.x.LANDNSClients == nil {
+		return 0
+	}
+	return s.x.LANDNSClients()
 }
 
 // CheckUpdateNow checks for a newer release right away, ignoring the
@@ -736,4 +815,26 @@ func RunStats(s *Service, ctx context.Context, ticks <-chan time.Time) {
 		s.o.update(func(sn *Snapshot) { sn.Queries, sn.LatencyMs = ev.Queries, ev.LatencyMs })
 		s.x.Bus.Emit(EventStats, ev)
 	}
+}
+
+// InstallInfo is how the GUI was installed (Linux): which service buttons
+// it shows when the daemon cannot be reached.
+type InstallInfo struct {
+	Kind    string `json:"kind"` // "appimage", "package", "tarball"; "" without service buttons
+	Unit    bool   `json:"unit"`
+	SteamOS bool   `json:"steamos"`
+}
+
+// ServiceInstall is answered by the Linux GUI itself (internal/rpc/client):
+// here, in the daemon and on Windows, there are no service buttons.
+func (s *Service) ServiceInstall() InstallInfo { return InstallInfo{} }
+
+// InstallService installs the background service; only the Linux GUI can.
+func (s *Service) InstallService() error {
+	return &AppError{Code: CodeServiceActionUnsupported}
+}
+
+// StartService starts the background service; only the Linux GUI can.
+func (s *Service) StartService() error {
+	return &AppError{Code: CodeServiceActionUnsupported}
 }

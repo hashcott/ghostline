@@ -1,4 +1,4 @@
-//go:build integration
+//go:build windows && integration
 
 package certstore_test
 

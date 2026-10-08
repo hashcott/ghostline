@@ -60,6 +60,26 @@ So mã hiện ra với dòng tương ứng trong file `SHA256SUMS` trên trang R
 
 **Phần mềm diệt virus.** zapret2 và GoodbyeDPI dùng driver **WinDivert**, hay bị antivirus báo nhầm. Ghostline kiểm tra mã băm của engine trước mỗi lần chạy. Nếu zapret2 bị chặn, Ghostline tạm dùng GoodbyeDPI và trang Vượt DPI hiện đường dẫn thư mục `bin\zapret2` để bạn thêm vào danh sách loại trừ (exclusions) của Windows Defender.
 
+### Linux
+
+Chọn file cho bản phân phối của bạn ở trang Releases (xem bảng trong README): `.deb` cho Ubuntu và Debian, `.rpm` cho Fedora, `tar.gz` (hoặc `PKGBUILD` đính kèm) cho Arch, AppImage cho các bản khác. Kiểm tra bằng `sha256sum -c SHA256SUMS --ignore-missing`.
+
+- **Hai phần.** Dịch vụ nền `ghostline.service` chạy bằng root: đổi DNS, chạy zapret2 và proxy, vẫn bảo vệ khi đã đóng cửa sổ, sau khi khởi động lại máy và cả khi bạn đã đăng xuất. Cửa sổ app chạy bằng tài khoản của bạn và chỉ nói chuyện với dịch vụ, không bao giờ cần `sudo`.
+- **Ai được điều khiển.** Thành viên các nhóm `wheel`, `sudo`, `admin` hoặc `ghostline`. Cho tài khoản khác: `sudo usermod -aG ghostline <tài khoản>` rồi đăng nhập lại. Tài khoản khác sẽ thấy "Tài khoản của bạn không có quyền điều khiển Ghostline".
+- **Dịch vụ chưa chạy.** Cửa sổ báo điều đó và có nút **khởi động dịch vụ** (deb, rpm, Arch) hoặc **cài dịch vụ** (AppImage, tar.gz); cả hai hỏi mật khẩu qua hộp thoại của hệ thống. Trong terminal: `sudo systemctl enable --now ghostline`.
+- **Khởi động cùng hệ thống.** Trong Cài đặt, *khởi động cùng hệ thống* tự kết nối lúc bật máy (khi bật *tự động kết nối*) và mở Ghostline ở khay khi bạn đăng nhập.
+
+### Steam Deck (SteamOS) — chưa kiểm chứng
+
+Ghostline chưa được thử trên Steam Deck. Cách dự kiến, trong Desktop Mode:
+
+1. Mở Konsole và đặt mật khẩu cho tài khoản `deck` một lần: `passwd`. Bước cài dịch vụ sẽ hỏi mật khẩu này.
+2. Tải AppImage, cho phép chạy (*Properties → Permissions*) rồi mở.
+3. Bấm **cài dịch vụ** và nhập mật khẩu. Kết nối.
+4. Chuyển sang Game Mode: dịch vụ vẫn bảo vệ, không cần mở cửa sổ.
+
+Nếu AppImage báo thiếu WebKitGTK 6.0 thì bản SteamOS này chưa chạy được cửa sổ; hãy mở issue kèm phiên bản SteamOS.
+
 ## 3. Bắt đầu nhanh: một nút bấm
 
 <p align="center"><img src="screenshots/simple-vi.png" width="320" alt="Giao diện Đơn giản"></p>
@@ -513,6 +533,7 @@ Làm lần lượt, dừng lại khi trang đã mở được:
 
 - **Bản cài đặt:** Settings → Apps → Ghostline → Uninstall. Trình gỡ cài đặt tự trả DNS về như cũ, xoá các tác vụ khởi động, driver WinDivert và mọi chứng chỉ Ghostline.
 - **Bản portable:** trong app bấm **Ngắt kết nối**, tắt **khởi động cùng Windows**, thoát từ khay, rồi xoá thư mục.
+- **Linux:** `sudo apt remove ghostline` (`apt purge` xoá luôn cài đặt), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; AppImage và tar.gz: `sudo ./uninstall.sh [--purge]` trong thư mục đã giải nén, hoặc `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, proxy hệ thống, chứng chỉ (cả trong profile Firefox), luật firewall và bảng nftables được trả lại trước. rpm và Arch giữ lại `/var/lib/ghostline` và `/var/log/ghostline`; xoá hai thư mục này để gỡ sạch.
 
 ## 9. Câu hỏi thường gặp
 

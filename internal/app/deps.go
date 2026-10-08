@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"net/netip"
 	"time"
 
@@ -10,14 +11,15 @@ import (
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/dpi"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
 	"github.com/hashcott/ghostline/internal/rules"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 // Engine is the loopback DNS server.
@@ -31,14 +33,14 @@ type Engine interface {
 	Stats() engine.Stats
 }
 
-// DNS changes adapter DNS settings.
-type DNS interface {
-	Select(mode string, guids []string) ([]sysdns.Adapter, error)
-	Snapshot([]sysdns.Adapter) ([]model.AdapterSnapshot, error)
-	ApplyLoopback([]model.AdapterSnapshot, bool) error
-	Restore([]model.AdapterSnapshot) []sysdns.RestoreError
-	Flush() error
-	// Report lists adapters that are up with their DNS, for diagnosis.
+// DNS changes the system's DNS (sysdns.Backend: adapters on Windows,
+// NetworkManager, systemd-resolved or resolv.conf on Linux).
+type DNS = sysdns.Backend
+
+// DNSReporter is a DNS backend that can list the adapters that are up with
+// their DNS servers (Windows), so a failed leak check names the ones that
+// bypass Ghostline.
+type DNSReporter interface {
 	Report() ([]sysdns.AdapterDNS, error)
 }
 
@@ -62,7 +64,7 @@ type Safety interface {
 // System answers questions about the machine.
 type System interface {
 	IsAdmin() bool
-	PortOwners(uint16) ([]winutil.PortOwner, error)
+	PortOwners(uint16) ([]procs.PortOwner, error)
 	// ListenFree binds UDP and TCP on each address, then releases them.
 	ListenFree([]netip.AddrPort) error
 	SelfPID() (uint32, time.Time)
@@ -115,20 +117,14 @@ type Proxy interface {
 	Alive() bool
 }
 
-// SysProxy changes the Windows system proxy.
-type SysProxy interface {
-	Snapshot() (store.SysProxySnapshot, error)
-	Existing(store.SysProxySnapshot) (server, pac string, has bool)
-	Apply(addr string) error
-	IsOurs(addr string) (bool, error)
-	RestoreIfOurs(addr string, snap store.SysProxySnapshot) (bool, error)
-}
+// SysProxy changes the system proxy (WinINET, or the desktop's settings).
+type SysProxy = sysproxy.Backend
 
 // Firewall manages Ghostline's inbound rules.
 type Firewall interface {
 	Add(port int) error // the proxy's LAN-sharing rule
 	Delete() error
-	AddNamed(r winutil.FirewallRule) error // DNS server and setup page rules
+	AddNamed(r firewall.Rule) error // DNS server and setup page rules
 	DeleteNamed(name string) error
 }
 
@@ -153,6 +149,8 @@ type Certs interface {
 
 // Deps wires the orchestrator.
 type Deps struct {
+	// Platform names the OS ("windows", "linux") for the UI's wording.
+	Platform     string
 	Engine       Engine
 	DNS          DNS
 	DPI          DPI

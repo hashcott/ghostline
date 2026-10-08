@@ -33,33 +33,62 @@ type DPIState struct {
 
 // State is the write-ahead record of what Ghostline changed on the system.
 type State struct {
-	Version      int                     `json:"version"`
-	Phase        Phase                   `json:"phase"`
-	PID          uint32                  `json:"pid"`
-	PIDStartTime time.Time               `json:"pidStartTime"`
-	StartedAt    time.Time               `json:"startedAt"`
-	Snapshot     []model.AdapterSnapshot `json:"snapshot"`
-	DPI          DPIState                `json:"dpi"`
-	SysProxy     *SysProxyState          `json:"sysproxy,omitempty"`
-	Firewall     *FirewallState          `json:"firewall,omitempty"`
-	Certs        *CertsState             `json:"certs,omitempty"`
+	Version      int               `json:"version"`
+	Phase        Phase             `json:"phase"`
+	PID          uint32            `json:"pid"`
+	PIDStartTime time.Time         `json:"pidStartTime"`
+	StartedAt    time.Time         `json:"startedAt"`
+	DNS          model.DNSSnapshot `json:"dns"`
+	DPI          DPIState          `json:"dpi"`
+	SysProxy     *SysProxyState    `json:"sysproxy,omitempty"`
+	Firewall     *FirewallState    `json:"firewall,omitempty"`
+	Certs        *CertsState       `json:"certs,omitempty"`
 }
 
-// SysProxySnapshot is the WinINET per-connection proxy configuration.
-type SysProxySnapshot struct {
-	Flags         uint32 `json:"flags"`
-	Server        string `json:"server"`
-	Bypass        string `json:"bypass"`
-	AutoconfigURL string `json:"autoconfigUrl"`
+// MarshalJSON also writes a Windows DNS snapshot under "snapshot", the key
+// v0.5 reads, so a crash followed by a downgrade still restores the
+// adapters. The current build reads "dns" (UnmarshalJSON uses "snapshot"
+// only when "dns" is empty).
+func (s State) MarshalJSON() ([]byte, error) {
+	type plain State
+	aux := struct {
+		plain
+		Legacy []model.AdapterSnapshot `json:"snapshot,omitempty"`
+	}{plain: plain(s)}
+	if s.DNS.Backend == "windows" {
+		aux.Legacy = s.DNS.Windows
+	}
+	return json.Marshal(aux)
+}
+
+// UnmarshalJSON reads v5, v4 (its proxy snapshot migrates in
+// model.ProxySnapshot), and v3 files (v0.5), whose adapters were in
+// "snapshot": they become a "windows" DNS snapshot.
+func (s *State) UnmarshalJSON(b []byte) error {
+	type plain State
+	aux := struct {
+		*plain
+		Legacy []model.AdapterSnapshot `json:"snapshot"`
+	}{plain: (*plain)(s)}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if len(aux.Legacy) > 0 && s.DNS.Empty() {
+		s.DNS = model.DNSSnapshot{Backend: "windows", Windows: aux.Legacy}
+	}
+	if s.Version < 5 {
+		s.Version = 5
+	}
+	return nil
 }
 
 // SysProxyState records Ghostline's change to the system proxy. Set is true
 // once Ghostline applied Ours; TakenOver once another app replaced it.
 type SysProxyState struct {
-	Set       bool              `json:"set"`
-	TakenOver bool              `json:"takenOver"`
-	Ours      string            `json:"ours"`
-	Snapshot  *SysProxySnapshot `json:"snapshot"`
+	Set       bool                 `json:"set"`
+	TakenOver bool                 `json:"takenOver"`
+	Ours      string               `json:"ours"`
+	Snapshot  *model.ProxySnapshot `json:"snapshot"`
 }
 
 // FirewallState records the inbound rules Ghostline created, by name.
@@ -132,7 +161,7 @@ func (s *State) RemoveSessionCert(thumbprint string) {
 }
 
 // CleanState is the state with nothing to restore.
-func CleanState() State { return State{Version: 3, Phase: PhaseClean} }
+func CleanState() State { return State{Version: 5, Phase: PhaseClean} }
 
 func cleanState() State { return CleanState() }
 

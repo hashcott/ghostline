@@ -13,14 +13,16 @@ import (
 )
 
 type fakeAPI struct {
-	adapters   []sysdns.Adapter
-	dns        map[string][]string // guid|v4 or guid|v6
-	setErr     error
-	netshErr   error
-	netshDHCP  error
-	netshCalls []string
-	setCalls   int
-	flushes    int
+	adapters    []sysdns.Adapter
+	adaptersErr error
+	dns         map[string][]string // guid|v4 or guid|v6
+	setErr      error
+	setFail     map[string]bool // guids whose SetDNS fails
+	netshErr    error
+	netshDHCP   error
+	netshCalls  []string
+	setCalls    int
+	flushes     int
 }
 
 func key(guid string, v6 bool) string {
@@ -30,7 +32,7 @@ func key(guid string, v6 bool) string {
 	return guid + "|v4"
 }
 
-func (f *fakeAPI) Adapters() ([]sysdns.Adapter, error) { return f.adapters, nil }
+func (f *fakeAPI) Adapters() ([]sysdns.Adapter, error) { return f.adapters, f.adaptersErr }
 func (f *fakeAPI) GetDNS(guid string, v6 bool) ([]string, error) {
 	return f.dns[key(guid, v6)], nil
 }
@@ -38,6 +40,9 @@ func (f *fakeAPI) SetDNS(guid string, v6 bool, servers []string) error {
 	f.setCalls++
 	if f.setErr != nil {
 		return f.setErr
+	}
+	if f.setFail[guid] {
+		return errors.New("set failed")
 	}
 	f.dns[key(guid, v6)] = servers
 	return nil
@@ -131,6 +136,23 @@ func TestApplyLoopback_SkipsV6WhenDisabled(t *testing.T) {
 	require.Empty(t, api.dns["{A}|v6"])
 }
 
+// One adapter that cannot be set does not keep the others on their DNS;
+// the error names the one that failed.
+func TestApplyLoopback_ContinuesPastFailedAdapter(t *testing.T) {
+	a, b := eth("{A}", 1), eth("{B}", 2)
+	a.Alias, b.Alias = "Wi-Fi", "Ethernet"
+	api := &fakeAPI{adapters: []sysdns.Adapter{a, b}, dns: map[string][]string{},
+		setFail: map[string]bool{"{A}": true}, netshErr: errors.New("netsh failed")}
+	m, _ := newMgr(api)
+	ads, _ := m.Select("auto", nil)
+	snaps, _ := m.Snapshot(ads)
+	err := m.ApplyLoopback(snaps, false)
+	var ae *sysdns.ApplyError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, []string{"Wi-Fi"}, ae.Failed)
+	require.Equal(t, []string{"127.0.0.1"}, api.dns["{B}|v4"])
+}
+
 func TestRestore_KeysByGUIDAndNetshUsesIfIndex(t *testing.T) { // Review Focus #3
 	api := &fakeAPI{adapters: []sysdns.Adapter{{GUID: "{A}", IfIndex: 12, Alias: "Ethernet 2", IfType: 6, Up: true, HasGateway: true}},
 		dns: map[string][]string{}, setErr: errors.New("api down")}
@@ -150,7 +172,7 @@ func TestRestore_RetriesThenFallsBackThenReports(t *testing.T) {
 		IPv4: model.FamilyDNS{Mode: model.DNSModeStatic, Servers: []string{"9.9.9.9"}}}}
 	errs := m.Restore(snaps)
 	require.Len(t, errs, 1)
-	require.Equal(t, "{A}", errs[0].GUID)
+	require.Equal(t, "Ethernet", errs[0].Target)
 	require.Equal(t, 3, api.setCalls)
 	require.Equal(t, int32(2), sleeps.Load())
 	require.Equal(t, []string{"netsh:7:v4:9.9.9.9", "netsh:7:v4:"}, api.netshCalls)

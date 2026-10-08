@@ -2,6 +2,7 @@
 export * as Service from "../../bindings/github.com/hashcott/ghostline/internal/app/service";
 export type {
   AppError,
+  InstallInfo,
   AppInfo,
   AutotuneProgress,
   LogEvent,
@@ -29,6 +30,7 @@ export type {
   CFView,
   CFProgress,
   ImportPreview,
+  DPIInfo,
 } from "../../bindings/github.com/hashcott/ghostline/internal/app/models";
 export type { Answer, Source as LookupSource, Verdict } from "../../bindings/github.com/hashcott/ghostline/internal/lookup/models";
 export type { Fields as StampFields } from "../../bindings/github.com/hashcott/ghostline/internal/stamps/models";

@@ -168,3 +168,13 @@ func TestRulesLoadedAtStart(t *testing.T) {
 	require.True(t, rh.svc.Explain("boot.com").Block)
 	require.True(t, strings.Contains(rh.svc.GetRules().Text, "boot.com"))
 }
+
+// C2: when the UI runs in another process (the Linux daemon), a list may
+// not name a file on the daemon's machine.
+func TestAddList_FileRefusedWhenNoFileLists(t *testing.T) {
+	rh := newRulesSvc(t)
+	rh.svc.x.NoFileLists = true
+	_, err := rh.svc.AddList(lists.List{Name: "x", Source: "file", Path: "/etc/shadow", Format: "hosts", Action: "block"})
+	require.ErrorIs(t, err, lists.ErrFileListsOff)
+	require.Empty(t, rh.svc.GetRules().Lists)
+}

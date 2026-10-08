@@ -101,14 +101,14 @@ func (s *Service) CloseSetupPage() error {
 
 // SaveDeviceFiles saves the LAN CA (.crt) and, with a home Wi-Fi name,
 // the iOS profile (.mobileconfig) through the native save dialog.
-func (s *Service) SaveDeviceFiles() error {
+func (s *Service) SaveDeviceFiles(ctx context.Context) error {
 	if s.x.SaveFile == nil || s.o.d.Certs == nil {
 		return errors.New("saving files is not available")
 	}
 	ca := s.o.LANCA()
 	if ca == nil {
 		var err error
-		if ca, err = s.o.d.Certs.LANCA(context.Background()); err != nil {
+		if ca, err = s.o.d.Certs.LANCA(ctx); err != nil {
 			return err
 		}
 	}
@@ -121,7 +121,7 @@ func (s *Service) SaveDeviceFiles() error {
 	if err != nil {
 		return err
 	}
-	if err := s.x.SaveFile("ghostline-lan-ca.crt", files.CRT); err != nil {
+	if err := s.x.SaveFile(ctx, "ghostline-lan-ca.crt", files.CRT); err != nil {
 		return err
 	}
 	if files.SSID == "" {
@@ -131,7 +131,7 @@ func (s *Service) SaveDeviceFiles() error {
 	if err != nil {
 		return err
 	}
-	return s.x.SaveFile("ghostline.mobileconfig", mc)
+	return s.x.SaveFile(ctx, "ghostline.mobileconfig", mc)
 }
 
 // ResetLANCA replaces the LAN CA; other devices must install it again.

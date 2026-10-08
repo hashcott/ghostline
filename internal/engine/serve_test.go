@@ -8,10 +8,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/netip"
 	"slices"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -109,19 +111,37 @@ func TestServe_DoHGetPost(t *testing.T) {
 	require.Equal(t, uint64(2), e.ServeStats().Queries)
 }
 
-func freePort(t *testing.T) uint16 {
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	require.NoError(t, err)
-	defer pc.Close()
-	return uint16(pc.LocalAddr().(*net.UDPAddr).Port)
+// freeDualPort is a loopback port free for both TCP and UDP. TCP is bound
+// first: Windows reserves TCP port ranges (Hyper-V), so a port the OS gave
+// to UDP may be refused for TCP (WSAEACCES), which broke Swap on CI.
+func freeDualPort(t *testing.T) uint16 {
+	t.Helper()
+	// Not the dynamic range (49152+): Windows runners reserve large parts
+	// of it (Hyper-V, WinNAT), for TCP and UDP separately.
+	for range 200 {
+		port := 20000 + rand.IntN(12000)
+		addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			continue
+		}
+		pc, err := net.ListenPacket("udp", addr)
+		_ = l.Close()
+		if err == nil {
+			_ = pc.Close()
+			return uint16(port)
+		}
+	}
+	t.Fatal("no port free for both TCP and UDP")
+	return 0
 }
 
-// servePlain serves plain DNS on a free port. A port free for UDP may be
-// reserved for TCP on Windows, so it tries again with another one.
+// servePlain serves plain DNS on a port free for both protocols, trying
+// another if it was taken in between.
 func servePlain(t *testing.T, e *engine.Engine, l *lanCert) netip.AddrPort {
 	t.Helper()
 	for range 10 {
-		plain := netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), freePort(t))
+		plain := netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), freeDualPort(t))
 		res, err := e.Serve(context.Background(), engine.ServeConfig{DoH: []netip.AddrPort{netip.MustParseAddrPort("127.0.0.1:0")}, Plain: []netip.AddrPort{plain}, Cert: l.cur.Load})
 		require.NoError(t, err)
 		if slices.Contains(res.Bound, plain) {

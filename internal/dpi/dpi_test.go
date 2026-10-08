@@ -129,7 +129,7 @@ func newRig(t *testing.T) *rig {
 	rg.m = NewManager(rg.bin, []Installed{
 		{Engine: g, Assets: fstest.MapFS{"goodbyedpi.exe": {Data: []byte("g")}}},
 		{Engine: z, Assets: fstest.MapFS{"zapret2.exe": {Data: []byte("z")}, "lua/a.lua": {Data: []byte("lua")}}},
-	}, rg.r, rg.s, func(time.Duration) {})
+	}, rg.r, NewWinDivert(rg.s), func(time.Duration) {})
 	return rg
 }
 
@@ -197,14 +197,14 @@ func TestManager_AutoHostlistRoundTrip(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "dpi-autohostlist.txt")
 	require.NoError(t, os.WriteFile(src, []byte("a.com\n"), 0o644))
 	rg.r.onRun = func(dir string) {
-		b, err := os.ReadFile(filepath.Join(dir, "autohostlist.txt"))
+		b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(autoHostlistName)))
 		require.NoError(t, err)
 		require.Equal(t, "a.com\n", string(b))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "autohostlist.txt"), []byte("a.com\nb.com\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(autoHostlistName)), []byte("a.com\nb.com\n"), 0o644))
 	}
 	_, err := rg.m.Start(context.Background(), "zapret2", Plan{AutoHostlist: src})
 	require.NoError(t, err)
-	require.Equal(t, "autohostlist.txt", rg.z2.got[0].AutoHostlist)
+	require.Equal(t, autoHostlistName, rg.z2.got[0].AutoHostlist)
 	require.NoError(t, rg.m.Stop())
 	b, err := os.ReadFile(src)
 	require.NoError(t, err)
@@ -216,7 +216,7 @@ func TestManager_AutoHostlistMissingSourceStartsEmpty(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "dpi-autohostlist.txt")
 	_, err := rg.m.Start(context.Background(), "zapret2", Plan{AutoHostlist: src})
 	require.NoError(t, err)
-	b, err := os.ReadFile(filepath.Join(rg.bin, "zapret2", "autohostlist.txt"))
+	b, err := os.ReadFile(filepath.Join(rg.bin, "zapret2", filepath.FromSlash(autoHostlistName)))
 	require.NoError(t, err)
 	require.Empty(t, b)
 }
@@ -274,7 +274,7 @@ func TestManager_TamperedAssetIsHashMismatch(t *testing.T) {
 	c := &calls{}
 	e := &fakeEngine{id: "zapret2", files: map[string]string{"zapret2.exe": sha("z")}}
 	m := NewManager(t.TempDir(), []Installed{{Engine: e, Assets: fstest.MapFS{"zapret2.exe": {Data: []byte("evil")}}}},
-		&fakeRunner{c: c}, &fakeSvc{c: c, running: true}, func(time.Duration) {})
+		&fakeRunner{c: c}, NewWinDivert(&fakeSvc{c: c, running: true}), func(time.Duration) {})
 	_, err := m.Start(context.Background(), "zapret2", Plan{})
 	require.ErrorIs(t, err, ErrHashMismatch)
 }
@@ -320,6 +320,9 @@ func TestManager_Get(t *testing.T) {
 // Defender refuses the write itself (ERROR_VIRUS_INFECTED or access
 // denied) when it scans the file being extracted.
 func TestManager_ExtractRefusedIsBlockedByAV(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes a read-only file: the refusal cannot be staged (CI runs this package as root)")
+	}
 	rg := newRig(t)
 	dst := filepath.Join(rg.bin, "zapret2", "zapret2.exe")
 	require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o755))

@@ -84,3 +84,36 @@ func Exists(name string) bool {
 	}
 	return err == nil
 }
+
+type taskScheduler struct{ exe, guardDir, state string }
+
+// NewTaskScheduler registers exe's logon tasks with Task Scheduler.
+// guardDir holds the network guard script; state is the state.json it
+// reads.
+func NewTaskScheduler(exe, guardDir, state string) Manager {
+	return taskScheduler{exe: exe, guardDir: guardDir, state: state}
+}
+
+func (t taskScheduler) SetAutostart(on bool) error {
+	if on {
+		return Create(AutostartTask(t.exe))
+	}
+	return Delete(brand.TaskAutostart)
+}
+
+// CreateRecovery registers the --restore task and the network guard. The
+// guard is a last resort for when an antivirus removes ghostline.exe:
+// failing to set it up is logged, not fatal.
+func (t taskScheduler) CreateRecovery() error {
+	if err := Create(RecoveryTask(t.exe)); err != nil {
+		return err
+	}
+	if err := CreateGuard(t.guardDir, t.state); err != nil {
+		slog.Warn("startup: network guard task not created", "err", err)
+	}
+	return nil
+}
+
+func (t taskScheduler) DeleteRecovery() error {
+	return errors.Join(Delete(RecoveryTask(t.exe).Name), Delete(brand.TaskGuard))
+}

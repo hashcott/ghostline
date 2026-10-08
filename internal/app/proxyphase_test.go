@@ -2,11 +2,14 @@ package app
 
 import (
 	"context"
+	"github.com/hashcott/ghostline/internal/model"
+	"github.com/hashcott/ghostline/internal/sysproxy"
 	"sync"
 	"testing"
 
+	"github.com/hashcott/ghostline/internal/firewall"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,17 +45,30 @@ func (p *fProxy) Alive() bool                    { p.mu.Lock(); defer p.mu.Unloc
 type fSysProxy struct {
 	r        *rec
 	states   *fStates
-	existing store.SysProxySnapshot
+	existing model.WinINETProxy
+	snapErr  error // Snapshot fails with it (no session, unsupported desktop)
 	ours     bool
 	t        *testing.T
 }
 
-func (s *fSysProxy) Snapshot() (store.SysProxySnapshot, error) {
-	return s.existing, s.r.add("sysproxy.snapshot")
+// Snapshot follows the Backend contract: Ghostline's own leftover address
+// comes back as the default ("direct").
+func (s *fSysProxy) Snapshot(ours string) (sysproxy.Snapshot, error) {
+	if s.snapErr != nil {
+		return sysproxy.Snapshot{}, s.snapErr
+	}
+	w := s.existing
+	if w.Server == ours {
+		w = model.WinINETProxy{Flags: 1}
+	}
+	return sysproxy.Snapshot{Backend: "windows", Windows: &w}, s.r.add("sysproxy.snapshot")
 }
-func (s *fSysProxy) Existing(snap store.SysProxySnapshot) (string, string, bool) {
-	return snap.Server, snap.AutoconfigURL, snap.Server != "" || snap.AutoconfigURL != ""
+func (s *fSysProxy) Existing(snap sysproxy.Snapshot) (string, string, bool) {
+	w := snap.Windows
+	return w.Server, w.AutoconfigURL, w.Server != "" || w.AutoconfigURL != ""
 }
+func (s *fSysProxy) Watch(func()) (func(), error) { return func() {}, nil }
+func (s *fSysProxy) Info() sysproxy.Info          { return sysproxy.Info{Supported: true} }
 func (s *fSysProxy) Apply(addr string) error {
 	// Write-ahead invariant: the snapshot is in state.json before any change.
 	st, err := s.states.Load()
@@ -66,7 +82,7 @@ func (s *fSysProxy) Apply(addr string) error {
 	return nil
 }
 func (s *fSysProxy) IsOurs(string) (bool, error) { return s.ours, nil }
-func (s *fSysProxy) RestoreIfOurs(string, store.SysProxySnapshot) (bool, error) {
+func (s *fSysProxy) RestoreIfOurs(string, sysproxy.Snapshot) (bool, error) {
 	if err := s.r.add("sysproxy.restore"); err != nil {
 		return false, err
 	}
@@ -88,7 +104,7 @@ func (f *fFirewall) Add(int) error {
 	return f.r.add("firewall.add")
 }
 func (f *fFirewall) Delete() error { return f.r.add("firewall.delete") }
-func (f *fFirewall) AddNamed(r winutil.FirewallRule) error {
+func (f *fFirewall) AddNamed(r firewall.Rule) error {
 	st, err := f.states.Load()
 	require.NoError(f.t, err)
 	require.NotNil(f.t, st.Firewall, "firewall rule created before it was persisted")
@@ -141,7 +157,7 @@ func TestConnect_ProxyPhaseRunsAfterProtected(t *testing.T) {
 	require.Equal(t, []ProxyRun{{Listen: listenFor(8080, true, true), ShareLAN: true}}, h.proxy.runs)
 	st, _ := h.states.Load()
 	require.True(t, st.SysProxy.Set)
-	require.ElementsMatch(t, []string{winutil.FirewallRuleName, winutil.RuleBlockPublic}, st.Firewall.Rules)
+	require.ElementsMatch(t, []string{firewall.ProxyRule, firewall.RuleBlockPublic}, st.Firewall.Rules)
 }
 
 func TestProxyPhase_FailureAtEachStep(t *testing.T) {
@@ -176,7 +192,7 @@ func TestProxyPhase_FailureAtEachStep(t *testing.T) {
 			require.False(t, sn.Proxy.Running)
 			st, _ := h.states.Load()
 			require.Nil(t, st.SysProxy)
-			require.NotContains(t, firewallRules(st), winutil.FirewallRuleName, "the proxy rule is undone; only the Public block rule may stay")
+			require.NotContains(t, firewallRules(st), firewall.ProxyRule, "the proxy rule is undone; only the Public block rule may stay")
 			require.Equal(t, store.PhaseDNSSet, st.Phase)
 		})
 	}
@@ -185,7 +201,7 @@ func TestProxyPhase_FailureAtEachStep(t *testing.T) {
 func TestProxyPhase_PortBusy(t *testing.T) {
 	h := newProxyHarness(t, true)
 	h.proxy.startE = errBoom
-	h.sys.proxyOwners = []winutil.PortOwner{{PID: 4242, Name: "nginx.exe"}}
+	h.sys.proxyOwners = []procs.PortOwner{{PID: 4242, Name: "nginx.exe"}}
 	require.NoError(t, h.o.Connect(context.Background()))
 	e := h.o.Snapshot().Proxy.Error
 	require.Equal(t, CodeProxyPortBusy, e.Code)
@@ -194,7 +210,7 @@ func TestProxyPhase_PortBusy(t *testing.T) {
 
 func TestProxyPhase_ExistingDeclined(t *testing.T) {
 	h := newProxyHarness(t, false)
-	h.sp.existing = store.SysProxySnapshot{Flags: 3, Server: "10.0.0.1:3128"}
+	h.sp.existing = model.WinINETProxy{Flags: 3, Server: "10.0.0.1:3128"}
 	require.NoError(t, h.o.Connect(context.Background()))
 	require.Equal(t, 1, h.asked)
 	require.NotContains(t, h.r.list(), "sysproxy.apply")

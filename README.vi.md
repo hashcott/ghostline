@@ -4,13 +4,13 @@
 
 # Ghostline
 
-**Mã hoá DNS và vượt DPI cho Windows, chỉ với một nút bấm.**
+**Mã hoá DNS và vượt DPI cho Windows và Linux, chỉ với một nút bấm.**
 
 [![CI](https://github.com/hashcott/ghostline/actions/workflows/ci.yml/badge.svg)](https://github.com/hashcott/ghostline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hashcott/ghostline?include_prereleases)](https://github.com/hashcott/ghostline/releases)
 [![Downloads](https://img.shields.io/github/downloads/hashcott/ghostline/total)](https://github.com/hashcott/ghostline/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64%20%7C%20Linux%20x86__64-blue)
 
 [English](README.md) · Tiếng Việt
 
@@ -112,6 +112,23 @@ Get-FileHash .\Ghostline-0.1.0-portable.zip -Algorithm SHA256
 >
 > Nếu bạn nâng quyền UAC bằng **một tài khoản admin khác**, dữ liệu của Ghostline sẽ nằm trong `%APPDATA%` của tài khoản admin đó.
 
+### Linux (x86_64)
+
+| Bản phân phối | File | Cài đặt |
+| --- | --- | --- |
+| Ubuntu 24.04+, Debian 13+ | `ghostline_<phiên bản>_amd64.deb` | `sudo apt install ./ghostline_<phiên bản>_amd64.deb` |
+| Fedora 41+ | `ghostline-<phiên bản>-1.x86_64.rpm` | `sudo dnf install ./ghostline-<phiên bản>-1.x86_64.rpm` |
+| Arch, CachyOS, Manjaro | `ghostline-<phiên bản>-linux-amd64.tar.gz` | Giải nén rồi chạy `sudo ./install.sh`, hoặc build `ghostline-bin` từ `PKGBUILD` đính kèm bản phát hành (`makepkg -si`) |
+| Bản phân phối khác | `Ghostline-<phiên bản>-x86_64.AppImage` | `chmod +x` rồi chạy; app sẽ đề nghị cài dịch vụ nền |
+
+Kiểm tra file tải về: `sha256sum -c SHA256SUMS --ignore-missing`.
+
+Trên Linux, Ghostline gồm hai phần: dịch vụ nền (`ghostline.service`, chạy bằng root) đổi DNS, chạy zapret2 và vẫn bảo vệ khi đã đóng cửa sổ hay sau khi khởi động lại máy; và cửa sổ app, chạy bằng tài khoản của bạn. Thành viên các nhóm `wheel`, `sudo`, `admin` hoặc `ghostline` điều khiển được dịch vụ; muốn cho tài khoản khác dùng: `sudo usermod -aG ghostline <tài khoản>` rồi đăng nhập lại. Gói deb và rpm khởi động dịch vụ ngay; trên Arch hãy bật một lần bằng `sudo systemctl enable --now ghostline` (hoặc nút trong cửa sổ).
+
+**Yêu cầu:** systemd, GTK 4 và WebKitGTK 6.0 (gói cài tự kéo về; AppImage và tar.gz dùng thư viện có sẵn của máy).
+
+**Gỡ cài đặt:** `sudo apt remove ghostline` (`apt purge` xoá luôn cài đặt), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz và AppImage: `sudo ./uninstall.sh [--purge]` hoặc `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, proxy hệ thống, chứng chỉ, luật firewall và bảng nftables được trả lại trước. rpm và Arch giữ lại cài đặt: `sudo rm -rf /var/lib/ghostline /var/log/ghostline` để xoá hẳn.
+
 ## Sử dụng
 
 > 📖 Hướng dẫn chi tiết từng màn hình, cách xử lý khi không vào được trang và xử lý sự cố: **[docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md)**
@@ -161,6 +178,16 @@ Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/
 - **Fake SNI** chỉ áp dụng cho trình duyệt trên máy này đi qua proxy, chỉ cho tên miền có rule `sni=`, và làm hỏng app ghim chứng chỉ. Firefox có thể cần bật `security.enterprise_roots.enabled`.
 - **Thiết bị dùng DNS của máy tính sẽ mất mạng khi máy tắt hoặc ngắt kết nối.** iOS không có DNS dự phòng: với profile DoH, iPhone mất mạng ở Wi-Fi nhà cho tới khi bạn chọn *Tự động* trong *Cài đặt › Cài đặt chung › VPN và quản lý thiết bị › DNS* (4G/5G không bị ảnh hưởng). Nút Ngắt kết nối sẽ hỏi lại khi có thiết bị trong mạng đang dùng DNS server; nếu máy tính hay tắt, hãy đặt DNS thủ công cho iPhone thay vì dùng profile. Private DNS của Android không dùng được với Ghostline; hãy đặt DNS tĩnh cho Wi-Fi.
 
+### Linux
+
+- GNOME không có khay hệ thống mặc định: đóng cửa sổ là thoát app, còn việc bảo vệ vẫn chạy trong dịch vụ nền.
+- Proxy hệ thống chỉ được đặt tự động trên GNOME và KDE; desktop khác hãy tự đặt `127.0.0.1:<cổng>`.
+- Fake SNI trong Chrome và Chromium trên Ubuntu, Debian cần gói `libnss3-tools` (`certutil`).
+- Kernel không có NFQUEUE (`nfnetlink_queue`, `nft_queue`) thì không vượt DPI được; fragment của proxy vẫn hoạt động.
+- Không có GoodbyeDPI (chỉ có trên Windows); engine là zapret2.
+- Gói cài chưa ký GPG: hãy kiểm tra `SHA256SUMS`.
+- SteamOS (Steam Deck) chưa được kiểm chứng.
+
 ## Build từ mã nguồn
 
 **Cần có:** Go 1.26+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, và [NSIS](https://nsis.sourceforge.io) để tạo bản cài đặt.
@@ -172,6 +199,13 @@ wails3 dev                     # chạy thử với tự tải lại (kết nố
 wails3 build                   # bin/ghostline.exe
 wails3 package                 # bản cài đặt NSIS
 wails3 task windows:portable   # file zip portable
+```
+
+Trên Linux (gói phát triển GTK 4 và WebKitGTK 6.0, thêm `squashfs-tools` cho AppImage):
+
+```bash
+wails3 task linux:build                     # bin/linux/ghostline và bin/linux/ghostlined
+wails3 task linux:package VERSION=0.6.0     # deb, rpm, AppImage và tar.gz trong bin/
 ```
 
 **Test:**

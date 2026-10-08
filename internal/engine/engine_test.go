@@ -39,13 +39,13 @@ var _ upstream.Upstream = (*fakeUp)(nil)
 
 func start(t *testing.T, onQuery func(engine.QueryEvent), ups ...upstream.Upstream) *engine.Engine {
 	t.Helper()
-	// Port 0 gives a free UDP port, and TCP must then bind the same one:
-	// Windows reserves some TCP ports, so try again on a refusal.
+	// One port for both protocols, so Swap (which listens again on the same
+	// address for UDP and TCP) cannot land on a Windows-reserved TCP port.
 	var err error
 	for range 10 {
 		e := engine.New(onQuery)
 		if err = e.Start(context.Background(), engine.Config{
-			ListenV4:  netip.MustParseAddrPort("127.0.0.1:0"),
+			ListenV4:  netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), freeDualPort(t)),
 			Upstreams: ups,
 		}); err == nil {
 			t.Cleanup(func() { _ = e.Stop(context.Background()) })
@@ -152,6 +152,6 @@ func TestEngine_StatsResetOnStartAndSwap(t *testing.T) { // review minor: stale 
 	require.Empty(t, e.Stats().PerUpstream, "old upstreams must not count after a swap")
 	query(t, e, "b.example.")
 	require.NoError(t, e.Stop(context.Background()))
-	require.NoError(t, e.Start(context.Background(), engine.Config{ListenV4: netip.MustParseAddrPort("127.0.0.1:0"), Upstreams: []upstream.Upstream{up}}))
+	require.NoError(t, e.Start(context.Background(), engine.Config{ListenV4: netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), freeDualPort(t)), Upstreams: []upstream.Upstream{up}}))
 	require.Zero(t, e.Stats().Queries, "a new session starts from zero")
 }

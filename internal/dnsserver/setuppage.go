@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashcott/ghostline/internal/winutil"
+	"github.com/hashcott/ghostline/internal/netid"
 )
 
 // SetupFiles are what the phone setup page offers. All of it is public.
@@ -96,7 +96,7 @@ func (p *SetupPage) Handler() http.Handler {
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ap, err := netip.ParseAddrPort(r.RemoteAddr)
-		if err != nil || !winutil.IsPrivateOrLocal(ap.Addr()) {
+		if err != nil || !netid.IsPrivateOrLocal(ap.Addr()) {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}

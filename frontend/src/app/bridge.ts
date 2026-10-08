@@ -1,13 +1,16 @@
 import { Events } from "@wailsio/runtime";
 import { Service } from "./api";
 import { useGhost } from "./store";
-import { initI18n } from "../i18n";
+import { applyPlatform, initI18n } from "../i18n";
 
 /** startBridge subscribes to Go events and loads the initial state. */
 export function startBridge(): () => void {
   const s = useGhost.getState();
   const offs = [
-    Events.On("state", (ev: any) => useGhost.getState().setSnapshot(ev.data)),
+    Events.On("state", (ev: any) => {
+      applyPlatform(ev.data?.platform);
+      useGhost.getState().setSnapshot(ev.data);
+    }),
     Events.On("stats", (ev: any) => useGhost.getState().pushStats(ev.data)),
     Events.On("log", (ev: any) => useGhost.getState().pushLog(ev.data)),
     Events.On("query", (ev: any) => useGhost.getState().pushQuery(ev.data)),
@@ -29,7 +32,10 @@ export function startBridge(): () => void {
     Events.On("tools:scan", (ev: any) => useGhost.getState().setAdvScan(ev.data)),
     Events.On("tools:cfscan", (ev: any) => useGhost.getState().setCfScan(ev.data)),
   ];
-  void Service.GetSnapshot().then(s.setSnapshot);
+  void Service.GetSnapshot().then((snap) => {
+    applyPlatform(snap?.platform);
+    s.setSnapshot(snap);
+  });
   void Service.GetSettings().then((st) => {
     s.setSettings(st);
     void initI18n(st.language === "en" ? "en" : "vi");

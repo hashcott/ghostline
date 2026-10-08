@@ -2,17 +2,17 @@ package watchdog_test
 
 import (
 	"errors"
+	"github.com/hashcott/ghostline/internal/model"
 	"os"
 	"testing"
 
-	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
 	"github.com/stretchr/testify/require"
 )
 
-var proxySnap = store.SysProxySnapshot{Flags: 1, Bypass: "<local>"}
+var proxySnap = model.ProxySnapshot{Backend: "windows", Windows: &model.WinINETProxy{Flags: 1, Bypass: "<local>"}}
 
 func dirtyWithProxy() *store.State {
 	st := dirty()
@@ -27,14 +27,19 @@ type orderDNS struct {
 	log *[]string
 }
 
-func (o *orderDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
+func (o *orderDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
 	*o.log = append(*o.log, "dns")
 	return o.fakeDNS.Restore(s)
 }
 
+func (o *orderDNS) RestoreDefault() error {
+	*o.log = append(*o.log, "dns")
+	return o.fakeDNS.RestoreDefault()
+}
+
 func withProxyHooks(d watchdog.Deps, log *[]string, sysErr error) watchdog.Deps {
 	d.DNS = &orderDNS{fakeDNS: fakeDNS{loopback: []sysdns.Adapter{{GUID: snap.GUID}}}, log: log}
-	d.RestoreSysProxy = func(ours string, s store.SysProxySnapshot) (bool, error) {
+	d.RestoreSysProxy = func(ours string, s model.ProxySnapshot) (bool, error) {
 		*log = append(*log, "sysproxy:"+ours)
 		return sysErr == nil, sysErr
 	}

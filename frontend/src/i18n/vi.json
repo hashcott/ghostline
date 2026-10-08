@@ -240,7 +240,8 @@
       "clear": "xoá hết"
     },
     "blacklistSavedReload": "đã lưu — zapret2 đã nạp danh sách mới",
-    "autotuneDone": "✓ tự dò đã chọn {{preset}} ({{engine}})"
+    "autotuneDone": "✓ tự dò đã chọn {{preset}} ({{engine}})",
+    "mechanism": "Bắt gói: {{mechanism}}"
   },
   "logs": {
     "title": "NHẬT KÝ",
@@ -265,6 +266,7 @@
     "SWAPPED": "đã chuyển sang {{servers}} máy chủ mới",
     "SWAP_FAILED": "không đổi được máy chủ",
     "ADAPTER_ADDED": "đã bảo vệ card mạng mới: {{adapter}}",
+    "DNS_REAPPLIED": "hệ thống đã đổi DNS; đặt lại ({{adapter}})",
     "SITES_BLOCKED": "{{count}} trang mẫu bị chặn ở tầng TLS",
     "DPI_STARTED": "{{engine}} đã chạy (preset {{preset}})",
     "DPI_STOPPED": "đã tắt vượt DPI",
@@ -288,6 +290,7 @@
     "closeToTray": "đóng → thu xuống khay",
     "adapters": "card mạng",
     "adaptersManual": "chọn tay",
+    "dnsBackend": "DNS hệ thống",
     "testDomain": "tên miền thử",
     "bootstrap": "bootstrap (ip:port, mỗi dòng một)",
     "maxUpstreams": "số máy chủ tối đa",
@@ -356,6 +359,26 @@
     "testDomainMany": "Không nên dùng nhiều tên miền: {{count}} tên miền làm mỗi lượt quét lâu hơn và dễ loại nhầm máy chủ tốt. Nên dùng 1–2 (tối đa 5)."
   },
   "errors": {
+    "PORT53_NOT_OWNER": {
+      "message": "{{name}} không giữ cổng 53",
+      "action": "Tải lại rồi chọn đúng dịch vụ đang hiện"
+    },
+    "DAEMON_UNREACHABLE": {
+      "message": "Dịch vụ nền của Ghostline chưa chạy",
+      "action": "Khởi động bằng lệnh: sudo systemctl start ghostline"
+    },
+    "DAEMON_PROTOCOL_MISMATCH": {
+      "message": "Dịch vụ nền khác phiên bản với ứng dụng",
+      "action": "Cập nhật Ghostline để ứng dụng và dịch vụ cùng phiên bản"
+    },
+    "NOT_AUTHORIZED": {
+      "message": "Tài khoản của bạn không có quyền điều khiển Ghostline",
+      "action": "Chạy: sudo usermod -aG ghostline $USER rồi đăng nhập lại"
+    },
+    "NO_UI": {
+      "message": "Thao tác này cần cửa sổ Ghostline",
+      "action": "Mở Ghostline rồi thử lại"
+    },
     "NOT_ADMIN": {
       "message": "Ghostline cần quyền quản trị (admin) để đổi DNS",
       "action": "Mở lại Ghostline bằng quyền admin"
@@ -607,6 +630,38 @@
     "TEST_DOMAIN_NO_ADDRESS": {
       "message": "Tên miền thử này không có địa chỉ IPv4 (bản ghi A) nên mọi máy chủ sẽ trượt. Hãy dùng trang có địa chỉ thật, ví dụ store.steampowered.com thay cho steam.com",
       "action": ""
+    },
+    "DPI_KERNEL_UNSUPPORTED": {
+      "message": "Kernel Linux này không chuyển được gói tin cho engine DPI (thiếu nfnetlink_queue hoặc nft_queue)",
+      "action": "Cài module netfilter queue của bản phân phối, hoặc bật proxy: chế độ chia nhỏ gói của proxy không cần các module này"
+    },
+    "SESSION_PENDING": {
+      "message": "Proxy hệ thống sẽ được đặt khi bạn đăng nhập vào màn hình",
+      "action": "Không cần làm gì: bảo vệ đã bật"
+    },
+    "PROXY_DESKTOP_UNSUPPORTED": {
+      "message": "Ghostline không đổi được cài đặt proxy của desktop này",
+      "action": "Tự đặt proxy HTTP về địa chỉ trên trang Proxy"
+    },
+    "CERT_PARTIAL": {
+      "message": "Hệ thống đã tin chứng chỉ Fake SNI, nhưng {{target}} thì chưa",
+      "action": "Trang web trong trình duyệt đó có thể báo lỗi chứng chỉ; chi tiết có trong nhật ký"
+    },
+    "CERT_NSS_TOOL_MISSING": {
+      "message": "Chrome và Chromium chưa tin chứng chỉ Fake SNI: thiếu certutil",
+      "action": "Cài libnss3-tools (sudo apt install libnss3-tools), rồi tắt và bật lại Fake SNI"
+    },
+    "PKEXEC_FAILED": {
+      "message": "Không chạy được với quyền quản trị; chạy lệnh này trong terminal",
+      "action": "Chạy lệnh trong ngoặc bằng terminal"
+    },
+    "SERVICE_INSTALL_MANUAL": {
+      "message": "Bản này cài dịch vụ bằng install.sh",
+      "action": "Chạy: sudo ./install.sh trong thư mục đã giải nén"
+    },
+    "SERVICE_ACTION_UNSUPPORTED": {
+      "message": "Bản này không tự cài được dịch vụ",
+      "action": "Cài lại Ghostline từ gói của hệ điều hành"
     }
   },
   "tray": {
@@ -681,7 +736,9 @@
     },
     "hint": {
       "goodbyedpi": "{{count}} kết nối bị chặn kể cả khi fragment — thử bật vượt DPI ở trang Vượt DPI"
-    }
+    },
+    "systemProxyDesktop": "Đặt proxy trong phần cài đặt của {{desktop}}",
+    "systemProxyManual": "Ghostline không đổi được cài đặt proxy của {{desktop}}: hãy tự đặt proxy HTTP về {{addr}}"
   },
   "rules": {
     "title": "RULES",
@@ -1027,5 +1084,12 @@
       "speedTest": "đo tốc độ tải",
       "rechecking": "đang kiểm tra…"
     }
+  },
+  "service": {
+    "start": "khởi động dịch vụ",
+    "install": "cài dịch vụ",
+    "update": "cập nhật dịch vụ",
+    "packageUpdate": "Cập nhật Ghostline bằng trình quản lý gói",
+    "steamosHint": "Trên Steam Deck, đặt mật khẩu trước: mở Konsole và chạy passwd"
   }
 }

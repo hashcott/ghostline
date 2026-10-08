@@ -69,7 +69,7 @@ func TestState_V3RoundTrip(t *testing.T) {
 	}))
 	st, err := s.Load()
 	require.NoError(t, err)
-	require.Equal(t, 3, st.Version)
+	require.Equal(t, 5, st.Version)
 	require.Equal(t, []string{"Ghostline DNS (TCP)", "Ghostline DNS (UDP)"}, st.Firewall.Rules)
 	require.Equal(t, []string{"aa"}, st.Certs.Session)
 
@@ -78,5 +78,5 @@ func TestState_V3RoundTrip(t *testing.T) {
 	st.RemoveSessionCert("aa")
 	require.Nil(t, st.Firewall)
 	require.Nil(t, st.Certs)
-	require.Equal(t, 3, store.CleanState().Version)
+	require.Equal(t, 5, store.CleanState().Version)
 }

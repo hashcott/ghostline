@@ -12,8 +12,8 @@ import (
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/certstore"
 	"github.com/hashcott/ghostline/internal/dnsserver"
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 )
 
 // SetupPage is the temporary phone setup page (*dnsserver.SetupPage).
@@ -64,7 +64,7 @@ func (o *Orchestrator) OpenSetupPage(newPage func(dnsserver.SetupFiles, func()) 
 	if err != nil {
 		return "", appErr(CodeSetupPageFailed, err)
 	}
-	rule := winutil.FirewallRule{Name: winutil.RuleSetup, Protocol: "TCP", Ports: []int{store.SetupPagePort}}
+	rule := firewall.Rule{Name: firewall.RuleSetup, Protocol: "TCP", Ports: []int{store.SetupPagePort}}
 	if o.d.Firewall != nil {
 		if err := ignoreNoChange(o.setState(func(st *store.State) { st.AddFirewallRule(rule.Name) })); err != nil {
 			return "", appErr(CodeSetupPageFailed, err)
@@ -103,11 +103,11 @@ func (o *Orchestrator) dropSetupRule() {
 	if o.d.Firewall == nil {
 		return
 	}
-	if err := o.d.Firewall.DeleteNamed(winutil.RuleSetup); err != nil {
+	if err := o.d.Firewall.DeleteNamed(firewall.RuleSetup); err != nil {
 		o.logErr("dnsserver", CodeSetupPageFailed, err, "detail", err.Error())
 		return
 	}
-	warnIgnored("state update", ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(winutil.RuleSetup) })))
+	warnIgnored("state update", ignoreNoChange(o.setState(func(st *store.State) { st.RemoveFirewallRule(firewall.RuleSetup) })))
 }
 
 // closeSetup stops the setup page; its OnStop removes the rule.

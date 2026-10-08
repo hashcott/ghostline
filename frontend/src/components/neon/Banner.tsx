@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import css from "./neon.module.css";
 
-export type BannerAction = { label: string; onClick: () => void; primary?: boolean };
+export type BannerAction = { label: string; onClick: () => void; primary?: boolean; disabled?: boolean };
 
 type Props = { tone: "ok" | "warn" | "err" | "violet"; children: ReactNode; actions?: BannerAction[] };
 
@@ -15,7 +15,7 @@ export function Banner({ tone, children, actions = [] }: Props) {
       {actions.length > 0 && (
         <div className={css.actions}>
           {actions.map((a) => (
-            <button key={a.label} className={`${css.btn} ${a.primary ? css.primary : ""}`} onClick={a.onClick}>
+            <button key={a.label} className={`${css.btn} ${a.primary ? css.primary : ""}`} onClick={a.onClick} disabled={a.disabled}>
               <span>{a.label}</span>
             </button>
           ))}

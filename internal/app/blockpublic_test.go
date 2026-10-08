@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashcott/ghostline/internal/firewall"
 	"github.com/hashcott/ghostline/internal/store"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,8 +19,8 @@ func countCalls(calls []string, name string) int {
 	return n
 }
 
-const addBlock = "firewall.add:" + winutil.RuleBlockPublic
-const delBlock = "firewall.delete:" + winutil.RuleBlockPublic
+const addBlock = "firewall.add:" + firewall.RuleBlockPublic
+const delBlock = "firewall.delete:" + firewall.RuleBlockPublic
 
 // Sharing on the LAN adds the Public block rule (recorded in state.json
 // first, checked by the fake) and Disconnect removes it.
@@ -29,7 +29,7 @@ func TestBlockPublic_WithProxyShare(t *testing.T) {
 	require.NoError(t, h.o.Connect(context.Background()))
 	require.Equal(t, 1, countCalls(h.r.list(), addBlock))
 	st, _ := h.states.Load()
-	require.Contains(t, st.Firewall.Rules, winutil.RuleBlockPublic)
+	require.Contains(t, st.Firewall.Rules, firewall.RuleBlockPublic)
 
 	require.NoError(t, h.o.Disconnect(context.Background()))
 	require.Contains(t, h.r.list(), delBlock)
@@ -70,7 +70,7 @@ func TestBlockPublic_FailureStopsSharing(t *testing.T) {
 	require.Equal(t, CodeProxyFirewall, sn.Proxy.Error.Code)
 }
 
-var onlyBlockPublic = []string{winutil.RuleBlockPublic}
+var onlyBlockPublic = []string{firewall.RuleBlockPublic}
 
 func firewallRules(st store.State) []string {
 	if st.Firewall == nil {

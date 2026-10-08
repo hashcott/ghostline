@@ -18,10 +18,10 @@ import (
 	"github.com/hashcott/ghostline/internal/engine"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/probe"
+	"github.com/hashcott/ghostline/internal/procs"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/hashcott/ghostline/internal/sysdns"
 	"github.com/hashcott/ghostline/internal/watchdog"
-	"github.com/hashcott/ghostline/internal/winutil"
 	"github.com/miekg/dns"
 )
 
@@ -100,36 +100,90 @@ type fDNS struct {
 	adapters   []sysdns.Adapter
 	restoreErr bool
 	report     []sysdns.AdapterDNS
+	// reapply makes Reconcile report these targets as set again (Linux).
+	reapply []string
+	// applyFail makes Apply fail on these adapters (by alias) and set the rest.
+	applyFail    map[string]bool
+	reconcileErr error
 }
 
-func (d *fDNS) Select(string, []string) ([]sysdns.Adapter, error) {
-	return d.adapters, d.r.add("dns.select")
-}
-func (d *fDNS) Snapshot(ads []sysdns.Adapter) ([]model.AdapterSnapshot, error) {
+func (d *fDNS) Name() string { return "fake" }
+func (d *fDNS) Snapshot(sysdns.Selection) (sysdns.Snapshot, error) {
 	var out []model.AdapterSnapshot
-	for _, a := range ads {
+	for _, a := range d.adapters {
 		out = append(out, model.AdapterSnapshot{GUID: a.GUID, Alias: a.Alias, IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}})
 	}
-	return out, d.r.add("dns.snapshot")
+	if err := d.r.add("dns.snapshot"); err != nil {
+		return sysdns.Snapshot{}, err
+	}
+	if len(out) == 0 {
+		return sysdns.Snapshot{}, errors.New("no connected adapters")
+	}
+	return sysdns.Snapshot{Backend: "windows", Windows: out}, nil
 }
-func (d *fDNS) ApplyLoopback(snaps []model.AdapterSnapshot, v6 bool) error {
+func (d *fDNS) Apply(s sysdns.Snapshot, v6 bool) error {
 	d.lastV6 = v6
 	name := "dns.apply"
-	if len(snaps) == 1 && snaps[0].GUID != "{A}" {
-		name = "dns.apply:" + snaps[0].GUID
+	if len(s.Windows) == 1 && s.Windows[0].GUID != "{A}" {
+		name = "dns.apply:" + s.Windows[0].GUID
 	}
-	return d.r.add(name)
-}
-func (d *fDNS) Restore(s []model.AdapterSnapshot) []sysdns.RestoreError {
-	_ = d.r.add("dns.restore")
-	if d.restoreErr {
-		return []sysdns.RestoreError{{GUID: s[0].GUID, Alias: s[0].Alias, Err: errBoom}}
+	if err := d.r.add(name); err != nil {
+		return err
+	}
+	var failed []string
+	for _, a := range s.Windows {
+		if d.applyFail[a.Alias] {
+			failed = append(failed, a.Alias)
+		}
+	}
+	if failed != nil {
+		return &sysdns.ApplyError{Failed: failed, Err: errBoom}
 	}
 	return nil
 }
-func (d *fDNS) Flush() error { return d.r.add("dns.flush") }
+func (d *fDNS) Reconcile(s sysdns.Snapshot, _ sysdns.Selection) (sysdns.Snapshot, sysdns.Snapshot, []sysdns.Change, error) {
+	_ = d.r.add("dns.reconcile")
+	if d.reconcileErr != nil {
+		return s, sysdns.Snapshot{}, nil, d.reconcileErr
+	}
+	known := map[string]bool{}
+	for _, a := range s.Windows {
+		known[a.GUID] = true
+	}
+	next := s
+	next.Windows = append([]model.AdapterSnapshot(nil), s.Windows...)
+	toApply := sysdns.Snapshot{Backend: s.Backend}
+	var changes []sysdns.Change
+	for _, a := range d.adapters {
+		if !known[a.GUID] {
+			sn := model.AdapterSnapshot{GUID: a.GUID, Alias: a.Alias, IPv4: model.FamilyDNS{Mode: model.DNSModeDHCP}}
+			next.Windows = append(next.Windows, sn)
+			toApply.Windows = append(toApply.Windows, sn)
+			changes = append(changes, sysdns.Change{Target: a.Alias, Added: true})
+		}
+	}
+	for _, t := range d.reapply {
+		toApply = next
+		changes = append(changes, sysdns.Change{Target: t})
+	}
+	return next, toApply, changes, nil
+}
+func (d *fDNS) StillOurs(s sysdns.Snapshot) sysdns.Snapshot { return s }
+func (d *fDNS) Restore(s sysdns.Snapshot) []sysdns.RestoreError {
+	_ = d.r.add("dns.restore")
+	if d.restoreErr {
+		return []sysdns.RestoreError{{Target: s.Label(), Err: errBoom}}
+	}
+	return nil
+}
+func (d *fDNS) RestoreDefault() error { return d.r.add("dns.restoredefault") }
+func (d *fDNS) Flush() error          { return d.r.add("dns.flush") }
 func (d *fDNS) Report() ([]sysdns.AdapterDNS, error) {
 	return d.report, d.r.add("dns.report")
+}
+func (d *fDNS) Watch(func()) (func(), error) { return func() {}, nil }
+func (d *fDNS) Info() sysdns.Info {
+	return sysdns.Info{Backend: "fake", AdapterPick: true, Adapters: d.adapters}
 }
 
 // fDPI runs no process but builds argv with the real engines, so tests can
@@ -140,6 +194,7 @@ type fDPI struct {
 	running string           // engine ID, "" when stopped
 	startE  error            // fails every start
 	failOn  map[string]error // fails starts of one engine
+	missing map[string]bool  // engines this "OS" does not have
 	starts  []dpiStart
 	onStart func()
 }
@@ -194,7 +249,13 @@ func (p *fDPI) Engine() string { p.mu.Lock(); defer p.mu.Unlock(); return p.runn
 func (p *fDPI) RefreshLists(dpi.Plan) error {
 	return p.r.add("dpi.refresh")
 }
-func (p *fDPI) Get(engine string) (dpi.Engine, bool) { e, ok := testEngines[engine]; return e, ok }
+func (p *fDPI) Get(engine string) (dpi.Engine, bool) {
+	if p.missing[engine] {
+		return nil, false
+	}
+	e, ok := testEngines[engine]
+	return e, ok
+}
 func (p *fDPI) setRunning(v string) {
 	p.mu.Lock()
 	p.running = v
@@ -235,15 +296,15 @@ func (s *fSafety) DeleteRecoveryTask() error { return s.r.add("safety.task.delet
 type fSystem struct {
 	r           *rec
 	admin       bool
-	owners      []winutil.PortOwner // port 53
-	proxyOwners []winutil.PortOwner // any other port
+	owners      []procs.PortOwner // port 53
+	proxyOwners []procs.PortOwner // any other port
 	noV6        bool
 	listenErr   error            // returned by ListenFree
 	probed      []netip.AddrPort // what ListenFree was asked to bind
 }
 
 func (s *fSystem) IsAdmin() bool { _ = s.r.add("sys.admin"); return s.admin }
-func (s *fSystem) PortOwners(port uint16) ([]winutil.PortOwner, error) {
+func (s *fSystem) PortOwners(port uint16) ([]procs.PortOwner, error) {
 	if port != 53 {
 		return s.proxyOwners, nil
 	}
@@ -332,7 +393,7 @@ func (f *fStates) Update(fn func(*store.State) error) error {
 		switch {
 		case st.Phase == store.PhaseClean:
 			return f.r.add("state.clean")
-		case before.Phase == store.PhaseDNSSet && len(st.Snapshot) > len(before.Snapshot):
+		case before.Phase == store.PhaseDNSSet && len(st.DNS.Windows) > len(before.DNS.Windows):
 			return f.r.add("state.append")
 		default:
 			return f.r.add("state.dns_set")
