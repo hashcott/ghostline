@@ -38,5 +38,5 @@ func (Unsupported) DeleteRecovery() error { return nil }
 type ServiceManaged struct{}
 
 func (ServiceManaged) SetAutostart(bool) error { return nil }
-func (ServiceManaged) CreateRecovery() error      { return nil }
-func (ServiceManaged) DeleteRecovery() error      { return nil }
+func (ServiceManaged) CreateRecovery() error   { return nil }
+func (ServiceManaged) DeleteRecovery() error   { return nil }
