@@ -228,43 +228,19 @@ func (r *dbusResolved) Links() ([]model.ResolvedLink, error) {
 	if !ok {
 		return nil, errors.New("resolved: unexpected DNS property")
 	}
-	byIdx := map[int]*model.ResolvedLink{}
-	for _, row := range rows {
-		if len(row) != 3 {
-			continue
-		}
-		idx, _ := row[0].(int32)
-		raw, _ := row[2].([]byte)
-		if idx == 0 { // global servers, not a link
-			continue
-		}
-		l := byIdx[int(idx)]
-		if l == nil {
-			l = &model.ResolvedLink{IfIndex: int(idx)}
-			if ifc, err := net.InterfaceByIndex(int(idx)); err == nil {
-				l.Name = ifc.Name
-			}
-			byIdx[int(idx)] = l
-		}
-		if a, ok := netip.AddrFromSlice(raw); ok {
-			l.Servers = append(l.Servers, a.Unmap().String())
-		}
-	}
-	var out []model.ResolvedLink
-	for _, l := range byIdx {
+	links := linksFromDNS(rows, ifaceInfo)
+	for i := range links {
 		var path dbus.ObjectPath
-		if err := r.mgr().Call(resolvedMgr+".GetLink", 0, int32(l.IfIndex)).Store(&path); err != nil {
+		if err := r.mgr().Call(resolvedMgr+".GetLink", 0, int32(links[i].IfIndex)).Store(&path); err != nil {
 			return nil, err
 		}
 		dr, err := r.conn.Object(resolvedName, path).GetProperty("org.freedesktop.resolve1.Link.DefaultRoute")
 		if err != nil {
 			return nil, err
 		}
-		l.DefaultRoute, _ = dr.Value().(bool)
-		out = append(out, *l)
+		links[i].DefaultRoute, _ = dr.Value().(bool)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].IfIndex < out[j].IfIndex })
-	return out, nil
+	return links, nil
 }
 
 func (r *dbusResolved) SetDefaultRoute(ifindex int, on bool) error {
@@ -337,4 +313,48 @@ func (n *dbusNM) RcManager() (string, error) {
 	}
 	s, _ := v.Value().(string)
 	return s, nil
+}
+
+// linksFromDNS groups Manager.DNS rows (ifindex, family, address) by link.
+// Global servers (ifindex 0), loopback interfaces and loopback servers are
+// left out: they are Ghostline's own (resolved reports the global ::1 on
+// lo) or a local stub, never a link's upstream to route around.
+func linksFromDNS(rows [][]any, iface func(ifindex int) (name string, loopback bool)) []model.ResolvedLink {
+	byIdx := map[int]*model.ResolvedLink{}
+	for _, row := range rows {
+		if len(row) != 3 {
+			continue
+		}
+		idx, _ := row[0].(int32)
+		raw, _ := row[2].([]byte)
+		a, ok := netip.AddrFromSlice(raw)
+		if idx <= 0 || !ok || a.Unmap().IsLoopback() {
+			continue
+		}
+		l := byIdx[int(idx)]
+		if l == nil {
+			name, loopback := iface(int(idx))
+			if loopback {
+				continue
+			}
+			l = &model.ResolvedLink{IfIndex: int(idx), Name: name}
+			byIdx[int(idx)] = l
+		}
+		l.Servers = append(l.Servers, a.Unmap().String())
+	}
+	out := make([]model.ResolvedLink, 0, len(byIdx))
+	for _, l := range byIdx {
+		out = append(out, *l)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].IfIndex < out[j].IfIndex })
+	return out
+}
+
+// ifaceInfo names a link and says whether it is a loopback interface.
+func ifaceInfo(ifindex int) (string, bool) {
+	ifc, err := net.InterfaceByIndex(ifindex)
+	if err != nil {
+		return "", false
+	}
+	return ifc.Name, ifc.Flags&net.FlagLoopback != 0
 }
