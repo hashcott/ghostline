@@ -53,3 +53,17 @@ func (s *ProxySnapshot) UnmarshalJSON(b []byte) error {
 	}
 	return json.Unmarshal(b, (*plain)(s))
 }
+
+// MarshalJSON also writes a Windows snapshot's WinINET fields at the top
+// level, the form v0.5 reads, so a crash followed by a downgrade still
+// restores the right proxy. Readers of the current form ignore them.
+func (s ProxySnapshot) MarshalJSON() ([]byte, error) {
+	type plain ProxySnapshot
+	if s.Backend != "windows" || s.Windows == nil {
+		return json.Marshal(plain(s))
+	}
+	return json.Marshal(struct {
+		plain
+		WinINETProxy
+	}{plain(s), *s.Windows})
+}

@@ -44,6 +44,22 @@ type State struct {
 	Certs        *CertsState       `json:"certs,omitempty"`
 }
 
+// MarshalJSON also writes a Windows DNS snapshot under "snapshot", the key
+// v0.5 reads, so a crash followed by a downgrade still restores the
+// adapters. The current build reads "dns" (UnmarshalJSON uses "snapshot"
+// only when "dns" is empty).
+func (s State) MarshalJSON() ([]byte, error) {
+	type plain State
+	aux := struct {
+		plain
+		Legacy []model.AdapterSnapshot `json:"snapshot,omitempty"`
+	}{plain: plain(s)}
+	if s.DNS.Backend == "windows" {
+		aux.Legacy = s.DNS.Windows
+	}
+	return json.Marshal(aux)
+}
+
 // UnmarshalJSON reads v5, v4 (its proxy snapshot migrates in
 // model.ProxySnapshot), and v3 files (v0.5), whose adapters were in
 // "snapshot": they become a "windows" DNS snapshot.
