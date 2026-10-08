@@ -8,9 +8,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -199,4 +202,81 @@ func TestNSS_RecordsBeforeInstalling(t *testing.T) {
 	l, err := n.List("Ghostline Fake SNI")
 	require.NoError(t, err)
 	require.Len(t, l, 1, "the attempt is on record")
+}
+
+// fakeNSSDBs is certutil over in-memory databases: dir → nickname → DER.
+type fakeNSSDBs map[string]map[string][]byte
+
+func (f fakeNSSDBs) run(_ string, args ...string) ([]byte, error) {
+	arg := func(flag string) string {
+		for i, a := range args {
+			if a == flag && i+1 < len(args) {
+				return args[i+1]
+			}
+		}
+		return ""
+	}
+	db := f[strings.TrimPrefix(arg("-d"), "sql:")]
+	nick := arg("-n")
+	switch {
+	case slices.Contains(args, "-D"):
+		if _, ok := db[nick]; !ok {
+			return []byte("certutil: could not find certificate named " + nick), errors.New("exit status 255")
+		}
+		delete(db, nick)
+		return nil, nil
+	case slices.Contains(args, "-L") && nick != "":
+		return db[nick], nil // -r: the DER
+	case slices.Contains(args, "-L"):
+		out := "\nCertificate Nickname                                         Trust Attributes\n                                                             SSL,S/MIME,JAR/XPI\n\n"
+		for n := range db {
+			out += fmt.Sprintf("%-60s %s\n", n, "C,,")
+		}
+		return []byte(out), nil
+	}
+	return nil, nil
+}
+
+func profile(t *testing.T, home string, rel ...string) string {
+	t.Helper()
+	dir := filepath.Join(append([]string{home}, rel...)...)
+	require.NoError(t, os.MkdirAll(dir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "cert9.db"), nil, 0o600))
+	return dir
+}
+
+// Ubuntu/Debian: Firefox imports the policy's root into each profile and
+// keeps it after the policy is gone. Removal takes it out of every profile
+// (deb, snap, XDG) by thumbprint; other roots stay.
+func TestNSSAgent_RemovePurgesFirefoxProfiles(t *testing.T) {
+	home := t.TempDir()
+	deb := profile(t, home, ".mozilla", "firefox", "abc.default-release")
+	snap := profile(t, home, "snap", "firefox", "common", ".mozilla", "firefox", "x.default")
+	xdg := profile(t, home, ".config", "mozilla", "firefox", "y.default")
+	der, other := testCA(t, "Ghostline Fake SNI A"), testCA(t, "Ghostline Fake SNI B")
+	dbs := fakeNSSDBs{
+		deb:  {"Ghostline Fake SNI A - Ghostline": der, "Ghostline Fake SNI B - Ghostline": other, "DigiCert Root": other},
+		snap: {"Ghostline Fake SNI A - Ghostline": der},
+		xdg:  {},
+	}
+	tasks := agentTasks(home, dbs.run, func(string) (string, error) { return "/usr/bin/certutil", nil })
+	b, _ := json.Marshal(removeArgs{Thumbprint: certstore.Thumbprint(der)})
+	_, err := tasks["nss.remove"](b)
+	require.NoError(t, err)
+	require.Equal(t, map[string][]byte{"Ghostline Fake SNI B - Ghostline": other, "DigiCert Root": other}, dbs[deb])
+	require.Empty(t, dbs[snap])
+}
+
+// A user with Firefox but no Chrome database stays on record: the policy
+// root lands in their Firefox profile and must be purged later.
+func TestNSSAgent_FirefoxProfileAloneIsNotSkipped(t *testing.T) {
+	home := t.TempDir()
+	profile(t, home, ".mozilla", "firefox", "abc.default-release")
+	f := &fakeCertutil{}
+	tasks := agentTasks(home, f.run, func(string) (string, error) { return "/usr/bin/certutil", nil })
+	b, _ := json.Marshal(installArgs{DER: testCA(t, "x")})
+	res, err := tasks["nss.install"](b)
+	require.NoError(t, err)
+	require.Equal(t, installResult{}, res)
+	require.Empty(t, f.argv, "the policy installs into Firefox; certutil only for ~/.pki/nssdb")
 }

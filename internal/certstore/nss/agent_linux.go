@@ -43,7 +43,9 @@ func agentTasks(home string, run func(string, ...string) ([]byte, error), look f
 				return nil, err
 			}
 			if _, err := os.Stat(dbDir); err != nil {
-				return installResult{Skipped: true}, nil // no Chrome profile
+				// No Chrome database. Firefox gets the root from its policy
+				// and keeps it in its profiles: the removal purges them.
+				return installResult{Skipped: len(firefoxProfiles(home)) == 0}, nil
 			}
 			cu, err := certutil()
 			if err != nil {
@@ -67,18 +69,80 @@ func agentTasks(home string, run func(string, ...string) ([]byte, error), look f
 			if err := json.Unmarshal(raw, &a); err != nil {
 				return nil, err
 			}
-			if _, err := os.Stat(dbDir); err != nil {
+			_, noDB := os.Stat(dbDir)
+			profiles := firefoxProfiles(home)
+			if noDB != nil && len(profiles) == 0 {
 				return nil, nil
 			}
 			cu, err := certutil()
 			if err != nil {
 				return nil, err
 			}
-			out, err := run(cu, "-d", db, "-D", "-n", nickname(a.Thumbprint))
-			if err != nil && strings.Contains(string(out)+err.Error(), "could not find certificate") {
-				return nil, nil // already gone (deleted in the browser): done
+			var errs []error
+			if noDB == nil {
+				out, err := run(cu, "-d", db, "-D", "-n", nickname(a.Thumbprint))
+				if err != nil && !strings.Contains(string(out)+err.Error(), "could not find certificate") {
+					errs = append(errs, err) // not found: deleted in the browser, done
+				}
 			}
-			return nil, err
+			for _, dir := range profiles {
+				errs = append(errs, purgeProfile(run, cu, dir, a.Thumbprint))
+			}
+			return nil, errors.Join(errs...)
 		},
 	}
+}
+
+// firefoxProfiles lists the Firefox profiles (deb, snap, XDG) of home.
+func firefoxProfiles(home string) []string {
+	var out []string
+	for _, base := range []string{".mozilla/firefox", "snap/firefox/common/.mozilla/firefox", ".config/mozilla/firefox"} {
+		dbs, _ := filepath.Glob(filepath.Join(home, base, "*", "cert9.db"))
+		for _, db := range dbs {
+			out = append(out, filepath.Dir(db))
+		}
+	}
+	return out
+}
+
+// purgeProfile deletes the root with thumbprint from a Firefox profile.
+// Firefox names a policy root after its subject ("Ghostline Fake SNI … -
+// Ghostline"): those are read back and compared, so nothing else goes.
+func purgeProfile(run func(string, ...string) ([]byte, error), cu, dir, thumbprint string) error {
+	db := "sql:" + dir
+	out, err := run(cu, "-d", db, "-L")
+	if err != nil {
+		return err
+	}
+	for _, nick := range listedNicknames(out) {
+		if !strings.HasPrefix(nick, "Ghostline") {
+			continue
+		}
+		der, err := run(cu, "-d", db, "-L", "-n", nick, "-r")
+		if err != nil || certstore.Thumbprint(der) != thumbprint {
+			continue
+		}
+		if _, err := run(cu, "-d", db, "-D", "-n", nick); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// listedNicknames reads `certutil -L`: a header, then one line per
+// certificate, its nickname and then its trust flags.
+func listedNicknames(out []byte) []string {
+	var names []string
+	header := true
+	for line := range strings.Lines(string(out)) {
+		if header {
+			header = !strings.Contains(line, "SSL,S/MIME,JAR/XPI")
+			continue
+		}
+		line = strings.TrimRight(line, " \t\r\n")
+		if i := strings.LastIndexAny(line, " \t"); i > 0 {
+			names = append(names, strings.TrimSpace(line[:i]))
+		}
+	}
+	return names
 }
