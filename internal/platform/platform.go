@@ -39,6 +39,9 @@ type Deps struct {
 	// WatchResume reports the machine waking from sleep; nil where the GUI
 	// sees it itself (Windows: WM_POWERBROADCAST).
 	WatchResume func(onResume func()) (stop func(), err error)
+	// WatchSessions reports a user logging in (Linux: logind), so work that
+	// waited for their desktop session can run; nil where there is none.
+	WatchSessions func(onNew func()) (stop func(), err error)
 
 	Startup       startup.Manager
 	StartWatchdog func(pid uint32, start time.Time) (stop func() error, err error)

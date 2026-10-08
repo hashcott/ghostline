@@ -29,6 +29,9 @@ func main() {
 		os.Exit(2)
 	}
 	switch a.Command {
+	case "session-agent":
+		// Run as a user by the daemon: no lock, no log, no root setup.
+		os.Exit(runSessionAgent(os.Stdin, os.Stdout))
 	case "daemon":
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
 		defer stop()

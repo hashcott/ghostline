@@ -3,6 +3,8 @@ package platform
 import (
 	zapret2Files "github.com/hashcott/ghostline/assets/zapret2"
 	"github.com/hashcott/ghostline/internal/dpi/zapret2"
+	"github.com/hashcott/ghostline/internal/session"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -53,16 +55,23 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 	paths := store.PathsIn(dataDir, logDir)
 	paths.BinDir = filepath.Join(filepath.Dir(dataDir), "bin") // outside data/ (0700): nfqws2 runs as nobody
 	secretKey := secrets.NewFileKey(filepath.Join(dataDir, "secret.key"))
+	var watchSessions func(func()) (func(), error)
+	if sessions, err := session.NewLinux(slog.Default()); err == nil {
+		watchSessions = func(onNew func()) (func(), error) {
+			return sessions.WatchNew(func(session.User) { onNew() })
+		}
+	}
 	return Deps{
 		Paths:  paths,
 		Lock:   newFileLock(filepath.Join(runDir, "state.lock")),
 		Socket: filepath.Join(runDir, "ctl.sock"),
 
-		DNS:         sysdns.DetectLinux(paths.DataDir),
-		WatchResume: watchResume,
-		SysProxy:    sysproxy.Unsupported{},
-		Certs:       certstore.Unsupported{},
-		Firewall:    firewall.Unsupported{},
+		DNS:           sysdns.DetectLinux(paths.DataDir),
+		WatchResume:   watchResume,
+		WatchSessions: watchSessions,
+		SysProxy:      sysproxy.Unsupported{},
+		Certs:         certstore.Unsupported{},
+		Firewall:      firewall.Unsupported{},
 
 		DPIRunner:      dpi.NewLinuxRunner(),
 		DPIInterceptor: dpi.NewNftables(zapret2.Filter),
