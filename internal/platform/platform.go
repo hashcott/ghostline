@@ -32,8 +32,8 @@ type Deps struct {
 	Certs         certstore.Store
 	Firewall      firewall.Manager
 
-	DPIRunner   dpi.Runner
-	DPIServices dpi.Services
+	DPIRunner      dpi.Runner
+	DPIInterceptor dpi.Interceptor
 	// DPIEngines lists the engines this OS can run, with their files.
 	DPIEngines func(list func() strategies.List) []dpi.Installed
 

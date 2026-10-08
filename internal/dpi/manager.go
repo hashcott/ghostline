@@ -21,11 +21,6 @@ var (
 	ErrUnknownEngine = errors.New("dpi: unknown engine")
 )
 
-// driverService is the WinDivert 2.x service name. WinDivert 1.x (shipped
-// with GoodbyeDPI 0.2.2) used a versioned name ("WinDivert1.4"), so cleanup
-// looks for the prefix.
-const driverService = "WinDivert"
-
 // List files are copied into the engine directory under these names: the
 // engines read argv as ANSI (GoodbyeDPI) or through Cygwin (winws2), so a
 // path with Vietnamese letters (C:\Users\Đức…) would be mangled.
@@ -88,14 +83,6 @@ type Runner interface {
 	Start(exe string, args []string, dir string) (Process, error)
 }
 
-// Services controls Windows services.
-type Services interface {
-	Find(prefix string) ([]string, error)
-	Running(name string) (bool, error)
-	Stop(name string) error
-	Delete(name string) error
-}
-
 // Installed pairs an engine with the embedded files it is extracted from.
 type Installed struct {
 	Engine Engine
@@ -108,7 +95,7 @@ type Manager struct {
 	binDir  string
 	engines map[string]Installed
 	runner  Runner
-	svc     Services
+	ic      Interceptor
 	sleep   func(time.Duration)
 
 	mu      sync.Mutex
@@ -118,11 +105,11 @@ type Manager struct {
 }
 
 // NewManager manages the given engines, extracted under binDir.
-func NewManager(binDir string, engines []Installed, r Runner, s Services, sleep func(time.Duration)) *Manager {
+func NewManager(binDir string, engines []Installed, r Runner, ic Interceptor, sleep func(time.Duration)) *Manager {
 	if sleep == nil {
 		sleep = time.Sleep
 	}
-	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, svc: s, sleep: sleep}
+	m := &Manager{binDir: binDir, engines: map[string]Installed{}, runner: r, ic: ic, sleep: sleep}
 	for _, e := range engines {
 		m.engines[e.Engine.ID()] = e
 	}
@@ -137,10 +124,10 @@ func (m *Manager) Get(engine string) (Engine, bool) {
 
 func (m *Manager) dir(engine string) string { return filepath.Join(m.binDir, engine) }
 
-// Start stops whatever runs, removes leftover WinDivert services, verifies
-// (re-extracting if needed) and launches the engine. It is running when,
-// after 2s, the process is alive and the WinDivert driver is up. p's list
-// paths are absolute.
+// Start stops whatever runs (cleaning up its capture), verifies
+// (re-extracting if needed), prepares the capture and launches the engine.
+// It is running when, after 2s, the process is alive and the Interceptor
+// says it captures. p's list paths are absolute.
 func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -160,6 +147,9 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 			}
 			return 0, err
 		}
+	}
+	if err := m.ic.Prepare(); err != nil {
+		return 0, err
 	}
 	rel, err := copyLists(dir, p)
 	if err != nil {
@@ -183,9 +173,9 @@ func (m *Manager) Start(ctx context.Context, engine string, p Plan) (int, error)
 		}
 		return 0, ErrStartFailed
 	}
-	if ok, _ := m.svc.Running(driverService); !ok {
+	if !m.ic.Ready(proc.PID()) {
 		_ = proc.Kill()
-		return 0, fmt.Errorf("%w: WinDivert driver not running", ErrStartFailed)
+		return 0, fmt.Errorf("%w: %s not capturing", ErrStartFailed, m.ic.Info().Mechanism)
 	}
 	m.proc, m.running, m.plan = proc, engine, p
 	return proc.PID(), nil
@@ -239,7 +229,7 @@ func isAppControlBlock(err error) bool {
 		bytes.Contains([]byte(err.Error()), []byte("virus"))
 }
 
-// Stop kills the engine and removes every WinDivert service.
+// Stop kills the engine and cleans up its capture.
 func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -260,11 +250,7 @@ func (m *Manager) stopLocked() error {
 		}
 		m.proc, m.running, m.plan = nil, "", Plan{}
 	}
-	names, err := m.svc.Find(driverService)
-	errs = append(errs, err)
-	for _, n := range names {
-		errs = append(errs, m.svc.Stop(n), m.svc.Delete(n))
-	}
+	errs = append(errs, m.ic.Cleanup())
 	return errors.Join(errs...)
 }
 
@@ -284,3 +270,6 @@ func (m *Manager) Engine() string {
 	}
 	return m.running
 }
+
+// Info describes the packet capture for the UI.
+func (m *Manager) Info() InterceptorInfo { return m.ic.Info() }

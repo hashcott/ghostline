@@ -127,7 +127,7 @@ func newRig(t *testing.T) *rig {
 	rg.m = NewManager(rg.bin, []Installed{
 		{Engine: g, Assets: fstest.MapFS{"goodbyedpi.exe": {Data: []byte("g")}}},
 		{Engine: z, Assets: fstest.MapFS{"zapret2.exe": {Data: []byte("z")}, "lua/a.lua": {Data: []byte("lua")}}},
-	}, rg.r, rg.s, func(time.Duration) {})
+	}, rg.r, NewWinDivert(rg.s), func(time.Duration) {})
 	return rg
 }
 
@@ -261,7 +261,7 @@ func TestManager_TamperedAssetIsHashMismatch(t *testing.T) {
 	c := &calls{}
 	e := &fakeEngine{id: "zapret2", files: map[string]string{"zapret2.exe": sha("z")}}
 	m := NewManager(t.TempDir(), []Installed{{Engine: e, Assets: fstest.MapFS{"zapret2.exe": {Data: []byte("evil")}}}},
-		&fakeRunner{c: c}, &fakeSvc{c: c, running: true}, func(time.Duration) {})
+		&fakeRunner{c: c}, NewWinDivert(&fakeSvc{c: c, running: true}), func(time.Duration) {})
 	_, err := m.Start(context.Background(), "zapret2", Plan{})
 	require.ErrorIs(t, err, ErrHashMismatch)
 }

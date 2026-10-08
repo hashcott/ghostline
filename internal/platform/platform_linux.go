@@ -67,9 +67,9 @@ func newLinux(dataDir, logDir, runDir string) (Deps, error) {
 		Certs:         certstore.Unsupported{},
 		Firewall:      firewall.Unsupported{},
 
-		DPIRunner:   dpi.UnsupportedRunner{},
-		DPIServices: dpi.NoServices{},
-		DPIEngines:  func(func() strategies.List) []dpi.Installed { return nil },
+		DPIRunner:      dpi.UnsupportedRunner{},
+		DPIInterceptor: dpi.NoInterceptor{},
+		DPIEngines:     func(func() strategies.List) []dpi.Installed { return nil },
 
 		// systemd is the watchdog (ExecStopPost=--restore) and the boot
 		// restore, so Connect's safety step has nothing to start.

@@ -41,8 +41,8 @@ func New(exe string) (Deps, error) {
 		Certs:         certstore.NewWindows(certstore.LocalMachine),
 		Firewall:      firewall.NewNetsh(exe),
 
-		DPIRunner:   dpi.NewWindowsRunner(),
-		DPIServices: dpi.NewWindowsServices(),
+		DPIRunner:      dpi.NewWindowsRunner(),
+		DPIInterceptor: dpi.NewWinDivert(dpi.NewWindowsServices()),
 		DPIEngines: func(list func() strategies.List) []dpi.Installed {
 			return []dpi.Installed{
 				{Engine: goodbyedpi.New(), Assets: goodbyedpiFiles.FS},

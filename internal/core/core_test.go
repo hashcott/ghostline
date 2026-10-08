@@ -49,7 +49,7 @@ func testDeps(t *testing.T) platform.Deps {
 		SysProxy: sysproxy.Unsupported{}, WatchSysProxy: watch,
 		Certs: certstore.Unsupported{}, Firewall: firewall.Unsupported{},
 
-		DPIRunner: dpi.UnsupportedRunner{}, DPIServices: dpi.NoServices{},
+		DPIRunner: dpi.UnsupportedRunner{}, DPIInterceptor: dpi.NoInterceptor{},
 		DPIEngines: func(func() strategies.List) []dpi.Installed { return nil },
 
 		Startup:       startup.Unsupported{},
