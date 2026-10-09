@@ -21,6 +21,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/certs"
 	"github.com/hashcott/ghostline/internal/proxy/mitm"
+	"github.com/hashcott/ghostline/internal/tlsfrag"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,7 +108,7 @@ func readHello(t *testing.T, br *bufio.Reader) []byte {
 	t.Helper()
 	hdr, err := br.Peek(5)
 	require.NoError(t, err)
-	n := 5 + int(hdr[3])<<8 | int(hdr[4])
+	n, _ := tlsfrag.RecordLen(hdr)
 	hello := make([]byte, n)
 	_, err = io.ReadFull(br, hello)
 	require.NoError(t, err)
