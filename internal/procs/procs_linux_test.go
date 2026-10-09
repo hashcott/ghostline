@@ -35,6 +35,12 @@ func TestLinux_WaitForExitReturnsWhenChildExits(t *testing.T) {
 	_ = cmd.Wait()
 }
 
+func TestLinux_ProcessNamesIncludesThisTest(t *testing.T) {
+	names, err := NewLinux().ProcessNames()
+	require.NoError(t, err)
+	require.Contains(t, names, procName(uint32(os.Getpid())))
+}
+
 func TestLinux_IsAdminMatchesEuid(t *testing.T) {
 	require.Equal(t, os.Geteuid() == 0, NewLinux().IsAdmin())
 }

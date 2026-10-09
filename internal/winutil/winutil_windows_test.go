@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -68,6 +69,14 @@ func TestProcessAlive(t *testing.T) {
 	require.True(t, ProcessAlive(pid, start))
 	require.False(t, ProcessAlive(pid, start.Add(time.Second)))
 	require.False(t, ProcessAlive(0xFFFFFFF0, start))
+}
+
+func TestProcessNames_IncludesThisTest(t *testing.T) {
+	names, err := ProcessNames()
+	require.NoError(t, err)
+	self, err := os.Executable()
+	require.NoError(t, err)
+	require.Contains(t, names, filepath.Base(self))
 }
 
 func TestJob_KillsChildOnClose(t *testing.T) {

@@ -39,7 +39,7 @@ func TestConnect_FailureAtEachStepRollsBack(t *testing.T) {
 	}{
 		{"pick", CodeNoServers, nil},
 		{"engine.start", CodeEngineSelfTest, nil},
-		{"engine.selftest", CodeEngineSelfTest, []string{"engine.stop"}},
+		{"engine.selftest", CodeEngineSelfTest, []string{"engine.stop", "sys.loopback"}},
 		{"dns.snapshot", CodeSetDNSFailed, []string{"engine.stop"}},
 		{"safety.watchdog", CodeInternal, []string{"state.clean", "engine.stop"}},
 		{"dns.apply", CodeSetDNSFailed, []string{"dns.restore", "dns.flush", "safety.task.delete", "safety.watchdog.stop", "state.clean", "engine.stop"}},
@@ -273,4 +273,70 @@ func (p progressPicker) Pick(ctx context.Context, onProgress func(done, total in
 	}
 	p.after()
 	return p.inner.Pick(ctx, nil)
+}
+
+// The engine runs but its self test gets no answer: another program on
+// this machine takes the loopback DNS packets (AdGuard, antivirus, VPN).
+func TestConnect_SelfTestTimeoutWithDNSIntercepted(t *testing.T) {
+	h := newHarness(t)
+	h.eng.selfE = errors.New("read udp 127.0.0.1:64590->127.0.0.1:53: i/o timeout")
+	h.sys.loopErr = errors.New("no datagram")
+	h.sys.procNames = []string{"System", "svchost.exe", "AdguardSvc.exe"}
+	require.Error(t, h.o.Connect(context.Background()))
+	e := h.o.Snapshot().Error
+	require.Equal(t, CodeDNSIntercepted, e.Code)
+	require.Equal(t, "AdGuard", e.Params["name"])
+	require.Equal(t, "adguard", e.Params["hint"])
+	// The probe runs once the engine has released port 53.
+	require.Equal(t, []string{"engine.stop", "sys.loopback"}, after(h.r.list(), "engine.selftest"))
+}
+
+// An interceptor Ghostline does not know by name is still reported.
+func TestConnect_SelfTestTimeoutWithUnknownInterceptor(t *testing.T) {
+	h := newHarness(t)
+	h.eng.selfE = errors.New("i/o timeout")
+	h.sys.loopErr = errors.New("no datagram")
+	h.sys.procNames = []string{"System", "mystery.exe"}
+	require.Error(t, h.o.Connect(context.Background()))
+	e := h.o.Snapshot().Error
+	require.Equal(t, CodeDNSIntercepted, e.Code)
+	require.Equal(t, "", e.Params["name"])
+	require.Equal(t, "", e.Params["hint"])
+}
+
+// Several known interceptors run: all are named, the first gives the hint.
+func TestConnect_SelfTestTimeoutWithSeveralInterceptors(t *testing.T) {
+	h := newHarness(t)
+	h.eng.selfE = errors.New("i/o timeout")
+	h.sys.loopErr = errors.New("no datagram")
+	h.sys.procNames = []string{"AvastSvc.exe", "Adguard.exe"}
+	require.Error(t, h.o.Connect(context.Background()))
+	e := h.o.Snapshot().Error
+	require.Equal(t, "AdGuard, Avast", e.Params["name"])
+	require.Equal(t, "adguard", e.Params["hint"])
+}
+
+// Loopback DNS works, so the engine itself failed: the old error stays.
+func TestConnect_SelfTestFailsWithLoopbackWorking(t *testing.T) {
+	h := newHarness(t)
+	h.eng.selfE = errors.New("i/o timeout")
+	h.sys.procNames = []string{"AdguardSvc.exe"} // running, DNS protection off
+	require.Error(t, h.o.Connect(context.Background()))
+	require.Equal(t, CodeEngineSelfTest, h.o.Snapshot().Error.Code)
+}
+
+func TestFindDNSInterceptors(t *testing.T) {
+	names := func(ds []dnsInterceptor) []string {
+		var out []string
+		for _, d := range ds {
+			out = append(out, d.name)
+		}
+		return out
+	}
+	require.Equal(t, []string{"AdGuard"}, names(findDNSInterceptors([]string{"adguard.exe", "AdguardSvc.exe"})))
+	require.Equal(t, []string{"AdGuard"}, names(findDNSInterceptors([]string{`C:\Program Files\AdGuard\AdguardSvc.exe`})))
+	require.Equal(t, []string{"Avast", "Portmaster"}, names(findDNSInterceptors([]string{"portmaster-core_v1-6-10.exe", "AvastSvc.exe"})))
+	require.Equal(t, []string{"YogaDNS"}, names(findDNSInterceptors([]string{"YogaDNS.exe"})))
+	require.Empty(t, findDNSInterceptors([]string{"chrome.exe", "AdGuardHome.exe", "portmaster.exe"}))
+	require.Empty(t, findDNSInterceptors(nil))
 }

@@ -31,7 +31,8 @@ func (windowsInspector) StartTime(pid uint32) (time.Time, error) {
 func (windowsInspector) Alive(pid uint32, start time.Time) bool {
 	return winutil.ProcessAlive(pid, start)
 }
-func (windowsInspector) WaitForExit(pid uint32) error { return winutil.WaitForExit(pid) }
+func (windowsInspector) WaitForExit(pid uint32) error    { return winutil.WaitForExit(pid) }
+func (windowsInspector) ProcessNames() ([]string, error) { return winutil.ProcessNames() }
 func (windowsInspector) StopService(name string, wait time.Duration) error {
 	return winutil.StopService(name, wait)
 }

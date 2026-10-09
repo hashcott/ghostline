@@ -9,7 +9,7 @@ const keys = (o: Record<string, unknown>, p = ""): string[] =>
   );
 
 const goCodes = [
-  "NOT_ADMIN", "PORT53_BUSY", "NO_SERVERS", "ENGINE_SELFTEST_FAILED", "SET_DNS_FAILED", "VERIFY_LEAK",
+  "NOT_ADMIN", "PORT53_BUSY", "NO_SERVERS", "ENGINE_SELFTEST_FAILED", "DNS_INTERCEPTED", "SET_DNS_FAILED", "VERIFY_LEAK",
   "RESTORE_FAILED", "DPI_START_FAILED", "DPI_BLOCKED_BY_AV", "DPI_HASH_MISMATCH", "SERVERLIST_BAD_SIGNATURE",
   "UPDATE_CHECK_FAILED", "AUTOTUNE_NO_PRESET", "INTERNAL", "SETTINGS_RESET", "STATE_RESET", "NOT_CONNECTED",
   // Phase 3.
@@ -21,6 +21,12 @@ const goCodes = [
 describe("i18n", () => {
   test("vi and en have identical keys", () => {
     expect(keys(en).sort()).toEqual(keys(vi).sort());
+  });
+
+  test("every DNS interceptor in internal/app/intercept.go has a hint", () => {
+    for (const id of ["adguard", "avast", "avg", "yogadns", "portmaster"]) {
+      expect((vi as any).errors.DNS_INTERCEPTED.hint[id], id).toBeTruthy();
+    }
   });
 
   test("every Go error code has a message", () => {

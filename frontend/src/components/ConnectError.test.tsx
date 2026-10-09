@@ -122,3 +122,18 @@ test("Windows (no install kind) shows only retry", async () => {
   await waitFor(() => expect(svc.ServiceInstall).toHaveBeenCalled());
   expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["thử lại"]);
 });
+
+test("DNS intercepted by a known program names it and says how to fix it", () => {
+  useGhost.getState().setSnapshot({ ...unreachable, error: { code: "DNS_INTERCEPTED", params: { name: "AdGuard", hint: "adguard" } } } as any);
+  render(<ConnectError onOpenServers={() => {}} onOpenLogs={() => {}} />);
+  expect(screen.getByText("Có vẻ AdGuard đang chặn DNS của máy nên Ghostline không nhận được truy vấn")).toBeTruthy();
+  expect(screen.getByText("Mở AdGuard → Cài đặt → Bảo vệ DNS → tắt, rồi bấm Thử lại")).toBeTruthy();
+  expect(screen.getByText("thử lại")).toBeTruthy();
+});
+
+test("DNS intercepted by an unknown program still explains the cause", () => {
+  useGhost.getState().setSnapshot({ ...unreachable, error: { code: "DNS_INTERCEPTED", params: { name: "", hint: "" } } } as any);
+  render(<ConnectError onOpenServers={() => {}} onOpenLogs={() => {}} />);
+  expect(screen.getByText(/trình chặn quảng cáo, antivirus hoặc VPN/)).toBeTruthy();
+  expect(screen.getByText(/Tắt tính năng lọc DNS/)).toBeTruthy();
+});

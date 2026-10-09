@@ -402,7 +402,7 @@ func (o *Orchestrator) connectSteps() []step {
 			}
 			if err := o.d.Engine.SelfTest(ctx); err != nil {
 				warnIgnored("engine stop", o.d.Engine.Stop(context.WithoutCancel(ctx)))
-				return appErr(CodeEngineSelfTest, err)
+				return o.selfTestErr(err)
 			}
 			o.mu.Lock()
 			o.servers = picked
