@@ -4,6 +4,10 @@ After=network.target NetworkManager.service systemd-resolved.service
 
 [Service]
 Type=simple
+# zapret2's packet queue. The daemon has no CAP_SYS_MODULE, so the modules
+# are loaded here with full privileges (+); a kernel without them does not
+# stop the service (-), DPI then reports it.
+ExecStartPre=+-modprobe -a nfnetlink_queue nft_queue
 ExecStart=@DAEMON@ --daemon
 ExecStopPost=@DAEMON@ --restore
 Restart=on-failure

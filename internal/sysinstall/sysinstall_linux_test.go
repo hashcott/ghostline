@@ -55,6 +55,17 @@ func TestUnit_FillsDaemonPath(t *testing.T) {
 	require.Contains(t, u, "CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_KILL CAP_DAC_OVERRIDE CAP_CHOWN CAP_FOWNER\n")
 }
 
+// The daemon may not load kernel modules (no CAP_SYS_MODULE), so the
+// packet queue zapret2 needs is loaded before it starts, with full
+// privileges ("+") and without failing the service when the kernel has
+// no such modules ("-"). After a reboot they are not loaded yet.
+func TestUnit_LoadsTheQueueModulesBeforeTheDaemon(t *testing.T) {
+	u := string(Unit("/x/ghostlined"))
+	require.Contains(t, u, "ExecStartPre=+-modprobe -a nfnetlink_queue nft_queue\n")
+	require.Less(t, strings.Index(u, "ExecStartPre="), strings.Index(u, "ExecStart=/x/ghostlined"))
+	require.NotContains(t, u, "CAP_SYS_MODULE", "the daemon itself stays without it")
+}
+
 func TestInstall_Fresh(t *testing.T) {
 	i, sys := newInstaller(t)
 	require.NoError(t, i.Install())
