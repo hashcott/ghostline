@@ -11,8 +11,12 @@ import (
 
 // applyPlatformOptions keeps Ghostline in the tray when its window closes,
 // restores DNS before Windows logs off or shuts down, and re-checks the
-// engine after sleep.
+// engine after sleep. It also lets the tray icon come back when the
+// taskbar is (re)created.
 func applyPlatformOptions(opts *application.Options, orch *app.Orchestrator) {
+	if err := allowTaskbarCreated(); err != nil {
+		slog.Warn("shell: the tray icon will not come back after Explorer restarts", "err", err)
+	}
 	opts.Windows = application.WindowsOptions{
 		DisableQuitOnLastWindowClosed: true,
 		WndProcInterceptor: func(hwnd uintptr, msg uint32, wParam, lParam uintptr) (uintptr, bool) {
