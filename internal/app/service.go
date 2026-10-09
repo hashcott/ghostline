@@ -818,11 +818,17 @@ func RunStats(s *Service, ctx context.Context, ticks <-chan time.Time) {
 }
 
 // InstallInfo is how the GUI was installed (Linux): which service buttons
-// it shows when the daemon cannot be reached.
+// it shows when the daemon cannot be reached or is older than the GUI.
 type InstallInfo struct {
-	Kind    string `json:"kind"` // "appimage", "package", "tarball"; "" without service buttons
-	Unit    bool   `json:"unit"`
-	SteamOS bool   `json:"steamos"`
+	Kind     string `json:"kind"` // "appimage", "package", "tarball"; "" without service buttons
+	Unit     bool   `json:"unit"`
+	SteamOS  bool   `json:"steamos"`
+	Packaged bool   `json:"packaged"` // the service came from a package
+	// ServiceVersion is the daemon's build ("" when it cannot be reached),
+	// AppVersion the GUI's. Outdated: the daemon is an older release.
+	ServiceVersion string `json:"serviceVersion"`
+	AppVersion     string `json:"appVersion"`
+	Outdated       bool   `json:"outdated"`
 }
 
 // ServiceInstall is answered by the Linux GUI itself (internal/rpc/client):

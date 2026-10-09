@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashcott/ghostline/internal/app"
+	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/rpc"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/stretchr/testify/require"
@@ -173,4 +174,42 @@ func TestDialogMethods_AreTheCtxMethods(t *testing.T) {
 		}
 	}
 	require.Equal(t, dialogMethods, got)
+}
+
+func TestServiceInstall_DaemonVersion(t *testing.T) {
+	old := brand.Version
+	t.Cleanup(func() { brand.Version = old })
+	cases := []struct {
+		daemon, gui string
+		outdated    bool
+	}{
+		{"0.6.0", "0.6.2", true},
+		{"0.6.2", "0.6.2", false},
+		{"0.6.3", "0.6.2", false}, // never offer a downgrade
+		{"0.6.0", "dev", false},
+		{"dev", "0.6.2", false},
+	}
+	for _, c := range cases {
+		brand.Version = c.gui
+		sock := filepath.Join(t.TempDir(), "ctl.sock")
+		l, err := net.Listen("unix", sock)
+		require.NoError(t, err)
+		srv := rpc.NewServer(rpc.ServiceHandler(fakeApp{}), c.daemon, func(net.Conn) error { return nil }, quiet())
+		go func() { _ = srv.Serve(l) }()
+		s, conn := New(sock, quiet(), nil)
+		got := s.ServiceInstall()
+		require.Equal(t, c.daemon, got.ServiceVersion, c)
+		require.Equal(t, c.gui, got.AppVersion, c)
+		require.Equal(t, c.outdated, got.Outdated, c)
+		conn.Close()
+		srv.Close()
+	}
+}
+
+func TestServiceInstall_DaemonDown(t *testing.T) {
+	s, conn := New(filepath.Join(t.TempDir(), "none.sock"), quiet(), nil)
+	defer conn.Close()
+	got := s.ServiceInstall()
+	require.Empty(t, got.ServiceVersion)
+	require.False(t, got.Outdated)
 }

@@ -249,3 +249,16 @@ func TestReplyTooLargeIsAnError(t *testing.T) {
 		t.Fatal("the call hung")
 	}
 }
+
+func TestClientKeepsDaemonVersion(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "ctl.sock")
+	l, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+	s := NewServer(echo, "0.6.0", acceptAll, quiet())
+	go func() { _ = s.Serve(l) }()
+	t.Cleanup(func() { _ = s.Close() })
+	c, err := Dial(context.Background(), sock, "0.6.2")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+	require.Equal(t, "0.6.0", c.DaemonVersion())
+}

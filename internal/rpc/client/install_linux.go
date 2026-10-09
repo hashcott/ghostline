@@ -33,7 +33,7 @@ func newInstaller() *installer {
 
 func (in *installer) info() app.InstallInfo {
 	d := sysinstall.Detect(in.getenv, in.exists, in.osRelease())
-	return app.InstallInfo{Kind: d.Kind, Unit: d.Unit, SteamOS: d.SteamOS}
+	return app.InstallInfo{Kind: d.Kind, Unit: d.Unit, SteamOS: d.SteamOS, Packaged: d.Packaged}
 }
 
 // install runs this build's ghostlined --install-system as root.
