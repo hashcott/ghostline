@@ -1,11 +1,13 @@
 # Danh sách kiểm tra trước khi phát hành
 
-Chạy trên Windows 11 x64, terminal **admin**. Đánh dấu từng mục; mục nào hỏng thì không phát hành.
+Phần Windows chạy trên Windows 11 x64, terminal **admin**; phần Linux ở mục *Kiểm tra thủ công Linux* bên dưới. Đánh dấu từng mục; mục nào hỏng thì không phát hành.
 
 ## Test tự động
 
 - [ ] `go test ./...` và `cd frontend && npm test` xanh
 - [ ] `go test -tags integration ./internal/sysdns/... ./internal/startup/... ./internal/sysproxy/...` xanh (admin)
+- [ ] CI trên `main` xanh cả ba job: `test` (Windows), `linux` (gồm test root, đóng gói, cài/gỡ deb và tar.gz trên runner), `pkgbuild`
+- [ ] Linux, bằng root: `sudo -E env "PATH=$PATH" go test -tags integration_root ./internal/sysdns/ ./internal/dpi/ ./cmd/ghostlined/` xanh
 
 ## Kiểm tra thủ công (spec §11)
 

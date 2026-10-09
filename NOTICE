@@ -12,8 +12,8 @@ Ghostline includes or depends on the following third-party software:
   Copyright ValdikSS. Bundled unmodified; license in assets/goodbyedpi/LICENSE-goodbyedpi.txt
 
 - zapret2 v1.0.5.2 (github.com/bol-van/zapret2) — MIT License
-  Copyright bol-van. winws2.exe and the zapret-lib, zapret-antidpi and
-  zapret-auto Lua files are bundled unmodified; license in
+  Copyright bol-van. winws2.exe (Windows), nfqws2 (Linux) and the zapret-lib,
+  zapret-antidpi and zapret-auto Lua files are bundled unmodified; license in
   assets/zapret2/LICENSE-zapret2.txt
 
 - Cygwin runtime (cygwin1.dll, cygwin.com), shipped with zapret2 — GNU LGPL v3
@@ -27,7 +27,12 @@ Ghostline includes or depends on the following third-party software:
 - JetBrains Mono (github.com/JetBrains/JetBrainsMono) — SIL Open Font License 1.1
   License in frontend/src/assets/fonts/OFL-JetBrainsMono.txt
 
+- AppImage type2 runtime (github.com/AppImage/type2-runtime), in the Linux
+  AppImage — MIT License. Bundled unmodified; see build/linux/appimage/RUNTIME.md
+
 - Wails (github.com/wailsapp/wails) — MIT License
+- godbus/dbus — BSD 2-Clause License; google/nftables — Apache License 2.0;
+  mdlayher/netlink — MIT License (Linux)
 - miekg/dns, ameshkov/dnsstamps, jedisct1/go-minisign — see their repositories
 - React, i18next, react-i18next, zustand — MIT License
 

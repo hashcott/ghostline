@@ -15,12 +15,13 @@
 [English](README.md) · Tiếng Việt
 
 <a href="https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe"><img src="https://img.shields.io/badge/%E2%AC%87%20T%E1%BA%A3i%20v%E1%BB%81-Windows%2010%2F11%20x64-2ea44f?style=for-the-badge" alt="Tải Ghostline cho Windows"></a>
+<a href="#linux-x86_64"><img src="https://img.shields.io/badge/%E2%AC%87%20T%E1%BA%A3i%20v%E1%BB%81-Linux%20x86__64-2ea44f?style=for-the-badge" alt="Tải Ghostline cho Linux"></a>
 
 </div>
 
 ---
 
-Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ mọi card mạng về đó, rồi chuyển tiếp truy vấn qua **DoH, DoT, DoQ hoặc DNSCrypt** tới máy chủ nhanh nhất còn hoạt động. Khi kết nối mã hoá bị can thiệp bằng cách soi gói tin (DPI), Ghostline có thể chạy thêm một engine vượt DPI: **zapret2** (khuyên dùng) hoặc **GoodbyeDPI**. Trên hết, Ghostline được thiết kế để **luôn trả lại DNS gốc của bạn**, kể cả khi app bị tắt đột ngột hay máy mất điện.
+Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ DNS của hệ thống về đó (mọi card mạng trên Windows; NetworkManager, systemd-resolved hoặc `/etc/resolv.conf` trên Linux), rồi chuyển tiếp truy vấn qua **DoH, DoT, DoQ hoặc DNSCrypt** tới máy chủ nhanh nhất còn hoạt động. Khi kết nối mã hoá bị can thiệp bằng cách soi gói tin (DPI), Ghostline có thể chạy thêm một engine vượt DPI: **zapret2** (khuyên dùng), hoặc **GoodbyeDPI** trên Windows. Trên hết, Ghostline được thiết kế để **luôn trả lại DNS gốc của bạn**, kể cả khi app bị tắt đột ngột hay máy mất điện.
 
 <p align="center">
   <img src="docs/screenshots/simple-vi.png" height="360" alt="Giao diện Đơn giản">
@@ -49,10 +50,10 @@ Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ m�
 
 - **Mã hoá DNS cho toàn hệ thống:** hỗ trợ DoH, DoT, DoQ, DNSCrypt, chạy trên [AdGuard dnsproxy](https://github.com/AdguardTeam/dnsproxy).
 - **Tự chọn máy chủ:** quét song song, loại máy chủ trả kết quả bị đầu độc, và nhớ máy chủ tốt nhất cho từng mạng.
-- **Không bao giờ mất mạng:** chụp lại DNS gốc của từng card mạng trước khi đổi, với 5 lớp khôi phục: ngắt kết nối sạch, tiến trình watchdog, khôi phục khi mở lại app, tác vụ chạy lúc đăng nhập, và lớp bảo vệ mạng vẫn chạy được khi antivirus cách ly `ghostline.exe`.
+- **Không bao giờ mất mạng:** chụp lại DNS gốc trước khi đổi và luôn trả về. Trên Windows có 5 lớp khôi phục: ngắt kết nối sạch, tiến trình watchdog, khôi phục khi mở lại app, tác vụ chạy lúc đăng nhập, và lớp bảo vệ mạng vẫn chạy được khi antivirus cách ly `ghostline.exe`. Trên Linux, dịch vụ systemd khôi phục khi ngắt kết nối, khi dừng hoặc bị crash, và lúc khởi động máy.
 - **Xác minh không rò rỉ:** sau khi kết nối, Ghostline kiểm tra truy vấn thật sự đi qua nó.
-- **Vượt DPI với hai engine:** đi kèm [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (gói giả, nhiều kiểu cắt, hỗ trợ QUIC cho YouTube/Google) và GoodbyeDPI 0.2.3rc3, đều được khoá mã băm. Chiến lược zapret2 lấy từ danh sách có chữ ký, cập nhật hằng ngày; có tự dò, danh sách đen, tự phát hiện trang bị chặn, và chia nhỏ (fragment) truy vấn DoH. Nếu antivirus chặn zapret2, Ghostline tạm chạy GoodbyeDPI và cho phép thử lại.
-- **Proxy cục bộ (HTTP / HTTPS / SOCKS4/5):** chạy cùng nút Connect, có thể đặt làm System Proxy của Windows, và chia sẻ cho điện thoại hay thiết bị khác cùng Wi-Fi (có mã QR). Tên miền luôn được phân giải qua DNS mã hoá của Ghostline.
+- **Vượt DPI:** đi kèm [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (gói giả, nhiều kiểu cắt, hỗ trợ QUIC cho YouTube/Google), chạy qua WinDivert trên Windows và hàng đợi nftables trên Linux, cùng GoodbyeDPI 0.2.3rc3 trên Windows, đều được khoá mã băm. Chiến lược zapret2 lấy từ danh sách có chữ ký, cập nhật hằng ngày; có tự dò, danh sách đen, tự phát hiện trang bị chặn, và chia nhỏ (fragment) truy vấn DoH. Trên Windows, nếu antivirus chặn zapret2, Ghostline tạm chạy GoodbyeDPI và cho phép thử lại.
+- **Proxy cục bộ (HTTP / HTTPS / SOCKS4/5):** chạy cùng nút Connect, có thể đặt làm proxy hệ thống (Windows, GNOME, KDE), và chia sẻ cho điện thoại hay thiết bị khác cùng Wi-Fi (có mã QR). Tên miền luôn được phân giải qua DNS mã hoá của Ghostline.
 - **Fragment web không cần driver:** lưu lượng qua proxy được tự động cắt nhỏ ClientHello khi trang bị chặn theo SNI, và Ghostline ghi nhớ cách vượt cho từng mạng.
 - **Rules và danh sách cộng đồng:** chặn, cho phép, DNS giả, fragment hoặc đi qua upstream proxy theo domain, keyword, regexp hay CIDR. Import danh sách hosts, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash, v2ray, sing-box hoặc CIDR thẳng từ link GitHub, tự cập nhật theo lịch.
 - **DNS server cho mạng nhà:** DNS mã hoá cho điện thoại, TV, máy chơi game và router trong Wi-Fi: DNS cổng 53 (không cần chứng chỉ) hoặc DNS-over-HTTPS, có trang cài đặt qua mã QR và profile cho iOS.
@@ -61,7 +62,7 @@ Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ m�
 - **Sao lưu và khôi phục:** xuất cài đặt, rule, danh sách và server tự thêm ra một file rồi nhập trên máy khác. Thông tin riêng tư và gắn với máy không bao giờ được xuất, và khi nhập không bao giờ tự bật Fake SNI hay chia sẻ trong LAN.
 - **Danh sách máy chủ có chữ ký:** cập nhật mỗi ngày, xác minh bằng ed25519; danh sách DNSCrypt được kiểm tra bằng minisign.
 - **Giao diện Đơn giản và Đầy đủ**, icon khay, giao diện tiếng Việt và tiếng Anh, phong cách neon-terminal.
-- **Bản cài đặt hoặc portable:** bản portable lưu mọi dữ liệu trong thư mục `data\` cạnh file exe.
+- **Bản cài đặt, portable hoặc gói Linux:** trên Windows có bản cài đặt và bản portable (lưu mọi dữ liệu trong thư mục `data\` cạnh file exe); trên Linux có `.deb`, `.rpm`, AppImage, `tar.gz` và PKGBUILD.
 - **Chỉ thông báo khi có bản mới:** không bao giờ tự cập nhật ngầm.
 
 ## Video hướng dẫn
@@ -97,6 +98,8 @@ Video hơn 3 phút có lồng tiếng: kết nối bằng một nút bấm, mứ
 | `ghostline-amd64-installer.exe` | Bản cài đặt (tự cài WebView2 nếu thiếu) | **[Tải trực tiếp ⬇](https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe)** |
 | `Ghostline-<phiên bản>-portable.zip` | Bản portable: giải nén rồi chạy | [Từ bản mới nhất](https://github.com/hashcott/ghostline/releases/latest) |
 | `SHA256SUMS` | Mã SHA-256 của hai file trên | [Tải trực tiếp](https://github.com/hashcott/ghostline/releases/latest/download/SHA256SUMS) |
+
+### Windows
 
 Kiểm tra file đã tải:
 
@@ -137,24 +140,30 @@ Trên Linux, Ghostline gồm hai phần: dịch vụ nền (`ghostline.service`,
 
 1. Mở Ghostline và bấm **Kết nối**. App tự chọn máy chủ, chuyển hướng DNS và kiểm tra rò rỉ.
 2. Nếu vẫn còn trang bị chặn, hoặc bật **proxy** (Đầy đủ → Proxy → bật proxy + dùng cho máy này) để trình duyệt được fragment tự động, hoặc vào **Đầy đủ → Vượt DPI**, chọn engine (khuyên dùng **zapret2**), bật lên rồi bấm **tự dò**.
-   Muốn chia sẻ cho thiết bị khác, bật **chia sẻ LAN** rồi quét mã QR bằng điện thoại (mạng phải là *Private*).
+   Muốn chia sẻ cho thiết bị khác, bật **chia sẻ LAN** rồi quét mã QR bằng điện thoại (trên Windows, mạng phải là *Private*).
 3. Bấm **Ngắt kết nối** (hoặc thoát từ icon khay) để trả lại DNS gốc.
 
-Nếu DNS có vẻ không đúng, vào **Cài đặt → Khôi phục DNS ngay** để đưa mọi card mạng về trạng thái đã lưu. Bạn cũng có thể chạy lệnh:
+Nếu DNS có vẻ không đúng, vào **Cài đặt → Khôi phục DNS ngay** để đưa DNS của hệ thống về trạng thái đã lưu. Bạn cũng có thể chạy lệnh:
 
 ```powershell
 ghostline.exe --restore
 ```
 
+Trên Linux, dừng dịch vụ là DNS được trả về: `sudo systemctl stop ghostline` (rồi `sudo systemctl start ghostline`).
+
 ## Cách hoạt động
 
 ```
-ứng dụng ──► DNS client của Windows ──► 127.0.0.1:53 (Ghostline / dnsproxy) ──► DoH · DoT · DoQ · DNSCrypt
-                                                │
+ứng dụng ──► DNS hệ thống ──► 127.0.0.1:53 (Ghostline / dnsproxy) ──► DoH · DoT · DoQ · DNSCrypt
+            (DNS client của Windows,      │
+             NetworkManager, resolved     │
+             hoặc resolv.conf)            │
             zapret2 / GoodbyeDPI (tuỳ chọn) biến đổi gói TLS/HTTP/QUIC đi ra để né lọc SNI
 ```
 
-**Lưới an toàn.** Trước khi đổi DNS của một card mạng, Ghostline ghi lại DNS hiện tại của card đó vào `state.json`. Năm lớp sau bảo đảm bản lưu này luôn được khôi phục:
+Trên Linux, Ghostline gồm một dịch vụ chạy bằng root (`ghostlined`, do systemd chạy) nắm DNS, DPI và proxy, và cửa sổ app chạy bằng tài khoản của bạn, nói chuyện với dịch vụ qua socket cục bộ. Đóng cửa sổ không làm dừng bảo vệ.
+
+**Lưới an toàn.** Trước khi đổi DNS, Ghostline ghi lại DNS hiện tại vào `state.json`. Trên Windows, năm lớp sau bảo đảm bản lưu này luôn được khôi phục:
 
 1. **Ngắt kết nối sạch:** trường hợp thông thường.
 2. **Watchdog:** một tiến trình `--watchdog` riêng khôi phục DNS trong vài giây nếu app chết.
@@ -162,7 +171,9 @@ ghostline.exe --restore
 4. **Tác vụ đăng nhập:** tác vụ `Ghostline Recovery` chạy `--restore` sau khi máy treo hoặc mất điện.
 5. **Bảo vệ mạng:** trong lúc kết nối, tác vụ `Ghostline Network Guard` chạy một script PowerShell bằng quyền SYSTEM mỗi phút, lúc khởi động máy và ngay sau khi Microsoft Defender xử lý một mối đe doạ. Nếu Ghostline đã tắt mà DNS vẫn trỏ về 127.0.0.1, script trả DNS và proxy hệ thống về như cũ theo `state.json`. Lớp này không cần `ghostline.exe`, nên vẫn hoạt động khi antivirus kill và cách ly app cùng các lớp ở trên.
 
-Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/specs).
+Trên Linux, systemd đóng vai watchdog: dịch vụ khôi phục khi ngắt kết nối, `ExecStopPost=--restore` chạy mỗi khi dịch vụ dừng hoặc bị crash (kể cả `kill -9`), và lúc khởi động máy dịch vụ khôi phục những gì lần mất điện để lại trước khi làm việc khác.
+
+Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/specs), và [`docs/platforms.md`](docs/platforms.md) chỉ ra mỗi tính năng nằm ở code nào trên Windows và Linux.
 
 ## Quyền riêng tư
 
@@ -173,12 +184,14 @@ Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/
 
 ## Hạn chế đã biết
 
+- **Fake SNI** chỉ áp dụng cho trình duyệt trên máy này đi qua proxy, chỉ cho tên miền có rule `sni=`, và làm hỏng app ghim chứng chỉ. Firefox có thể cần bật `security.enterprise_roots.enabled`.
+- **Thiết bị dùng DNS của máy tính sẽ mất mạng khi máy tắt hoặc ngắt kết nối.** iOS không có DNS dự phòng: với profile DoH, iPhone mất mạng ở Wi-Fi nhà cho tới khi bạn chọn *Tự động* trong *Cài đặt › Cài đặt chung › VPN và quản lý thiết bị › DNS* (4G/5G không bị ảnh hưởng). Nút Ngắt kết nối sẽ hỏi lại khi có thiết bị trong mạng đang dùng DNS server; nếu máy tính hay tắt, hãy đặt DNS thủ công cho iPhone thay vì dùng profile. Private DNS của Android không dùng được với Ghostline; hãy đặt DNS tĩnh cho Wi-Fi.
+
+### Windows
+
 - Nếu bạn duyệt UAC bằng **tài khoản admin khác**, `%APPDATA%` và System Proxy là của tài khoản đó, nên "dùng cho máy này" không áp dụng cho người dùng đang đăng nhập.
 - Fragment web chỉ giúp được ứng dụng đi qua proxy. Ứng dụng bỏ qua proxy của Windows (một số game, Firefox có cài đặt proxy riêng) cần dùng engine vượt DPI.
 - Chia sẻ LAN chỉ hoạt động trên mạng được Windows đánh dấu **Private**; Ghostline không bao giờ tự đổi profile mạng.
-
-- **Fake SNI** chỉ áp dụng cho trình duyệt trên máy này đi qua proxy, chỉ cho tên miền có rule `sni=`, và làm hỏng app ghim chứng chỉ. Firefox có thể cần bật `security.enterprise_roots.enabled`.
-- **Thiết bị dùng DNS của máy tính sẽ mất mạng khi máy tắt hoặc ngắt kết nối.** iOS không có DNS dự phòng: với profile DoH, iPhone mất mạng ở Wi-Fi nhà cho tới khi bạn chọn *Tự động* trong *Cài đặt › Cài đặt chung › VPN và quản lý thiết bị › DNS* (4G/5G không bị ảnh hưởng). Nút Ngắt kết nối sẽ hỏi lại khi có thiết bị trong mạng đang dùng DNS server; nếu máy tính hay tắt, hãy đặt DNS thủ công cho iPhone thay vì dùng profile. Private DNS của Android không dùng được với Ghostline; hãy đặt DNS tĩnh cho Wi-Fi.
 
 ### Linux
 
@@ -188,11 +201,12 @@ Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/
 - Kernel không có NFQUEUE (`nfnetlink_queue`, `nft_queue`) thì không vượt DPI được; fragment của proxy vẫn hoạt động.
 - Không có GoodbyeDPI (chỉ có trên Windows); engine là zapret2.
 - Gói cài chưa ký GPG: hãy kiểm tra `SHA256SUMS`.
+- AppImage cần glibc 2.39 trở lên (Ubuntu 24.04, Debian 13, Fedora 40 trở về sau).
 - SteamOS (Steam Deck) chưa được kiểm chứng.
 
 ## Build từ mã nguồn
 
-**Cần có:** Go 1.26+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, và [NSIS](https://nsis.sourceforge.io) để tạo bản cài đặt.
+**Cần có:** Go 1.27+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, và [NSIS](https://nsis.sourceforge.io) để tạo bản cài đặt Windows.
 
 ```bash
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.27
@@ -207,7 +221,7 @@ Trên Linux (gói phát triển GTK 4 và WebKitGTK 6.0, thêm `squashfs-tools` 
 
 ```bash
 wails3 task linux:build                     # bin/linux/ghostline và bin/linux/ghostlined
-wails3 task linux:package VERSION=0.6.0     # deb, rpm, AppImage và tar.gz trong bin/
+wails3 task linux:package VERSION=0.6.1     # deb, rpm, AppImage và tar.gz trong bin/
 ```
 
 **Test:**
@@ -217,10 +231,16 @@ go test ./...
 cd frontend && npm test
 ```
 
-Test tích hợp thay đổi cài đặt thật của hệ thống, nên cần chạy trong terminal **admin**:
+Test tích hợp thay đổi cài đặt thật của hệ thống, nên trên Windows cần chạy trong terminal **admin**:
 
 ```bash
 go test -tags integration ./internal/sysdns/... ./internal/startup/...
+```
+
+và trên Linux cần chạy bằng root (DNS hệ thống, hàng đợi nftables với nfqws2, khôi phục sau `kill -9`):
+
+```bash
+sudo -E env "PATH=$PATH" go test -tags integration_root ./internal/sysdns/ ./internal/dpi/ ./cmd/ghostlined/
 ```
 
 Trước khi phát hành, đi qua [`docs/release-checklist.md`](docs/release-checklist.md). Đẩy một tag `v*` lên GitHub sẽ tự build và tạo trang Release qua GitHub Actions.

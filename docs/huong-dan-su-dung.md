@@ -2,7 +2,7 @@
 
 [English](user-guide.md)
 
-Hướng dẫn này dành cho người dùng Windows 10/11, không cần biết về kỹ thuật. Bạn chỉ cần đọc phần 1–3 là dùng được ngay; các phần sau dành cho khi bạn muốn tinh chỉnh hoặc gặp sự cố.
+Hướng dẫn này dành cho người dùng Windows 10/11 và Linux, không cần biết về kỹ thuật. Bạn chỉ cần đọc phần 1–3 là dùng được ngay; các phần sau dành cho khi bạn muốn tinh chỉnh hoặc gặp sự cố.
 
 ## Mục lục
 
@@ -33,13 +33,17 @@ Hướng dẫn này dành cho người dùng Windows 10/11, không cần biết 
 
 Mỗi khi bạn mở một trang web, máy tính phải hỏi **DNS** "trang này ở địa chỉ IP nào?". Bình thường câu hỏi đó được gửi đi **không mã hoá**, nên nhà mạng có thể đọc, ghi lại hoặc trả lời sai để chặn trang.
 
-Ghostline chạy một DNS nhỏ ngay trên máy bạn (`127.0.0.1`), trỏ mọi card mạng về đó, rồi gửi câu hỏi DNS qua kênh **mã hoá** (DoH, DoT, DoQ, DNSCrypt) tới máy chủ nhanh nhất. Nếu nhà mạng còn chặn bằng cách soi gói tin (DPI), Ghostline có thể bật thêm engine vượt DPI (**zapret2** hoặc **GoodbyeDPI**) để vượt qua.
+Ghostline chạy một DNS nhỏ ngay trên máy bạn (`127.0.0.1`), trỏ DNS của hệ thống về đó (mọi card mạng trên Windows; NetworkManager, systemd-resolved hoặc `/etc/resolv.conf` trên Linux), rồi gửi câu hỏi DNS qua kênh **mã hoá** (DoH, DoT, DoQ, DNSCrypt) tới máy chủ nhanh nhất. Nếu nhà mạng còn chặn bằng cách soi gói tin (DPI), Ghostline có thể bật thêm engine vượt DPI (**zapret2**, hoặc **GoodbyeDPI** trên Windows) để vượt qua.
 
 Điều quan trọng nhất: **Ghostline luôn trả lại DNS gốc của bạn** khi ngắt kết nối, kể cả khi app bị tắt đột ngột hay máy mất điện.
 
 ## 2. Cài đặt
 
-Tải về từ trang [Releases](https://github.com/hashcott/ghostline/releases). Có hai lựa chọn:
+Tải về từ trang [Releases](https://github.com/hashcott/ghostline/releases).
+
+### Windows
+
+Có hai lựa chọn:
 
 | Bản | Khi nào nên dùng |
 | --- | --- |
@@ -108,7 +112,7 @@ Muốn huỷ khi đang kết nối: bấm nút nguồn lần nữa. Muốn tắt
 | --- | --- | --- |
 | **Chỉ DNS** | DNS mã hoá | Nhà mạng chỉ chặn bằng DNS; nhẹ nhất |
 | **DNS + vượt DPI** *(khuyên dùng)* | Thêm vượt DPI cho mọi ứng dụng | Đổi DNS rồi mà trang vẫn bị chặn |
-| **Tối đa** | Thêm proxy cho máy này (đặt proxy hệ thống của Windows); trình duyệt tự được fragment khi gặp trang bị chặn | Vượt DPI vẫn chưa đủ với vài trang |
+| **Tối đa** | Thêm proxy cho máy này (đặt proxy hệ thống); trình duyệt tự được fragment khi gặp trang bị chặn | Vượt DPI vẫn chưa đủ với vài trang |
 | **Tuỳ chỉnh** | Tổ hợp bạn tự chỉnh ở giao diện Đầy đủ | Sáng lên khi cài đặt ở đó không khớp mức nào |
 
 Chọn một mức cũng là tìm máy chủ tốt nhất: app quét lại toàn bộ danh sách (dòng dưới các mức hiện *Đang tìm máy chủ tốt nhất 120/906…*) và, khi đang kết nối, chuyển sang những máy chủ nhanh nhất mà không ngắt kết nối. Bấm lại mức đang chọn để tìm lại.
@@ -125,7 +129,7 @@ Mỗi mức chỉ đổi các công tắc trên; engine, chiến lược, máy c
 | --- | --- |
 | máy chủ | Máy chủ DNS đang dùng; `+4` nghĩa là còn 4 máy chủ khác chạy song song làm dự phòng |
 | độ trễ | Thời gian trung bình để nhận câu trả lời DNS |
-| vượt dpi | Preset GoodbyeDPI đang chạy, hoặc *tắt* |
+| vượt dpi | Preset vượt DPI đang chạy, hoặc *tắt* |
 | thời gian | Đã bảo vệ được bao lâu |
 
 **Các trạng thái có thể gặp:**
@@ -208,12 +212,12 @@ Dùng khi DNS đã được mã hoá nhưng kết nối tới một trang **vẫ
 
 - **Công tắc:** bật/tắt. Engine chỉ chạy khi Ghostline **đang kết nối**:
   - `● zapret2 đã chạy (preset …)`: đang hoạt động.
-  - `○ đang khởi động…`: chờ vài giây để driver WinDivert sẵn sàng.
+  - `○ đang khởi động…`: chờ vài giây để phần bắt gói tin sẵn sàng (driver WinDivert trên Windows, hàng đợi nftables trên Linux).
   - `○ Đã bật — sẽ chạy khi kết nối`: bạn đã bật nhưng chưa kết nối.
 - **Engine:**
   - **zapret2 (khuyên dùng):** mạnh hơn, có gói giả, nhiều kiểu cắt và hỗ trợ QUIC (YouTube, Google). Danh sách chiến lược được Ghostline cập nhật hằng ngày (có chữ ký), không cần cài bản mới.
-  - **GoodbyeDPI:** engine cũ. Bản cài từ trước khi có zapret2 vẫn dùng GoodbyeDPI cho tới khi bạn tự đổi.
-  - Nếu zapret2 bị antivirus chặn, Ghostline tạm chạy GoodbyeDPI, báo *suy giảm* và hiện nút **thử lại zapret2**.
+  - **GoodbyeDPI** (Windows): engine cũ. Bản cài từ trước khi có zapret2 vẫn dùng GoodbyeDPI cho tới khi bạn tự đổi.
+  - Trên Windows, nếu zapret2 bị antivirus chặn, Ghostline tạm chạy GoodbyeDPI, báo *suy giảm* và hiện nút **thử lại zapret2**.
 - **Preset:** mức độ can thiệp vào gói tin.
   - **Nhẹ → Vừa → Mạnh → Cực mạnh:** mức càng cao càng dễ vượt chặn nhưng có thể làm vài trang chậm hoặc lỗi. Nên bắt đầu từ **Nhẹ**.
   - **Mode 1–6** (chỉ GoodbyeDPI): các cấu hình có sẵn của GoodbyeDPI, thử khi các mức trên không hiệu quả.
@@ -241,7 +245,7 @@ Danh sách trang dùng để kiểm tra kết nối (mặc định: youtube.com,
 | ✓ | Mở được |
 | ✕ DNS | Không phân giải được tên |
 | ✕ TCP | Không kết nối được tới máy chủ của trang |
-| ✕ TLS | Bị chặn ở bước bắt tay mã hoá, thường do DPI → bật GoodbyeDPI hoặc tự dò |
+| ✕ TLS | Bị chặn ở bước bắt tay mã hoá, thường do DPI → bật vượt DPI hoặc tự dò |
 | ✕ HTTP | Kết nối được nhưng trang trả lỗi |
 
 Bạn có thể sửa danh sách trang mẫu trong ô bên dưới, mỗi dòng một trang.
@@ -252,7 +256,7 @@ Mở ở **công cụ › nhật ký** (tab đầu tiên).
 
 ![Nhật ký](screenshots/logs-vi.png)
 
-Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt GoodbyeDPI, lỗi.
+Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt vượt DPI, lỗi.
 
 - **Lọc:** tất cả, engine, dpi, hệ thống.
 - **tạm dừng / tiếp tục:** dừng cuộn để đọc.
@@ -266,16 +270,16 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt GoodbyeD
 | Mục | Ý nghĩa |
 | --- | --- |
 | ngôn ngữ | VI hoặc EN (cũng đổi được bằng nút VI/EN ở góc trên) |
-| khởi động cùng windows | Tự mở Ghostline khi đăng nhập, không hỏi UAC |
+| khởi động cùng windows / cùng hệ thống | Windows: tự mở Ghostline khi đăng nhập, không hỏi UAC. Linux: tự kết nối lúc bật máy (khi bật *tự động kết nối*) và mở Ghostline ở khay khi đăng nhập |
 | tự kết nối khi mở | Bấm kết nối ngay khi app mở |
 | đóng → thu xuống khay | Bấm ✕ thì ẩn xuống khay thay vì thoát. Ghostline vẫn bảo vệ ở chế độ nền |
-| card mạng | **tự động**: bảo vệ mọi card mạng đang dùng (khuyến nghị). **chọn tay**: chỉ bảo vệ các card bạn chọn |
+| card mạng | Windows: **tự động** bảo vệ mọi card mạng đang dùng (khuyến nghị), **chọn tay** chỉ bảo vệ các card bạn chọn. Linux hiện hệ thống DNS mà Ghostline điều khiển (NetworkManager, systemd-resolved hoặc `/etc/resolv.conf`) |
 | tên miền thử | Các tên miền bộ quét máy chủ hỏi, mỗi dòng một tên (mặc định `www.google.com`); máy chủ phải trả lời đúng tất cả. Nên dùng 1–2 trang luôn mở được: mỗi tên miền thêm làm mọi lượt quét lâu hơn (tối đa 5). Tên miền mới được kiểm tra khi lưu: tên miền không có địa chỉ IPv4 (ví dụ `steam.com`; hãy dùng `store.steampowered.com`) sẽ bị từ chối. Nếu sau này một tên miền trượt ở hầu hết máy chủ, lượt quét bỏ qua nó và hiện cảnh báo nhờ bạn sửa. Áp dụng từ lần quét sau |
 | bootstrap | DNS thường dùng để tìm địa chỉ của các máy chủ DoH lúc khởi động (mặc định `1.1.1.1:53`, `8.8.8.8:53`). Đây là lưu lượng DNS không mã hoá duy nhất, và chỉ dùng để tra tên máy chủ DoH |
 | số máy chủ tối đa | Số máy chủ dùng song song (mặc định 5). Nhiều hơn thì ổn định hơn nhưng tốn băng thông hơn một chút |
 | cập nhật danh sách máy chủ | Tải danh sách máy chủ mới mỗi ngày (có kiểm tra chữ ký) |
 | báo có bản mới | Hiện thông báo khi có phiên bản mới. Ghostline **không bao giờ tự cập nhật** |
-| ⚠ KHÔI PHỤC DNS NGAY | Đưa DNS mọi card mạng về trạng thái đã lưu. Dùng khi nghi ngờ DNS bị sai |
+| ⚠ KHÔI PHỤC DNS NGAY | Đưa DNS của hệ thống về trạng thái đã lưu. Dùng khi nghi ngờ DNS bị sai |
 
 ### 4.6. Proxy
 
@@ -290,18 +294,18 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt GoodbyeD
 1. Bật **bật proxy**. Proxy chạy khi bạn đang kết nối.
 2. Cho trình duyệt trên máy này: bật **dùng cho máy này**.
 3. Cho điện thoại: bật **chia sẻ LAN**. Trên điện thoại vào *Wi-Fi › mạng này › Proxy › Thủ công* và nhập địa chỉ hiện ra, hoặc quét mã QR.
-4. Nếu Ghostline báo mạng là *Public*, đổi sang *Private* trong Cài đặt Windows › Mạng.
+4. Trên Windows, nếu Ghostline báo mạng là *Public*, đổi sang *Private* trong Cài đặt Windows › Mạng.
 
 Ghostline có thể chạy một proxy cục bộ trên một cổng (mặc định `8080`), hiểu được **HTTP, HTTPS (CONNECT) và SOCKS4/4a/5**. Proxy bật và tắt cùng nút **Connect**, và luôn phân giải tên miền qua DNS mã hoá của Ghostline nên không bao giờ rò DNS plain.
 
 | Cài đặt | Ý nghĩa |
 | --- | --- |
 | bật proxy | Chạy proxy khi đã kết nối |
-| dùng cho máy này | Đặt System Proxy của Windows trỏ vào Ghostline. Cài đặt cũ được lưu lại trước và trả về khi ngắt, khi app crash hay mất điện. Nếu app khác (VPN, proxy công ty) đã đặt proxy, Ghostline hỏi trước khi ghi đè, và không bao giờ giành lại khi app khác đổi nó sau đó |
-| chia sẻ LAN | Cho điện thoại và thiết bị khác cùng Wi-Fi dùng proxy. Chỉ nhận địa chỉ mạng riêng, luật tường lửa `Ghostline Proxy` chỉ áp dụng cho mạng *Private* |
+| dùng cho máy này | Đặt proxy hệ thống trỏ vào Ghostline (Windows; GNOME và KDE trên Linux, đặt trong phiên đăng nhập của bạn). Cài đặt cũ được lưu lại trước và trả về khi ngắt, khi app crash hay mất điện. Nếu app khác (VPN, proxy công ty) đã đặt proxy, Ghostline hỏi trước khi ghi đè, và không bao giờ giành lại khi app khác đổi nó sau đó |
+| chia sẻ LAN | Cho điện thoại và thiết bị khác cùng Wi-Fi dùng proxy. Chỉ nhận địa chỉ mạng riêng. Trên Windows, luật tường lửa `Ghostline Proxy` chỉ áp dụng cho mạng *Private*; trên Linux, Ghostline mở cổng trong firewalld hoặc ufw và đóng lại khi ngắt kết nối |
 | cổng | 1024–65535 |
 
-**Trên điện thoại:** bật *chia sẻ LAN*, rồi trên điện thoại vào Wi-Fi → mạng này → Proxy → Thủ công, nhập địa chỉ hiện trên trang (hoặc quét mã QR). Nếu trang báo mạng đang là *Public*, đổi sang *Private* trong Cài đặt Windows → Mạng.
+**Trên điện thoại:** bật *chia sẻ LAN*, rồi trên điện thoại vào Wi-Fi → mạng này → Proxy → Thủ công, nhập địa chỉ hiện trên trang (hoặc quét mã QR). Trên Windows, nếu trang báo mạng đang là *Public*, đổi sang *Private* trong Cài đặt Windows → Mạng.
 
 **Fragment web** cắt nhỏ ClientHello của TLS để DPI không đọc được tên trang:
 
@@ -310,9 +314,9 @@ Ghostline có thể chạy một proxy cục bộ trên một cổng (mặc đ�
 - **kiểu cắt:** TCP (cắt quanh SNI), TLS record (cắt thành nhiều bản ghi TLS), hoặc kết hợp (mặc định).
 - Danh sách **domain đã ghi nhớ** cho thấy những gì đã học được ở mạng này; xoá mục nào nếu trang đó đã vào được mà không cần giúp.
 
-Nếu thống kê có kết nối *bị chặn dù đã fragment*, mạng đó cần dùng GoodbyeDPI.
+Nếu thống kê có kết nối *bị chặn dù đã fragment*, mạng đó cần bật vượt DPI.
 
-**Upstream proxy** (SOCKS5 hoặc HTTP, có thể kèm user/mật khẩu) cho phép rules đẩy một số trang qua proxy khác, ví dụ Tor. Mật khẩu được mã hoá bằng DPAPI của Windows. Bấm **kiểm tra** để thử.
+**Upstream proxy** (SOCKS5 hoặc HTTP, có thể kèm user/mật khẩu) cho phép rules đẩy một số trang qua proxy khác, ví dụ Tor. Mật khẩu được mã hoá (DPAPI trên Windows; trên Linux bằng khoá chỉ root đọc được). Bấm **kiểm tra** để thử.
 
 ### 4.7. Rules và danh sách
 
@@ -365,7 +369,7 @@ Sửa rules ở tab **bảng** hoặc chuyển sang **text** (mỗi dòng một 
 Chia sẻ DNS mã hoá của Ghostline cho trình duyệt trên máy này và cho thiết bị khác trong mạng nhà. DNS server chạy khi bạn đang kết nối.
 
 - **DoH cục bộ:** trình duyệt trên máy này có thể dùng `https://127.0.0.1/dns-query` làm DNS an toàn tuỳ chỉnh.
-- **Chia sẻ cho LAN:** trả lời thêm DNS cổng 53 và DoH trên IP LAN của máy. Chỉ thiết bị trong mạng **Private** dùng được; truy vấn từ nơi khác bị từ chối.
+- **Chia sẻ cho LAN:** trả lời thêm DNS cổng 53 và DoH trên IP LAN của máy. Chỉ thiết bị trong mạng nội bộ dùng được; truy vấn từ nơi khác bị từ chối. Trên Windows, mạng phải là **Private**; trên Linux, Ghostline mở cổng trong firewalld hoặc ufw.
 - **Cổng DoH:** mặc định 443; đổi nếu chương trình khác đang dùng cổng này.
 
 **Dùng cho thiết bị khác** (DNS cổng 53 không cần chứng chỉ):
@@ -379,7 +383,7 @@ Chia sẻ DNS mã hoá của Ghostline cho trình duyệt trên máy này và ch
 
 **Từng bước: profile DoH cho iPhone**
 
-1. Bấm **Kết nối**, rồi ở **DNS server** bật **bật DoH cục bộ** và **chia sẻ cho LAN** (mạng phải là *Private*).
+1. Bấm **Kết nối**, rồi ở **DNS server** bật **bật DoH cục bộ** và **chia sẻ cho LAN** (trên Windows, mạng phải là *Private*).
 2. Chọn hoặc nhập **tên Wi-Fi nhà**, đúng như trên điện thoại. Ghostline liệt kê các Wi-Fi máy biết; máy cắm dây có thể không có, và điện thoại cũng nhập được trên trang.
 3. Bấm **mở trang cài đặt cho điện thoại** và quét mã QR bằng iPhone. Trang mở trong 10 phút.
 4. Trên điện thoại, so vân tay với vân tay trong Ghostline, bấm **Tải profile** rồi cài trong *Cài đặt › Đã tải về hồ sơ*.
@@ -390,7 +394,7 @@ DNS mã hoá chỉ dùng khi ở Wi-Fi nhà; khi dùng 4G/5G hay mạng khác, i
 
 <p align="center"><img src="screenshots/setuppage-vi.png" width="300" alt="Trang cài đặt trên điện thoại"></p>
 
-**Khi máy tính tắt hoặc ngắt kết nối,** mọi thiết bị dùng DNS của máy sẽ mất mạng ở mạng nhà. iOS không tự chuyển sang DNS khác. Để iPhone có mạng lại, mở *Cài đặt › Cài đặt chung › VPN và quản lý thiết bị › DNS* và chọn **Tự động** (hoặc xoá profile). Nếu máy tính hay tắt, hãy dùng cách đặt DNS thủ công ở trên thay cho profile: không cần chứng chỉ và đổi lại rất nhanh. Khi có thiết bị trong mạng dùng DNS server trong 10 phút gần nhất, nút **Ngắt kết nối** (trong app và trên khay) sẽ hỏi lại trước; tắt Windows và **Thoát** thì không hỏi.
+**Khi máy tính tắt hoặc ngắt kết nối,** mọi thiết bị dùng DNS của máy sẽ mất mạng ở mạng nhà. iOS không tự chuyển sang DNS khác. Để iPhone có mạng lại, mở *Cài đặt › Cài đặt chung › VPN và quản lý thiết bị › DNS* và chọn **Tự động** (hoặc xoá profile). Nếu máy tính hay tắt, hãy dùng cách đặt DNS thủ công ở trên thay cho profile: không cần chứng chỉ và đổi lại rất nhanh. Khi có thiết bị trong mạng dùng DNS server trong 10 phút gần nhất, nút **Ngắt kết nối** (trong app và trên khay) sẽ hỏi lại trước; tắt máy và **Thoát** thì không hỏi.
 
 **CA LAN:** chứng chỉ mà thiết bị khác tin. Nó chỉ ký được cho IP nội bộ và `*.ghostline.lan`, nên không thể dùng để giả mạo trang web. **tạo lại** sinh CA mới (thiết bị phải cài lại); **gỡ** xoá CA và tắt DNS server.
 
@@ -417,7 +421,7 @@ Tính năng nâng cao cho trang nằm sau CDN cho phép *domain fronting*. Proxy
 - Bật một **nhóm preset** hoặc viết rule như `youtube.com sni=www.google.com connect=www.google.com`. `sni=none` không gửi tên nào. `connect=` chọn host để lấy địa chỉ kết nối.
 - Khi đang chạy, mọi trang có banner tím cho biết đang giải mã bao nhiêu tên miền. **tắt Fake SNI** dừng ngay.
 - Nếu máy chủ từ chối tên giả, Ghostline tự quay về fragment; bộ đếm trên trang cho thấy điều này.
-- Chứng chỉ được cài chỉ tồn tại khi đang kết nối, chỉ ký được cho các tên miền trong rule, và bị gỡ khi ngắt kết nối, khi app bị tắt đột ngột (watchdog gỡ) và khi gỡ cài đặt.
+- Chứng chỉ được cài (vào kho chứng chỉ của Windows; trên Linux vào kho tin cậy của hệ thống, và cho Firefox, Chrome khi chúng dùng kho riêng) chỉ tồn tại khi đang kết nối, chỉ ký được cho các tên miền trong rule, và bị gỡ khi ngắt kết nối, khi app bị tắt đột ngột (watchdog gỡ) và khi gỡ cài đặt.
 - Không dùng cho ngân hàng hay tài khoản quan trọng; app ghim chứng chỉ sẽ lỗi với các tên miền này. Firefox có thể cần bật `security.enterprise_roots.enabled` trong `about:config`.
 
 Danh sách từ nguồn khác chỉ được dùng rule `sni=` sau khi bạn bật **tin cho Fake SNI**; preset của Ghostline có chữ ký.
@@ -470,20 +474,20 @@ Trong **Cài đặt › Sao lưu và chuyển máy**:
 *Ảnh động được tua nhanh, không có tiếng; bấm vào để xem video có lồng tiếng.*
 
 - **xuất cài đặt…** lưu một file `.ghostline.json`. Chọn phần cần xuất: cài đặt, rule và danh sách, server tự thêm, danh sách đen vượt DPI, danh sách tự học của zapret2. File không bao giờ chứa tên Wi-Fi nhà, card mạng, mật khẩu proxy, nhật ký hay chứng chỉ. Danh sách trỏ tới một file trên máy này không được xuất.
-- **nhập cài đặt…** chỉ dùng được khi đã ngắt kết nối. Ghostline cho xem trước những gì sẽ thay đổi, và hỏi riêng trước khi nhập rule chuyển hướng lưu lượng đã giải mã (`sni=`, `connect=`). Khi nhập, Fake SNI, DNS server, chia sẻ trong LAN và khởi động cùng Windows luôn bị tắt, và danh sách từ nguồn khác không còn được tin cho Fake SNI: bật lại trên máy này nếu cần. Mật khẩu proxy phải nhập lại.
+- **nhập cài đặt…** chỉ dùng được khi đã ngắt kết nối. Ghostline cho xem trước những gì sẽ thay đổi, và hỏi riêng trước khi nhập rule chuyển hướng lưu lượng đã giải mã (`sni=`, `connect=`). Khi nhập, Fake SNI, DNS server, chia sẻ trong LAN và khởi động cùng Windows (cùng hệ thống) luôn bị tắt, và danh sách từ nguồn khác không còn được tin cho Fake SNI: bật lại trên máy này nếu cần. Mật khẩu proxy phải nhập lại.
 - Nếu ghi lỗi giữa chừng, mọi file được trả về như cũ. File bị thay khi nhập được giữ lại bên cạnh với tên `*.bak-import`.
 
-`Ghostline.exe --export <file>` ghi cùng bản sao lưu đó từ dòng lệnh, để gửi cho người đang giúp bạn. Chạy trong Command Prompt hoặc PowerShell để thấy kết quả; giống như khi mở Ghostline, Windows sẽ hỏi quyền quản trị.
+`Ghostline.exe --export <file>` ghi cùng bản sao lưu đó từ dòng lệnh, để gửi cho người đang giúp bạn. Chạy trong Command Prompt hoặc PowerShell để thấy kết quả; giống như khi mở Ghostline, Windows sẽ hỏi quyền quản trị. Trên Linux: `sudo /usr/lib/ghostline/ghostlined --export <file>` (dùng `/var/lib/ghostline/bin/ghostlined` nếu dịch vụ được cài từ AppImage hoặc tar.gz).
 
 ## 5. Icon ở khay hệ thống
 
-Ghostline có icon hình vòng tròn ở khay (góc dưới bên phải, cạnh đồng hồ). Màu icon cho biết trạng thái. **Bấm chuột phải** để mở menu:
+Ghostline có icon hình vòng tròn ở khay (trên Windows ở góc dưới bên phải, cạnh đồng hồ; trên Linux ở khay của thanh panel: KDE có sẵn, GNOME cần extension cho khay). Màu icon cho biết trạng thái. **Bấm chuột phải** để mở menu:
 
 - **Kết nối / Ngắt kết nối** (hỏi lại khi có thiết bị trong mạng đang dùng DNS của máy)
-- **Vượt DPI:** bật/tắt GoodbyeDPI nhanh
+- **Vượt DPI:** bật/tắt vượt DPI nhanh
 - **Proxy: bật/tắt:** bật hoặc tắt proxy cục bộ
 - **Mở Ghostline:** hiện lại cửa sổ
-- **Thoát:** ngắt kết nối, trả DNS về như cũ, rồi tắt app
+- **Thoát:** trên Windows, ngắt kết nối, trả DNS về như cũ, rồi tắt app. Trên Linux chỉ đóng cửa sổ: dịch vụ nền vẫn bảo vệ cho tới khi bạn bấm **Ngắt kết nối**
 
 ## 6. Khi một trang web vẫn bị chặn
 
@@ -493,10 +497,10 @@ Làm lần lượt, dừng lại khi trang đã mở được:
 
 1. **Kết nối Ghostline.** Nhiều trang chỉ bị chặn bằng DNS, nên kết nối là đủ.
 2. **Xoá cache trình duyệt** hoặc mở thử bằng cửa sổ ẩn danh (trình duyệt có thể còn nhớ kết quả DNS cũ).
-3. Vào **Vượt DPI**, bật **GoodbyeDPI** với preset **Nhẹ**.
+3. Vào **Vượt DPI**, bật với engine **zapret2** và preset **Nhẹ**.
 4. Bấm **⚡ tự dò** để Ghostline tự tìm preset phù hợp. Thêm trang bạn cần vào **Trang mẫu** trước để tự dò kiểm tra đúng trang đó.
-5. Vẫn không được: thử **Mode 1–6**.
-6. Nếu chỉ vài trang bị chặn, chuyển **Phạm vi** sang **danh sách đen** và thêm các trang đó, để GoodbyeDPI không ảnh hưởng tới phần còn lại.
+5. Vẫn bị chặn: thử preset mạnh hơn (trên Windows với GoodbyeDPI, thử **Mode 1–6**).
+6. Nếu chỉ vài trang bị chặn, chuyển **Phạm vi** sang **danh sách đen** và thêm các trang đó, để vượt DPI không ảnh hưởng tới phần còn lại.
 
 > **Lưu ý về trình duyệt:** Chrome, Edge và Firefox có tuỳ chọn *Secure DNS / DNS over HTTPS* riêng. Nếu bật, trình duyệt sẽ bỏ qua Ghostline. Hãy tắt tuỳ chọn đó, hoặc để ở chế độ "dùng DNS của hệ thống".
 
@@ -504,19 +508,26 @@ Làm lần lượt, dừng lại khi trang đã mở được:
 
 | Thông báo | Nguyên nhân và cách xử lý |
 | --- | --- |
-| **Ghostline cần quyền quản trị (admin) để đổi DNS** | Bạn đã mở app không có quyền admin. Đóng lại, chuột phải → **Run as administrator** |
+| **Ghostline cần quyền quản trị (admin) để đổi DNS** | Windows: bạn đã mở app không có quyền admin. Đóng lại, chuột phải → **Run as administrator** |
+| **Có vẻ … đang chặn DNS của máy nên Ghostline không nhận được truy vấn** | Một phần mềm chặn quảng cáo, diệt virus hoặc VPN lấy truy vấn DNS trước khi tới Ghostline (AdGuard, Avast, AVG, YogaDNS, Portmaster…). Thông báo nêu tên chương trình và cách tắt; hãy tắt lọc DNS trong chương trình đó (hoặc thoát nó) rồi thử lại |
 | **Cổng 53 đang bị … chiếm** | Một chương trình khác đang chạy DNS trên 127.0.0.1 (thường là WSL, Hyper-V hoặc một phần mềm DNS khác; Mobile Hotspot không còn gây lỗi này). Tắt chương trình đó, hoặc dùng nút **Tạm dừng dịch vụ …** mà Ghostline đưa ra. Ghostline luôn hỏi trước khi dừng dịch vụ nào |
 | **Không tìm được máy chủ hoạt động** | Mạng đang mất kết nối, hoặc nhà mạng chặn cả DNS mã hoá. Kiểm tra mạng, rồi thử bật **Fragment DNS** |
 | **Truy vấn DNS không đi qua Ghostline** | Có VPN hoặc phần mềm khác đang chiếm DNS. Nếu dưới lỗi có dòng **card mạng có DNS riêng**, đó là card mạng Windows vẫn hỏi DNS qua đường khác (VPN, PPPoE, USB 4G...): tắt nó hoặc chọn nó trong Cài đặt → card mạng, rồi kết nối lại |
 | **Không đặt được DNS cho …** | Card mạng đó không cho đổi DNS (thường là card ảo của VPN/máy ảo). Vào **Cài đặt → card mạng → chọn tay** và bỏ card đó ra |
 | **Không trả được DNS về như cũ cho …** | Bấm **⚠ KHÔI PHỤC DNS NGAY**. Thông báo này sẽ còn hiện cho tới khi khôi phục thành công |
 | **GoodbyeDPI không chạy được** | Thử preset khác. Xem thêm chi tiết trong ngoặc của thông báo |
+| **Một chương trình khác đang dùng driver WinDivert** | Windows: GoodbyeDPI hoặc zapret chạy ngoài Ghostline đang giữ driver. Tắt nó (`goodbyedpi.exe`, `winws.exe`, `winws2.exe`) rồi thử lại |
 | **GoodbyeDPI bị phần mềm diệt virus chặn** | Thêm thư mục Ghostline vào danh sách loại trừ của antivirus |
 | **File GoodbyeDPI đã bị thay đổi** | File GoodbyeDPI không còn khớp mã băm gốc (có thể bị antivirus sửa hoặc bị can thiệp). Cài lại Ghostline |
 | **Không tìm được cấu hình vượt DPI phù hợp** | Tự dò không tìm được preset mở được mọi trang mẫu. Thử Mode 1–6 hoặc tham số tự nhập |
 | **Cần kết nối trước khi tự dò vượt DPI** | Bấm Kết nối rồi tự dò lại |
+| **Dịch vụ nền của Ghostline chưa chạy** | Linux: bấm **khởi động dịch vụ** (hoặc **cài dịch vụ**) trong cửa sổ, hoặc chạy `sudo systemctl enable --now ghostline` |
+| **Tài khoản của bạn không có quyền điều khiển Ghostline** | Linux: chạy `sudo usermod -aG ghostline $USER`, rồi đăng xuất và đăng nhập lại |
+| **Kernel Linux này không chuyển được gói tin cho engine DPI** | Linux: kernel thiếu `nfnetlink_queue` / `nft_queue`. Từ 0.6.1 dịch vụ tự nạp chúng; với bản cũ hơn, chạy `sudo modprobe -a nfnetlink_queue nft_queue` hoặc cập nhật. Không có chúng thì fragment của proxy vẫn giúp được |
+| **Chrome và Chromium chưa tin chứng chỉ Fake SNI** | Linux (Ubuntu, Debian): cài `libnss3-tools`, rồi tắt và bật lại Fake SNI |
+| **Ghostline không đổi được cài đặt proxy của desktop này** | Linux: chỉ GNOME và KDE được đặt tự động. Tự đặt proxy HTTP theo địa chỉ ở trang Proxy |
 
-**Mất mạng sau khi dùng Ghostline?** Gần như không thể xảy ra vì có 5 lớp khôi phục. Kể cả khi antivirus kill Ghostline và xoá `ghostline.exe`, tác vụ `Ghostline Network Guard` vẫn tự trả DNS về như cũ trong khoảng 1 phút, và chạy lại khi khởi động máy. Nếu vẫn gặp:
+**Mất mạng sau khi dùng Ghostline?** Gần như không thể xảy ra vì có nhiều lớp khôi phục. Trên Windows, kể cả khi antivirus kill Ghostline và xoá `ghostline.exe`, tác vụ `Ghostline Network Guard` vẫn tự trả DNS về như cũ trong khoảng 1 phút, và chạy lại khi khởi động máy. Trên Linux, systemd trả DNS về mỗi khi dịch vụ dừng hoặc bị crash, và dịch vụ khôi phục lúc khởi động máy. Nếu vẫn gặp trên Windows:
 
 1. Mở Ghostline → **Cài đặt → ⚠ KHÔI PHỤC DNS NGAY**.
 2. Hoặc mở PowerShell bằng quyền admin và chạy:
@@ -526,9 +537,11 @@ Làm lần lượt, dừng lại khi trang đã mở được:
    (với bản portable, thay bằng đường dẫn tới `ghostline.exe` của bạn).
 3. Cách cuối cùng: vào **Settings → Network & internet → card mạng → DNS server assignment → Edit → Automatic (DHCP)**.
 
+Trên Linux: mở Ghostline → **Cài đặt → ⚠ KHÔI PHỤC DNS NGAY**, hoặc chạy `sudo systemctl stop ghostline` (dừng dịch vụ là DNS được trả về), rồi `sudo systemctl start ghostline`.
+
 **Báo lỗi:** vào **Nhật ký → lưu file**, rồi mở issue tại [GitHub](https://github.com/hashcott/ghostline/issues) kèm file đó. Nhật ký không chứa tên các trang bạn đã truy cập.
 
-**Gỡ chứng chỉ Ghostline bằng tay:** trong app, vào **Cài đặt → chứng chỉ → gỡ tất cả chứng chỉ Ghostline**. Không có app thì chạy `certlm.msc`, mở *Trusted Root Certification Authorities → Certificates* và xoá các mục bắt đầu bằng `Ghostline`.
+**Gỡ chứng chỉ Ghostline bằng tay:** trong app, vào **Cài đặt → chứng chỉ → gỡ tất cả chứng chỉ Ghostline**. Không có app thì trên Windows chạy `certlm.msc`, mở *Trusted Root Certification Authorities → Certificates* và xoá các mục bắt đầu bằng `Ghostline`. Trên Linux, `sudo /usr/lib/ghostline/ghostlined --remove-certs` gỡ chúng khỏi kho tin cậy của hệ thống và các trình duyệt (gỡ cài đặt cũng làm việc này).
 
 ## 8. Gỡ cài đặt
 
@@ -548,7 +561,7 @@ Thường là không. Ghostline gửi truy vấn tới nhiều máy chủ cùng 
 Không. Không telemetry, không tài khoản, không ghi tên trang bạn truy cập xuống đĩa. Mã nguồn mở, bạn có thể tự kiểm tra.
 
 **Tắt máy khi đang kết nối thì sao?**
-Không sao. Ghostline trả DNS về trước khi Windows tắt. Nếu máy mất điện đột ngột, lần đăng nhập sau tác vụ *Ghostline Recovery* sẽ tự khôi phục DNS, kể cả khi bạn không mở Ghostline.
+Không sao. Trên Windows, Ghostline trả DNS về trước khi Windows tắt; nếu máy mất điện đột ngột, lần đăng nhập sau tác vụ *Ghostline Recovery* sẽ tự khôi phục DNS, kể cả khi bạn không mở Ghostline. Trên Linux, dịch vụ trả DNS về khi dừng lúc tắt máy, và khôi phục lại lúc khởi động nếu máy mất điện (rồi tự kết nối nếu bật *khởi động cùng hệ thống*).
 
-**Dùng chung với Mobile Hotspot được không?**
+**Dùng chung với Mobile Hotspot được không?** (Windows)
 Được. Mobile Hotspot nghe cổng 53 trên mọi địa chỉ, nhưng Windows vẫn cho Ghostline dùng 127.0.0.1:53, nên bạn kết nối được ngay cả khi đang bật hotspot.

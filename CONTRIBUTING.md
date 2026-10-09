@@ -6,10 +6,10 @@ Thanks for helping! Issues and pull requests are welcome in English or Vietnames
 
 Please include:
 
-- Your Windows version and Ghostline version.
+- Your operating system (Windows version, or Linux distribution and desktop) and Ghostline version.
 - What you did, what you expected, and what happened.
 - The log: **Advanced → Logs → save file**. Logs never contain visited domains, but check them before posting.
-- If DNS was left wrong, the output of `Get-DnsClientServerAddress`.
+- If DNS was left wrong, the output of `Get-DnsClientServerAddress` on Windows, or `resolvectl status` (or `cat /etc/resolv.conf`) on Linux. On Linux, the service's log helps too: `journalctl -u ghostline -b`.
 
 ## Development setup
 
@@ -21,11 +21,22 @@ cd frontend && npm ci && cd ..
 wails3 dev
 ```
 
+On Linux the window talks to a separate root service. For development, run the service from your checkout and point the window at its socket:
+
+```bash
+go build -o bin/ghostlined ./cmd/ghostlined && go build -o bin/ghostline .
+sudo bin/ghostlined --daemon --data-dir /var/tmp/ghostline-dev        # terminal 1
+GHOSTLINE_SOCKET=/var/tmp/ghostline-dev/run/ctl.sock bin/ghostline     # terminal 2
+```
+
+Stop the service with Ctrl+C: it disconnects and puts the system back. After a hard kill, `sudo bin/ghostlined --restore --data-dir /var/tmp/ghostline-dev` does the same.
+
 ## Pull requests
 
 - **Tests first.** Every behavior change or bug fix comes with a test that fails without it.
-- **Keep it green:** `go test ./...`, `cd frontend && npm test`, `npx tsc --noEmit`, and `golangci-lint run` (CI runs all of them).
-- **System changes need extra care.** Code that touches adapter DNS, services or scheduled tasks must keep the safety net intact: snapshot first, and always be able to restore. Run the integration tests in an admin terminal.
+- **Keep it green:** `go test ./...`, `cd frontend && npm test`, `npx tsc --noEmit`, and `golangci-lint run` for both platforms (`GOOS=windows golangci-lint run` too). CI runs all of them on Windows and Linux, plus `go run ./tools/depcheck` and `go generate ./...` with no diff.
+- **System changes need extra care.** Code that touches system DNS, services, scheduled tasks, the firewall, certificates or nftables must keep the safety net intact: snapshot first, and always be able to restore. Run the integration tests in an admin terminal on Windows, and the `integration_root` tests as root on Linux.
+- **One place per OS difference.** OS-specific code lives in `_windows.go` / `_linux.go` files behind an interface; shared code never checks `runtime.GOOS`. `internal/platform` is the one place that picks each implementation (see [docs/platforms.md](docs/platforms.md)).
 - **Translations:** add every new UI string to both `frontend/src/i18n/vi.json` and `en.json`; a parity test checks this.
 - Use [Conventional Commits](https://www.conventionalcommits.org) (`fix(dpi): …`, `feat(ui): …`) and keep each PR to one topic.
 

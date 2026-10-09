@@ -15,12 +15,13 @@
 English · [Tiếng Việt](README.vi.md)
 
 <a href="https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe"><img src="https://img.shields.io/badge/%E2%AC%87%20Download-Windows%2010%2F11%20x64-2ea44f?style=for-the-badge" alt="Download Ghostline for Windows"></a>
+<a href="#linux-x86_64"><img src="https://img.shields.io/badge/%E2%AC%87%20Download-Linux%20x86__64-2ea44f?style=for-the-badge" alt="Download Ghostline for Linux"></a>
 
 </div>
 
 ---
 
-Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points every network adapter at it, and forwards your queries over **DoH, DoT, DoQ or DNSCrypt** to the fastest healthy resolver. When your network interferes with encrypted connections by inspecting packets (DPI), it can also run a DPI bypass engine: **zapret2** (recommended) or **GoodbyeDPI**. Above all, it is built to **always give your original DNS back**, even if the app crashes or the machine loses power.
+Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points the system's DNS at it (every network adapter on Windows; NetworkManager, systemd-resolved or `/etc/resolv.conf` on Linux), and forwards your queries over **DoH, DoT, DoQ or DNSCrypt** to the fastest healthy resolver. When your network interferes with encrypted connections by inspecting packets (DPI), it can also run a DPI bypass engine: **zapret2** (recommended), or **GoodbyeDPI** on Windows. Above all, it is built to **always give your original DNS back**, even if the app crashes or the machine loses power.
 
 <p align="center">
   <img src="docs/screenshots/simple-en.png" height="360" alt="Simple interface">
@@ -50,10 +51,10 @@ Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points every network a
 
 - **Encrypted DNS for the whole system:** DoH, DoT, DoQ and DNSCrypt upstreams, powered by [AdGuard dnsproxy](https://github.com/AdguardTeam/dnsproxy).
 - **Automatic server choice:** scans resolvers in parallel, rejects poisoned answers, and remembers the best servers per network.
-- **Never lose the internet:** each adapter's original DNS is snapshotted before any change, with five recovery layers: clean disconnect, a watchdog process, restore on next launch, a logon recovery task, and a network guard that works even if an antivirus quarantines `ghostline.exe`.
+- **Never lose the internet:** the original DNS is snapshotted before any change and always comes back. On Windows there are five recovery layers: clean disconnect, a watchdog process, restore on next launch, a logon recovery task, and a network guard that works even if an antivirus quarantines `ghostline.exe`. On Linux a systemd service restores on disconnect, when it stops or crashes, and at boot.
 - **Leak verification:** after connecting, Ghostline checks that queries really go through it.
-- **DPI bypass with two engines:** bundled, hash-pinned [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (fake packets, more split methods, QUIC for YouTube/Google) and GoodbyeDPI 0.2.3rc3. zapret2 strategies come from a signed list refreshed daily, with auto-tune, a site blacklist, automatic detection of blocked sites, and DoH request fragmentation. If antivirus blocks zapret2, Ghostline falls back to GoodbyeDPI and offers to retry.
-- **Local proxy (HTTP / HTTPS / SOCKS4/5):** runs with Connect, can become the Windows system proxy, and can be shared with phones and other devices on your Wi-Fi (QR code included). Names are always resolved through Ghostline's encrypted DNS.
+- **DPI bypass:** bundled, hash-pinned [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (fake packets, more split methods, QUIC for YouTube/Google), through WinDivert on Windows and an nftables queue on Linux, plus GoodbyeDPI 0.2.3rc3 on Windows. zapret2 strategies come from a signed list refreshed daily, with auto-tune, a site blacklist, automatic detection of blocked sites, and DoH request fragmentation. On Windows, if antivirus blocks zapret2, Ghostline falls back to GoodbyeDPI and offers to retry.
+- **Local proxy (HTTP / HTTPS / SOCKS4/5):** runs with Connect, can become the system proxy (Windows, GNOME, KDE), and can be shared with phones and other devices on your Wi-Fi (QR code included). Names are always resolved through Ghostline's encrypted DNS.
 - **Web fragmentation without a driver:** traffic through the proxy gets its TLS ClientHello split automatically when a site is blocked by SNI, and the fix is remembered per network.
 - **Rules and community lists:** block, allow, fake DNS, fragment or route through an upstream proxy by domain, keyword, regexp or CIDR. Import hosts, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash, v2ray, sing-box or CIDR lists straight from a GitHub link, updated on a schedule.
 - **DNS server for your home network:** encrypted DNS for phones, TVs, consoles and routers on your Wi-Fi: plain DNS on port 53 (no certificate needed) or DNS-over-HTTPS, with a QR-code setup page and an iOS profile.
@@ -62,7 +63,7 @@ Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points every network a
 - **Backup and restore:** export settings, rules, lists and your servers to one file and import them on another PC. Private and machine-bound values are never exported, and an import never turns on Fake SNI or sharing on the LAN.
 - **Signed server list:** updated daily and verified with ed25519; the DNSCrypt list is checked with minisign.
 - **Simple and Full interfaces**, a tray icon, Vietnamese and English UI, and a neon-terminal look.
-- **Installer or portable:** the portable build keeps all data in a `data\` folder next to the exe.
+- **Installer, portable or Linux packages:** on Windows, an installer or a portable build that keeps all data in a `data\` folder next to the exe; on Linux, `.deb`, `.rpm`, AppImage, `tar.gz` and a PKGBUILD.
 - **Update notifications only:** Ghostline tells you about a new version and never updates itself silently.
 
 ## Video
@@ -98,6 +99,8 @@ A narrated walkthrough of a little over 3 minutes: one-click connect, protection
 | `ghostline-amd64-installer.exe` | Installer (installs WebView2 if missing) | **[Direct download ⬇](https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe)** |
 | `Ghostline-<version>-portable.zip` | Portable: unzip and run | [From latest release](https://github.com/hashcott/ghostline/releases/latest) |
 | `SHA256SUMS` | Checksums for both | [Direct download](https://github.com/hashcott/ghostline/releases/latest/download/SHA256SUMS) |
+
+### Windows
 
 Verify the download:
 
@@ -136,24 +139,29 @@ Ghostline on Linux is two parts: a background service (`ghostline.service`, root
 
 1. Start Ghostline and press **Connect**. It picks a server, redirects DNS and verifies there is no leak.
 2. If some sites are still blocked, either turn on the **proxy** (Full → Proxy → enable proxy + use for this PC) so browsers get automatic fragmentation, or open **Full → DPI bypass**, pick an engine (**zapret2** is recommended), turn it on and press **auto-tune**.
-   To share with other devices, turn on **share on LAN** and scan the QR code on your phone (the network must be *Private*).
+   To share with other devices, turn on **share on LAN** and scan the QR code on your phone (on Windows the network must be *Private*).
 3. Press **Disconnect** (or quit from the tray) to restore your original DNS.
 
-If DNS ever looks wrong, **Settings → Restore DNS now** puts every adapter back to its saved state. From a terminal you can also run:
+If DNS ever looks wrong, **Settings → Restore DNS now** puts the system's DNS back to its saved state. From a terminal you can also run:
 
 ```powershell
 ghostline.exe --restore
 ```
 
+On Linux, stopping the service restores DNS: `sudo systemctl stop ghostline` (then `sudo systemctl start ghostline`).
+
 ## How it works
 
 ```
-apps ──► Windows DNS client ──► 127.0.0.1:53 (Ghostline / dnsproxy) ──► DoH · DoT · DoQ · DNSCrypt
-                                         │
+apps ──► system DNS ──► 127.0.0.1:53 (Ghostline / dnsproxy) ──► DoH · DoT · DoQ · DNSCrypt
+         (Windows DNS client, NetworkManager,     │
+          systemd-resolved or resolv.conf)        │
             zapret2 / GoodbyeDPI (optional) rewrites outgoing TLS/HTTP/QUIC to dodge SNI filtering
 ```
 
-**Safety net.** Before touching an adapter, Ghostline writes a snapshot (`state.json`) of its DNS. Five layers make sure that snapshot gets restored:
+On Linux, Ghostline is a root service (`ghostlined`, run by systemd) that owns DNS, DPI and the proxy, and a window that runs as your user and talks to it over a local socket. Closing the window does not stop protection.
+
+**Safety net.** Before changing DNS, Ghostline writes a snapshot (`state.json`) of it. On Windows, five layers make sure that snapshot gets restored:
 
 1. **Clean disconnect:** the normal path.
 2. **Watchdog:** a separate `--watchdog` process restores DNS within seconds if the app dies.
@@ -161,7 +169,9 @@ apps ──► Windows DNS client ──► 127.0.0.1:53 (Ghostline / dnsproxy) 
 4. **Logon task:** the `Ghostline Recovery` scheduled task runs `--restore` after a crash or power loss.
 5. **Network guard:** while connected, the `Ghostline Network Guard` task runs a PowerShell script as SYSTEM every minute, at boot and right after Microsoft Defender acts on a threat. If Ghostline is gone but DNS still points at 127.0.0.1, it restores DNS and the system proxy from `state.json`. It does not need `ghostline.exe`, so it still works when an antivirus kills and quarantines the app along with the layers above.
 
-Design details live in [`docs/superpowers/specs`](docs/superpowers/specs).
+On Linux, systemd is the watchdog: the service restores on disconnect, `ExecStopPost=--restore` runs whenever it stops or crashes (even after `kill -9`), and at boot the service restores whatever a power cut left before anything else.
+
+Design details live in [`docs/superpowers/specs`](docs/superpowers/specs), and [`docs/platforms.md`](docs/platforms.md) maps each feature to its Windows and Linux code.
 
 ## Privacy
 
@@ -172,12 +182,14 @@ Design details live in [`docs/superpowers/specs`](docs/superpowers/specs).
 
 ## Known limitations
 
+- **Fake SNI** works only for browsers on this PC going through the proxy, only for domains with an `sni=` rule, and breaks apps that pin certificates. Firefox may need `security.enterprise_roots.enabled`.
+- **Devices using this PC's DNS lose the internet when it is off or disconnected.** iOS has no fallback: with the DoH profile, the iPhone has no internet on your home Wi-Fi until you choose *Automatic* in *Settings › General › VPN & Device Management › DNS* (mobile data is not affected). Disconnect asks first while LAN devices use the DNS server; if this PC is often off, set the iPhone's DNS manually instead of using the profile. Android's Private DNS cannot use Ghostline; set a static DNS for your Wi-Fi instead.
+
+### Windows
+
 - If you approve UAC with a **different administrator account**, `%APPDATA%` and the system proxy belong to that account, so "use for this PC" does not affect the signed-in user.
 - Web fragmentation only helps apps that go through the proxy. Apps that ignore the Windows proxy (some games, Firefox with its own proxy settings) need the DPI engine instead.
 - LAN sharing works only on networks marked **Private** in Windows; Ghostline never changes the network profile itself.
-
-- **Fake SNI** works only for browsers on this PC going through the proxy, only for domains with an `sni=` rule, and breaks apps that pin certificates. Firefox may need `security.enterprise_roots.enabled`.
-- **Devices using this PC's DNS lose the internet when it is off or disconnected.** iOS has no fallback: with the DoH profile, the iPhone has no internet on your home Wi-Fi until you choose *Automatic* in *Settings › General › VPN & Device Management › DNS* (mobile data is not affected). Disconnect asks first while LAN devices use the DNS server; if this PC is often off, set the iPhone's DNS manually instead of using the profile. Android's Private DNS cannot use Ghostline; set a static DNS for your Wi-Fi instead.
 
 ### Linux
 
@@ -187,11 +199,12 @@ Design details live in [`docs/superpowers/specs`](docs/superpowers/specs).
 - A kernel without NFQUEUE (`nfnetlink_queue`, `nft_queue`) has no DPI bypass; the proxy's fragmentation still works.
 - No GoodbyeDPI (it is Windows-only); zapret2 is the engine.
 - Packages are not GPG-signed yet: check `SHA256SUMS`.
+- The AppImage needs glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 and later).
 - SteamOS (Steam Deck) is not verified yet.
 
 ## Building from source
 
-**Prerequisites:** Go 1.26+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, and [NSIS](https://nsis.sourceforge.io) for the installer.
+**Prerequisites:** Go 1.27+, Node.js 24, [Wails v3](https://v3.wails.io) `v3.0.0-beta.27`, and [NSIS](https://nsis.sourceforge.io) for the Windows installer.
 
 ```bash
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.27
@@ -206,7 +219,7 @@ On Linux (GTK 4 and WebKitGTK 6.0 development packages, plus `squashfs-tools` fo
 
 ```bash
 wails3 task linux:build                     # bin/linux/ghostline and bin/linux/ghostlined
-wails3 task linux:package VERSION=0.6.0     # deb, rpm, AppImage and tar.gz in bin/
+wails3 task linux:package VERSION=0.6.1     # deb, rpm, AppImage and tar.gz in bin/
 ```
 
 **Tests:**
@@ -216,10 +229,16 @@ go test ./...
 cd frontend && npm test
 ```
 
-Integration tests change real system settings, so run them in an **admin** terminal:
+Integration tests change real system settings, so run them in an **admin** terminal on Windows:
 
 ```bash
 go test -tags integration ./internal/sysdns/... ./internal/startup/...
+```
+
+and as root on Linux (system DNS, the nftables queue with nfqws2, recovery after `kill -9`):
+
+```bash
+sudo -E env "PATH=$PATH" go test -tags integration_root ./internal/sysdns/ ./internal/dpi/ ./cmd/ghostlined/
 ```
 
 Before a release, go through [`docs/release-checklist.md`](docs/release-checklist.md). Pushing a `v*` tag builds and publishes the release through GitHub Actions.
@@ -229,10 +248,15 @@ Before a release, go through [`docs/release-checklist.md`](docs/release-checklis
 | Path | Purpose |
 | --- | --- |
 | `internal/app` | Orchestrator: connect, disconnect, health checks, DPI, recovery |
+| `internal/core` | Everything below the window, shared by the Windows app and the Linux service |
+| `internal/platform` | The one place that picks each OS's implementations |
 | `internal/engine` | Local DNS server built on dnsproxy |
-| `internal/sysdns` | Read, apply and restore adapter DNS (Win32 + netsh fallback) |
-| `internal/watchdog`, `internal/startup` | Watchdog process and scheduled tasks |
-| `internal/dpi` | DPI engines (zapret2, GoodbyeDPI), signed strategy list, WinDivert service handling |
+| `internal/sysdns` | System DNS: Windows adapters (Win32 + netsh fallback); NetworkManager, systemd-resolved and resolv.conf on Linux |
+| `internal/watchdog`, `internal/startup` | Recovery, watchdog process and scheduled tasks (Windows) |
+| `internal/dpi` | DPI engines (zapret2, GoodbyeDPI), signed strategy list, packet capture (WinDivert, nftables) |
+| `internal/sysproxy`, `internal/certstore`, `internal/firewall` | System proxy, certificate stores and firewall per OS |
+| `cmd/ghostlined`, `internal/rpc`, `internal/session` | Linux service, its socket protocol, and tasks run in the user's desktop session |
+| `internal/sysinstall`, `build/linux` | Linux systemd unit, service install, and the deb/rpm/AppImage/tar.gz/PKGBUILD packaging |
 | `internal/scanner`, `internal/probe` | Server latency scan and blocked-site probes |
 | `internal/servers`, `internal/upstreams` | Signed server list and DNSCrypt list |
 | `internal/shell` | Window, tray and OS events (Wails) |
