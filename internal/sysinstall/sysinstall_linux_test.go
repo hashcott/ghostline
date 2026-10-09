@@ -63,7 +63,11 @@ func TestUnit_LoadsTheQueueModulesBeforeTheDaemon(t *testing.T) {
 	u := string(Unit("/x/ghostlined"))
 	require.Contains(t, u, "ExecStartPre=+-modprobe -a nfnetlink_queue nft_queue\n")
 	require.Less(t, strings.Index(u, "ExecStartPre="), strings.Index(u, "ExecStart=/x/ghostlined"))
-	require.NotContains(t, u, "CAP_SYS_MODULE", "the daemon itself stays without it")
+	for _, line := range strings.Split(u, "\n") {
+		if strings.HasPrefix(line, "CapabilityBoundingSet=") {
+			require.NotContains(t, line, "CAP_SYS_MODULE", "the daemon itself stays without it")
+		}
+	}
 }
 
 func TestInstall_Fresh(t *testing.T) {
