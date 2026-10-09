@@ -72,7 +72,7 @@ Pick the file for your distribution on the Releases page (see the table in the R
 - **Who may control it.** Members of `wheel`, `sudo`, `admin` or `ghostline`. For another account: `sudo usermod -aG ghostline <user>`, then log in again. Others see "your account may not control Ghostline".
 - **The service is not running.** The window says so and offers **start the service** (deb, rpm, Arch) or **install the service** (AppImage, tar.gz); both ask for your password through the system's dialog. In a terminal: `sudo systemctl enable --now ghostline`.
 - **Start with the system.** In Settings, *start with the system* connects at boot (with *connect automatically*) and opens Ghostline in the tray when you log in.
-- **Updating.** Install the new `.deb` or `.rpm`, or rebuild `ghostline-bin` from the new `PKGBUILD`. If you installed the service from the AppImage or the tar.gz, unpack the new tar.gz and run `sudo ./install.sh` once: it replaces the service and restarts it. Then use the new AppImage.
+- **Updating.** Install the new `.deb` or `.rpm`, or rebuild `ghostline-bin` from the new `PKGBUILD`. If you installed the service from the AppImage, open the new AppImage: it finds the older service and updates it once you enter your password, and reconnects if you were protected. If you cancel, the banner at the top keeps an **update the service** button. From the tar.gz, unpack the new one and run `sudo ./install.sh` once: it replaces the service and restarts it.
 
 ### Steam Deck (SteamOS) — not verified yet
 

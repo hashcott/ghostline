@@ -11,6 +11,7 @@ const svc = vi.hoisted(() => ({
   GetSettings: vi.fn(() => Promise.resolve({ language: "vi", mode: "simple", probeSites: [], dpi: {}, fragmentDns: {} })),
   GetLogs: vi.fn(() => Promise.resolve([])),
   AppInfo: vi.fn(() => Promise.resolve({ version: "test" })),
+  ServiceInstall: vi.fn(() => Promise.resolve({ kind: "", outdated: false })),
   SetMode: vi.fn(() => Promise.resolve()),
   SaveSettings: vi.fn(() => Promise.resolve()),
 }));
