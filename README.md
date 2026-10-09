@@ -126,7 +126,9 @@ Ghostline on Linux is two parts: a background service (`ghostline.service`, root
 
 **Requirements:** systemd, GTK 4 and WebKitGTK 6.0 (the packages pull them in; the AppImage and the tar.gz use the system's).
 
-**Uninstall:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz and AppImage: `sudo ./uninstall.sh [--purge]` or `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, the system proxy, certificates, firewall rules and the nftables table are restored first. rpm and Arch keep the settings: `sudo rm -rf /var/lib/ghostline /var/log/ghostline` removes them.
+**Update:** install the new `.deb` or `.rpm`, or rebuild `ghostline-bin` from the new `PKGBUILD`. If the service came from the AppImage or the tar.gz, unpack the new tar.gz and run `sudo ./install.sh` once (it replaces the service and restarts it); then use the new AppImage.
+
+**Uninstall:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz: `sudo ./uninstall.sh [--purge]` in the unpacked folder; AppImage: `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`, then delete the AppImage file. DNS, the system proxy, certificates, firewall rules and the nftables table are restored first. rpm and Arch keep the settings: `sudo rm -rf /var/lib/ghostline /var/log/ghostline` removes them.
 
 ## Usage
 

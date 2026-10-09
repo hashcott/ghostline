@@ -68,6 +68,7 @@ Pick the file for your distribution on the Releases page (see the table in the R
 - **Who may control it.** Members of `wheel`, `sudo`, `admin` or `ghostline`. For another account: `sudo usermod -aG ghostline <user>`, then log in again. Others see "your account may not control Ghostline".
 - **The service is not running.** The window says so and offers **start the service** (deb, rpm, Arch) or **install the service** (AppImage, tar.gz); both ask for your password through the system's dialog. In a terminal: `sudo systemctl enable --now ghostline`.
 - **Start with the system.** In Settings, *start with the system* connects at boot (with *connect automatically*) and opens Ghostline in the tray when you log in.
+- **Updating.** Install the new `.deb` or `.rpm`, or rebuild `ghostline-bin` from the new `PKGBUILD`. If you installed the service from the AppImage or the tar.gz, unpack the new tar.gz and run `sudo ./install.sh` once: it replaces the service and restarts it. Then use the new AppImage.
 
 ### Steam Deck (SteamOS) — not verified yet
 
@@ -533,7 +534,7 @@ Work through these in order and stop as soon as the site opens:
 
 - **Installer build:** Settings → Apps → Ghostline → Uninstall. The uninstaller restores your DNS and removes the startup tasks, the WinDivert driver and every Ghostline certificate.
 - **Portable build:** in the app click **Disconnect**, turn off **start with windows**, quit from the tray, then delete the folder.
-- **Linux:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; AppImage and tar.gz: `sudo ./uninstall.sh [--purge]` from the unpacked folder, or `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, the system proxy, certificates (also in Firefox profiles), firewall rules and the nftables table come back first. rpm and Arch keep `/var/lib/ghostline` and `/var/log/ghostline`; delete them to remove everything.
+- **Linux:** `sudo apt remove ghostline` (`apt purge` also deletes the settings), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz: `sudo ./uninstall.sh [--purge]` from the unpacked folder; AppImage: `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`, then delete the AppImage file. DNS, the system proxy, certificates (also in Firefox profiles), firewall rules and the nftables table come back first. rpm and Arch keep `/var/lib/ghostline` and `/var/log/ghostline`; delete them to remove everything.
 
 ## 9. FAQ
 

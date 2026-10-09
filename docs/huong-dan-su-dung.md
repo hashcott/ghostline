@@ -68,6 +68,7 @@ Chọn file cho bản phân phối của bạn ở trang Releases (xem bảng tr
 - **Ai được điều khiển.** Thành viên các nhóm `wheel`, `sudo`, `admin` hoặc `ghostline`. Cho tài khoản khác: `sudo usermod -aG ghostline <tài khoản>` rồi đăng nhập lại. Tài khoản khác sẽ thấy "Tài khoản của bạn không có quyền điều khiển Ghostline".
 - **Dịch vụ chưa chạy.** Cửa sổ báo điều đó và có nút **khởi động dịch vụ** (deb, rpm, Arch) hoặc **cài dịch vụ** (AppImage, tar.gz); cả hai hỏi mật khẩu qua hộp thoại của hệ thống. Trong terminal: `sudo systemctl enable --now ghostline`.
 - **Khởi động cùng hệ thống.** Trong Cài đặt, *khởi động cùng hệ thống* tự kết nối lúc bật máy (khi bật *tự động kết nối*) và mở Ghostline ở khay khi bạn đăng nhập.
+- **Cập nhật.** Cài gói `.deb` hoặc `.rpm` mới, hoặc build lại `ghostline-bin` từ `PKGBUILD` mới. Nếu bạn cài dịch vụ từ AppImage hoặc tar.gz, giải nén tar.gz mới rồi chạy `sudo ./install.sh` một lần: lệnh này thay dịch vụ và khởi động lại nó. Sau đó dùng AppImage mới.
 
 ### Steam Deck (SteamOS) — chưa kiểm chứng
 
@@ -533,7 +534,7 @@ Làm lần lượt, dừng lại khi trang đã mở được:
 
 - **Bản cài đặt:** Settings → Apps → Ghostline → Uninstall. Trình gỡ cài đặt tự trả DNS về như cũ, xoá các tác vụ khởi động, driver WinDivert và mọi chứng chỉ Ghostline.
 - **Bản portable:** trong app bấm **Ngắt kết nối**, tắt **khởi động cùng Windows**, thoát từ khay, rồi xoá thư mục.
-- **Linux:** `sudo apt remove ghostline` (`apt purge` xoá luôn cài đặt), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; AppImage và tar.gz: `sudo ./uninstall.sh [--purge]` trong thư mục đã giải nén, hoặc `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`. DNS, proxy hệ thống, chứng chỉ (cả trong profile Firefox), luật firewall và bảng nftables được trả lại trước. rpm và Arch giữ lại `/var/lib/ghostline` và `/var/log/ghostline`; xoá hai thư mục này để gỡ sạch.
+- **Linux:** `sudo apt remove ghostline` (`apt purge` xoá luôn cài đặt), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz: `sudo ./uninstall.sh [--purge]` trong thư mục đã giải nén; AppImage: `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`, rồi xoá file AppImage. DNS, proxy hệ thống, chứng chỉ (cả trong profile Firefox), luật firewall và bảng nftables được trả lại trước. rpm và Arch giữ lại `/var/lib/ghostline` và `/var/log/ghostline`; xoá hai thư mục này để gỡ sạch.
 
 ## 9. Câu hỏi thường gặp
 
