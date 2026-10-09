@@ -28,7 +28,8 @@ func TestDetect(t *testing.T) {
 	}{
 		{"appimage", env(map[string]string{"APPIMAGE": "/h/G.AppImage"}), none, "ID=arch\n", Info{Kind: "appimage"}},
 		{"appimage with service", env(map[string]string{"APPIMAGE": "/h/G.AppImage"}), only(SelfUnit), "", Info{Kind: "appimage", Unit: true}},
-		{"package", env(nil), only(PackageUnit), "ID=ubuntu\n", Info{Kind: "package", Unit: true}},
+		{"package", env(nil), only(PackageUnit), "ID=ubuntu\n", Info{Kind: "package", Unit: true, Packaged: true}},
+		{"appimage over a package", env(map[string]string{"APPIMAGE": "/h/G.AppImage"}), only(PackageUnit), "", Info{Kind: "appimage", Unit: true, Packaged: true}},
 		{"tarball", env(nil), none, "", Info{Kind: "tarball"}},
 		{"tarball installed", env(nil), only(SelfUnit), "", Info{Kind: "tarball", Unit: true}},
 		{"steamos", env(map[string]string{"APPIMAGE": "/h/G.AppImage"}), none, "NAME=\"SteamOS\"\nID=steamos\nID_LIKE=arch\n", Info{Kind: "appimage", SteamOS: true}},

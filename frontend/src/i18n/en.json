@@ -1102,6 +1102,8 @@
     "install": "install the service",
     "update": "update the service",
     "packageUpdate": "Update Ghostline with your package manager",
+    "outdated": "The background service runs {{service}}, older than the app ({{app}}). Update it to get the latest fixes.",
+    "updating": "Updating the background service…",
     "steamosHint": "On a Steam Deck, set a password first: open Konsole and run passwd"
   }
 }

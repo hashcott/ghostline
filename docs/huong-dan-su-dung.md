@@ -72,7 +72,7 @@ Chọn file cho bản phân phối của bạn ở trang Releases (xem bảng tr
 - **Ai được điều khiển.** Thành viên các nhóm `wheel`, `sudo`, `admin` hoặc `ghostline`. Cho tài khoản khác: `sudo usermod -aG ghostline <tài khoản>` rồi đăng nhập lại. Tài khoản khác sẽ thấy "Tài khoản của bạn không có quyền điều khiển Ghostline".
 - **Dịch vụ chưa chạy.** Cửa sổ báo điều đó và có nút **khởi động dịch vụ** (deb, rpm, Arch) hoặc **cài dịch vụ** (AppImage, tar.gz); cả hai hỏi mật khẩu qua hộp thoại của hệ thống. Trong terminal: `sudo systemctl enable --now ghostline`.
 - **Khởi động cùng hệ thống.** Trong Cài đặt, *khởi động cùng hệ thống* tự kết nối lúc bật máy (khi bật *tự động kết nối*) và mở Ghostline ở khay khi bạn đăng nhập.
-- **Cập nhật.** Cài gói `.deb` hoặc `.rpm` mới, hoặc build lại `ghostline-bin` từ `PKGBUILD` mới. Nếu bạn cài dịch vụ từ AppImage hoặc tar.gz, giải nén tar.gz mới rồi chạy `sudo ./install.sh` một lần: lệnh này thay dịch vụ và khởi động lại nó. Sau đó dùng AppImage mới.
+- **Cập nhật.** Cài gói `.deb` hoặc `.rpm` mới, hoặc build lại `ghostline-bin` từ `PKGBUILD` mới. Nếu bạn cài dịch vụ từ AppImage, mở AppImage mới: app thấy dịch vụ cũ hơn và cập nhật nó sau khi bạn nhập mật khẩu, rồi kết nối lại nếu trước đó đang bảo vệ. Nếu bạn huỷ, thanh thông báo ở trên vẫn có nút **cập nhật dịch vụ**. Với tar.gz, giải nén bản mới rồi chạy `sudo ./install.sh` một lần: lệnh này thay dịch vụ và khởi động lại nó.
 
 ### Steam Deck (SteamOS) — chưa kiểm chứng
 

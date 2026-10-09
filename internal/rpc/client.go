@@ -12,6 +12,8 @@ import (
 // Client is one connection to the daemon.
 type Client struct {
 	w *wire
+	// daemonVersion is the build the daemon named in its hello.
+	daemonVersion string
 
 	mu      sync.Mutex
 	nextID  uint64
@@ -60,7 +62,7 @@ func Dial(ctx context.Context, socket, version string) (*Client, error) {
 		c.Close()
 		return nil, fmt.Errorf("%s: %w", CodeUnreachable, err)
 	}
-	cl := &Client{w: w, pending: map[uint64]chan Msg{}, done: make(chan struct{}), events: make(chan Msg, eventQueue)}
+	cl := &Client{w: w, daemonVersion: first.Hello.Version, pending: map[uint64]chan Msg{}, done: make(chan struct{}), events: make(chan Msg, eventQueue)}
 	go cl.loop()
 	go cl.dispatch()
 	return cl, nil
@@ -79,6 +81,9 @@ func (c *Client) OnUI(fn func(ctx context.Context, kind string, args []json.RawM
 	c.onUI = fn
 	c.mu.Unlock()
 }
+
+// DaemonVersion is the daemon's build, from its hello.
+func (c *Client) DaemonVersion() string { return c.daemonVersion }
 
 // Done is closed when the connection ends.
 func (c *Client) Done() <-chan struct{} { return c.done }

@@ -130,7 +130,7 @@ Trên Linux, Ghostline gồm hai phần: dịch vụ nền (`ghostline.service`,
 
 **Yêu cầu:** systemd, GTK 4 và WebKitGTK 6.0 (gói cài tự kéo về; AppImage và tar.gz dùng thư viện có sẵn của máy).
 
-**Cập nhật:** cài gói `.deb` hoặc `.rpm` mới, hoặc build lại `ghostline-bin` từ `PKGBUILD` mới. Nếu dịch vụ được cài từ AppImage hoặc tar.gz, giải nén tar.gz mới rồi chạy `sudo ./install.sh` một lần (lệnh này thay dịch vụ và khởi động lại nó); sau đó dùng AppImage mới.
+**Cập nhật:** cài gói `.deb` hoặc `.rpm` mới, hoặc build lại `ghostline-bin` từ `PKGBUILD` mới. Nếu dịch vụ được cài từ AppImage, mở AppImage mới: app thấy dịch vụ cũ hơn và cập nhật nó sau khi bạn nhập mật khẩu (nếu huỷ, thanh thông báo ở trên vẫn có nút **cập nhật dịch vụ**). Với tar.gz, giải nén bản mới rồi chạy `sudo ./install.sh` một lần (lệnh này thay dịch vụ và khởi động lại nó).
 
 **Gỡ cài đặt:** `sudo apt remove ghostline` (`apt purge` xoá luôn cài đặt), `sudo dnf remove ghostline`, `sudo pacman -R ghostline-bin`; tar.gz: `sudo ./uninstall.sh [--purge]` trong thư mục đã giải nén; AppImage: `sudo /var/lib/ghostline/bin/ghostlined --uninstall-system [--purge]`, rồi xoá file AppImage. DNS, proxy hệ thống, chứng chỉ, luật firewall và bảng nftables được trả lại trước. rpm và Arch giữ lại cài đặt: `sudo rm -rf /var/lib/ghostline /var/log/ghostline` để xoá hẳn.
 

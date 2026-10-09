@@ -4,15 +4,26 @@ import (
 	"time"
 
 	"github.com/hashcott/ghostline/internal/app"
+	"github.com/hashcott/ghostline/internal/brand"
+	"github.com/hashcott/ghostline/internal/updater"
 )
 
 // daemonWait bounds the wait for the daemon after the service was
 // installed or started.
 var daemonWait = 10 * time.Second
 
-// ServiceInstall says which service buttons to show (the GUI answers it,
-// not the daemon, which may be down).
-func (s *Service) ServiceInstall() app.InstallInfo { return s.inst.info() }
+// ServiceInstall says which service buttons to show and whether the
+// daemon is an older release than this window (the GUI answers it, not
+// the daemon, which may be down).
+func (s *Service) ServiceInstall() app.InstallInfo {
+	in := s.inst.info()
+	in.AppVersion = brand.Version
+	if cl, err := s.conn.client(); err == nil {
+		in.ServiceVersion = cl.DaemonVersion()
+		in.Outdated = updater.Newer(in.ServiceVersion, in.AppVersion)
+	}
+	return in
+}
 
 // InstallService installs (or updates) the background service through
 // pkexec, then waits for the daemon.

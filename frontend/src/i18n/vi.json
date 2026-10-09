@@ -1102,6 +1102,8 @@
     "install": "cài dịch vụ",
     "update": "cập nhật dịch vụ",
     "packageUpdate": "Cập nhật Ghostline bằng trình quản lý gói",
+    "outdated": "Dịch vụ nền đang chạy bản {{service}}, cũ hơn app ({{app}}). Cập nhật để dùng các bản sửa mới.",
+    "updating": "Đang cập nhật dịch vụ nền…",
     "steamosHint": "Trên Steam Deck, đặt mật khẩu trước: mở Konsole và chạy passwd"
   }
 }
