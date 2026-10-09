@@ -195,7 +195,7 @@ Chi tiết thiết kế nằm trong [`docs/superpowers/specs`](docs/superpowers/
 
 ### Linux
 
-- GNOME không có khay hệ thống mặc định: đóng cửa sổ là thoát app, còn việc bảo vệ vẫn chạy trong dịch vụ nền.
+- GNOME không có khay hệ thống mặc định: khi bật *thu xuống khay*, cửa sổ đã đóng không có icon để bấm; mở lại Ghostline từ menu ứng dụng để hiện cửa sổ, hoặc tắt tuỳ chọn này để bấm ✕ là thoát. Dù cách nào, việc bảo vệ vẫn chạy trong dịch vụ nền.
 - Proxy hệ thống chỉ được đặt tự động trên GNOME và KDE; desktop khác hãy tự đặt `127.0.0.1:<cổng>`.
 - Fake SNI trong Chrome và Chromium trên Ubuntu, Debian cần gói `libnss3-tools` (`certutil`).
 - Kernel không có NFQUEUE (`nfnetlink_queue`, `nft_queue`) thì không vượt DPI được; fragment của proxy vẫn hoạt động.

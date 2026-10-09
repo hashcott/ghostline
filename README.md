@@ -193,7 +193,7 @@ Design details live in [`docs/superpowers/specs`](docs/superpowers/specs), and [
 
 ### Linux
 
-- GNOME has no tray by default: closing the window quits it, and protection keeps running in the background service.
+- GNOME has no tray by default: with *close to tray* on, a closed window has no icon to click; open Ghostline again from the app menu to bring it back, or turn the setting off so ✕ quits. Protection keeps running in the background service either way.
 - The system proxy is set automatically only on GNOME and KDE; on other desktops set `127.0.0.1:<port>` by hand.
 - Fake SNI in Chrome and Chromium on Ubuntu and Debian needs `libnss3-tools` (`certutil`).
 - A kernel without NFQUEUE (`nfnetlink_queue`, `nft_queue`) has no DPI bypass; the proxy's fragmentation still works.
