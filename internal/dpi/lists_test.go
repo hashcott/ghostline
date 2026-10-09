@@ -3,10 +3,23 @@ package dpi
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+// symlinkOrSkip makes a link, or skips where Windows needs admin or Developer
+// Mode to make one (CI runners have it; a plain user account does not).
+func symlinkOrSkip(t *testing.T, target, link string) {
+	t.Helper()
+	if err := os.Symlink(target, link); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("cannot make a symlink here: %v", err)
+		}
+		require.NoError(t, err)
+	}
+}
 
 // Review C2: the engine (nobody on Linux) can replace its list with a link
 // to any file. Root never writes through it…
@@ -18,7 +31,7 @@ func TestCopyLists_DoesNotWriteThroughALink(t *testing.T) {
 	require.NoError(t, os.WriteFile(victim, []byte("root ALL\n"), 0o600))
 	dst := filepath.Join(dir, filepath.FromSlash(autoHostlistName))
 	require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o755))
-	require.NoError(t, os.Symlink(victim, dst))
+	symlinkOrSkip(t, victim, dst)
 	_, err := copyLists(dir, Plan{Scope: ScopeBlacklist, AutoHostlist: src})
 	require.NoError(t, err)
 	b, _ := os.ReadFile(victim)
@@ -34,7 +47,7 @@ func TestReadEngineList_RejectsLinksAndPipes(t *testing.T) {
 	victim := filepath.Join(dir, "shadow")
 	require.NoError(t, os.WriteFile(victim, []byte("secret"), 0o600))
 	link := filepath.Join(dir, "list")
-	require.NoError(t, os.Symlink(victim, link))
+	symlinkOrSkip(t, victim, link)
 	_, err := readEngineList(link)
 	require.Error(t, err)
 
