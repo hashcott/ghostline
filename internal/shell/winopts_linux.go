@@ -5,7 +5,10 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// applyPlatformOptions: closing the window quits the GUI on Linux. Not every
-// desktop shows a tray (GNOME), and without one a hidden window could not be
-// brought back; the daemon (L2) keeps protection running instead.
-func applyPlatformOptions(*application.Options, *app.Orchestrator) {}
+// applyPlatformOptions keeps the GUI running when its window closes to the
+// tray; the WindowClosing hook quits when "close to tray" is off. Where the
+// desktop shows no tray (GNOME without an extension), opening Ghostline
+// again brings the window back through the single-instance handler.
+func applyPlatformOptions(opts *application.Options, _ *app.Orchestrator) {
+	opts.Linux.DisableQuitOnLastWindowClosed = true
+}

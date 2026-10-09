@@ -272,7 +272,7 @@ Records events: connecting, switching servers, DPI bypass on/off, errors.
 | language | VI or EN (also switchable with the VI/EN button at the top) |
 | start with windows / start with the system | Windows: open Ghostline when you sign in, without a UAC prompt. Linux: connect at boot (with *connect on launch*) and open Ghostline in the tray when you log in |
 | connect on launch | Connect as soon as the app opens |
-| close → minimise to tray | Clicking ✕ hides the window to the tray instead of quitting. Ghostline keeps protecting you in the background |
+| close → minimise to tray | Clicking ✕ hides the window to the tray instead of quitting. Ghostline keeps protecting you in the background. On a Linux desktop without a tray (GNOME without an extension), open Ghostline again from the app menu to bring the window back |
 | adapters | Windows: **auto** protects every adapter in use (recommended), **manual** only the adapters you pick. Linux shows the DNS system Ghostline drives instead (NetworkManager, systemd-resolved or `/etc/resolv.conf`) |
 | test domain | The domains the server scan asks for, one per line (default `www.google.com`); a server must answer every one. Use 1–2 sites that always work: each extra domain makes every scan slower (at most 5). A new domain is checked when you save it: one without an IPv4 address (for example `steam.com`; use `store.steampowered.com`) is refused. If a domain later fails on most servers, scans ignore it and a warning asks you to fix it. Applies from the next scan |
 | bootstrap | Plain DNS servers used only to look up the addresses of DoH servers at startup (default `1.1.1.1:53`, `8.8.8.8:53`). This is the only unencrypted DNS traffic, and it is only used to look up DoH server names |

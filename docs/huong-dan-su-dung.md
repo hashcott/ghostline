@@ -272,7 +272,7 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt vượt 
 | ngôn ngữ | VI hoặc EN (cũng đổi được bằng nút VI/EN ở góc trên) |
 | khởi động cùng windows / cùng hệ thống | Windows: tự mở Ghostline khi đăng nhập, không hỏi UAC. Linux: tự kết nối lúc bật máy (khi bật *tự động kết nối*) và mở Ghostline ở khay khi đăng nhập |
 | tự kết nối khi mở | Bấm kết nối ngay khi app mở |
-| đóng → thu xuống khay | Bấm ✕ thì ẩn xuống khay thay vì thoát. Ghostline vẫn bảo vệ ở chế độ nền |
+| đóng → thu xuống khay | Bấm ✕ thì ẩn xuống khay thay vì thoát. Ghostline vẫn bảo vệ ở chế độ nền. Trên Linux không có khay (GNOME chưa cài extension), mở lại Ghostline từ menu ứng dụng để hiện cửa sổ |
 | card mạng | Windows: **tự động** bảo vệ mọi card mạng đang dùng (khuyến nghị), **chọn tay** chỉ bảo vệ các card bạn chọn. Linux hiện hệ thống DNS mà Ghostline điều khiển (NetworkManager, systemd-resolved hoặc `/etc/resolv.conf`) |
 | tên miền thử | Các tên miền bộ quét máy chủ hỏi, mỗi dòng một tên (mặc định `www.google.com`); máy chủ phải trả lời đúng tất cả. Nên dùng 1–2 trang luôn mở được: mỗi tên miền thêm làm mọi lượt quét lâu hơn (tối đa 5). Tên miền mới được kiểm tra khi lưu: tên miền không có địa chỉ IPv4 (ví dụ `steam.com`; hãy dùng `store.steampowered.com`) sẽ bị từ chối. Nếu sau này một tên miền trượt ở hầu hết máy chủ, lượt quét bỏ qua nó và hiện cảnh báo nhờ bạn sửa. Áp dụng từ lần quét sau |
 | bootstrap | DNS thường dùng để tìm địa chỉ của các máy chủ DoH lúc khởi động (mặc định `1.1.1.1:53`, `8.8.8.8:53`). Đây là lưu lượng DNS không mã hoá duy nhất, và chỉ dùng để tra tên máy chủ DoH |
