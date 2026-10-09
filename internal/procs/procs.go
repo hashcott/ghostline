@@ -27,6 +27,8 @@ type Inspector interface {
 	Alive(pid uint32, start time.Time) bool
 	WaitForExit(pid uint32) error
 	StopService(name string, wait time.Duration) error
+	// ProcessNames lists the names of the running processes.
+	ProcessNames() ([]string, error)
 }
 
 // Unsupported is the Inspector for an OS without support yet.
@@ -40,3 +42,4 @@ func (Unsupported) StartTime(uint32) (time.Time, error)     { return time.Time{}
 func (Unsupported) Alive(uint32, time.Time) bool            { return false }
 func (Unsupported) WaitForExit(uint32) error                { return errUnsupported }
 func (Unsupported) StopService(string, time.Duration) error { return errUnsupported }
+func (Unsupported) ProcessNames() ([]string, error)         { return nil, errUnsupported }

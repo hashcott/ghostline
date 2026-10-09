@@ -25,6 +25,7 @@ const (
 	CodePort53NotOwner       = "PORT53_NOT_OWNER"
 	CodeNoServers            = "NO_SERVERS"
 	CodeEngineSelfTest       = "ENGINE_SELFTEST_FAILED"
+	CodeDNSIntercepted       = "DNS_INTERCEPTED" // another program takes 127.0.0.1:53 packets; param name, "" when unknown
 	CodeSetDNSFailed         = "SET_DNS_FAILED"
 	CodeVerifyLeak           = "VERIFY_LEAK"
 	CodeRestoreFailed        = "RESTORE_FAILED"

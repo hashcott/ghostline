@@ -395,6 +395,18 @@
       "message": "DNS cục bộ không khởi động được",
       "action": "Thử lại; xem nhật ký nếu lỗi lặp lại"
     },
+    "DNS_INTERCEPTED": {
+      "message": "Một phần mềm khác đang chặn DNS của máy (trình chặn quảng cáo, antivirus hoặc VPN)",
+      "messageNamed": "Có vẻ {{name}} đang chặn DNS của máy nên Ghostline không nhận được truy vấn",
+      "action": "Tắt tính năng lọc DNS / bảo vệ DNS trong phần mềm đó (hoặc thoát nó), rồi bấm Thử lại",
+      "hint": {
+        "adguard": "Mở AdGuard → Cài đặt → Bảo vệ DNS → tắt, rồi bấm Thử lại",
+        "avast": "Mở Avast → Protection (Bảo vệ) → Real Site → tắt, rồi bấm Thử lại",
+        "avg": "Mở AVG → tắt Fake Website Shield, rồi bấm Thử lại",
+        "yogadns": "Thoát YogaDNS (biểu tượng ở khay hệ thống), rồi bấm Thử lại",
+        "portmaster": "Tạm thoát Portmaster hoặc cho Ghostline ngoại lệ trong Portmaster, rồi bấm Thử lại"
+      }
+    },
     "SET_DNS_FAILED": {
       "message": "không đặt được DNS cho {{adapter}}",
       "action": "Chọn card mạng khác trong Cài đặt"

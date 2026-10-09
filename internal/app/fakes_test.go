@@ -301,6 +301,8 @@ type fSystem struct {
 	noV6        bool
 	listenErr   error            // returned by ListenFree
 	probed      []netip.AddrPort // what ListenFree was asked to bind
+	loopErr     error            // returned by LoopbackUDP
+	procNames   []string         // returned by ProcessNames
 }
 
 func (s *fSystem) IsAdmin() bool { _ = s.r.add("sys.admin"); return s.admin }
@@ -319,6 +321,11 @@ func (s *fSystem) ListenFree(addrs []netip.AddrPort) error {
 }
 func (s *fSystem) SelfPID() (uint32, time.Time) { return 1234, time.Unix(100, 0) }
 func (s *fSystem) IPv6Available() bool          { return !s.noV6 }
+func (s *fSystem) LoopbackUDP(uint16) error {
+	_ = s.r.add("sys.loopback")
+	return s.loopErr
+}
+func (s *fSystem) ProcessNames() ([]string, error) { return s.procNames, nil }
 
 type fPicker struct {
 	r     *rec

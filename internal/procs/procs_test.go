@@ -18,4 +18,6 @@ func TestUnsupported(t *testing.T) {
 	require.ErrorIs(t, in.WaitForExit(1), errors.ErrUnsupported)
 	require.ErrorIs(t, in.StopService("x", time.Second), errors.ErrUnsupported)
 	require.False(t, in.Alive(1, time.Time{}))
+	_, err = in.ProcessNames()
+	require.ErrorIs(t, err, errors.ErrUnsupported)
 }

@@ -395,6 +395,18 @@
       "message": "the local DNS engine failed to start",
       "action": "Retry; check the logs if it repeats"
     },
+    "DNS_INTERCEPTED": {
+      "message": "Another program is intercepting this computer's DNS (an ad blocker, antivirus or VPN)",
+      "messageNamed": "{{name}} seems to be intercepting this computer's DNS, so Ghostline gets no queries",
+      "action": "Turn off DNS filtering / DNS protection in that program (or quit it), then retry",
+      "hint": {
+        "adguard": "Open AdGuard → Settings → DNS protection → turn it off, then retry",
+        "avast": "Open Avast → Protection → Real Site → turn it off, then retry",
+        "avg": "Open AVG → turn off Fake Website Shield, then retry",
+        "yogadns": "Quit YogaDNS (its icon is in the system tray), then retry",
+        "portmaster": "Quit Portmaster for now or give Ghostline an exception in it, then retry"
+      }
+    },
     "SET_DNS_FAILED": {
       "message": "could not set DNS on {{adapter}}",
       "action": "Choose another adapter in Settings"

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -43,6 +44,39 @@ func (system) ListenFree(addrs []netip.AddrPort) error {
 	}
 	return nil
 }
+
+// LoopbackUDP binds 127.0.0.1:port, sends itself a datagram and waits
+// for it. A program that redirects DNS (AdGuard, an antivirus, a VPN)
+// takes such a datagram to port 53 before it arrives.
+func (system) LoopbackUDP(port uint16) error {
+	srv, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(port)})
+	if err != nil {
+		return err
+	}
+	defer srv.Close()
+	c, err := net.DialUDP("udp4", nil, srv.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	if _, err := c.Write([]byte("ghostline-probe")); err != nil {
+		return err
+	}
+	if err := srv.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		return err
+	}
+	buf := make([]byte, 64)
+	n, _, err := srv.ReadFromUDP(buf)
+	if err != nil {
+		return err
+	}
+	if string(buf[:n]) != "ghostline-probe" {
+		return errors.New("core: loopback probe: unexpected datagram")
+	}
+	return nil
+}
+
+func (s system) ProcessNames() ([]string, error) { return s.procs.ProcessNames() }
 
 // IPv6Available reports whether [::1] can be bound (IPv6 may be disabled).
 func (system) IPv6Available() bool {

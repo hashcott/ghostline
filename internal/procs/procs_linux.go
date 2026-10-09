@@ -78,6 +78,25 @@ func (linuxInspector) PortOwners(port uint16) ([]PortOwner, error) {
 	return out, nil
 }
 
+// ProcessNames lists the command names of the processes in /proc.
+func (linuxInspector) ProcessNames() ([]string, error) {
+	ds, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, d := range ds {
+		pid, err := strconv.ParseUint(d.Name(), 10, 32)
+		if err != nil {
+			continue
+		}
+		if n := procName(uint32(pid)); n != "" {
+			names = append(names, n)
+		}
+	}
+	return names, nil
+}
+
 func procName(pid uint32) string {
 	b, _ := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
 	return strings.TrimSpace(string(b))

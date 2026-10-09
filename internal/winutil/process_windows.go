@@ -69,6 +69,25 @@ func ProcessName(pid uint32) (string, error) {
 	return windows.UTF16ToString(buf[:n]), nil
 }
 
+// ProcessNames lists the image names (such as "svchost.exe") of the
+// running processes.
+func ProcessNames() ([]string, error) {
+	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer windows.CloseHandle(snap)
+	var names []string
+	e := windows.ProcessEntry32{Size: uint32(unsafe.Sizeof(windows.ProcessEntry32{}))}
+	for err = windows.Process32First(snap, &e); err == nil; err = windows.Process32Next(snap, &e) {
+		names = append(names, windows.UTF16ToString(e.ExeFile[:]))
+	}
+	if !errors.Is(err, windows.ERROR_NO_MORE_FILES) {
+		return names, err
+	}
+	return names, nil
+}
+
 // WaitForExit blocks until pid exits (or cannot be opened).
 func WaitForExit(pid uint32) error {
 	h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, pid)

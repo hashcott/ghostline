@@ -69,6 +69,11 @@ type System interface {
 	ListenFree([]netip.AddrPort) error
 	SelfPID() (uint32, time.Time)
 	IPv6Available() bool
+	// LoopbackUDP binds 127.0.0.1:port and sends itself a datagram; an
+	// error means it never arrived (or the bind failed).
+	LoopbackUDP(port uint16) error
+	// ProcessNames lists the image names of the running processes.
+	ProcessNames() ([]string, error)
 }
 
 // Picker chooses the upstream servers to use.
