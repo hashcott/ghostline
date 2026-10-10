@@ -101,6 +101,13 @@
   td:first-child { font-weight: 600; }
   td .note { display: block; font-weight: 400; color: var(--dim); font-size: 14px; }
   td.size { color: var(--dim); white-space: nowrap; font: 400 14px var(--mono); }
+  /* The row picked for the visitor's computer. */
+  tr.rec td:first-child { color: var(--green); }
+  .rec-tag {
+    display: inline-block; margin-left: 8px; padding: 0 6px; vertical-align: 2px;
+    border: 1px solid var(--green); border-radius: 3px; font: 400 12px var(--mono); color: var(--green);
+  }
+  .steps code { font-family: var(--mono); font-size: 0.9em; color: var(--text); word-break: break-all; }
   .after { margin: 20px 0 0; font-size: 15px; color: var(--dim); }
 
   .updates { max-width: 40em; }
@@ -209,9 +216,23 @@
       lede: "Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
       source: "Mã nguồn",
       getWin: "Tải cho Windows", getLinux: "Xem các bản cho Linux", getOther: "Xem mọi bản tải",
+      getPkg: { deb: "Tải cho Ubuntu, Debian", rpm: "Tải cho Fedora", tar: "Tải cho Arch Linux", appimage: "Tải cho Linux" },
       metaWin: "Windows 10 và 11, 64-bit.",
       metaLinux: "Chọn gói hợp với bản Linux của bạn ở bảng bên dưới.",
+      metaPkg: "Dùng bản Linux khác? Xem <a href=\"#all\">mọi bản tải</a>.",
+      metaMac: "Chưa có bản cho macOS: Ghostline hiện chạy trên Windows và Linux.",
       metaOther: "Ghostline chạy trên Windows và Linux. Hãy mở trang này trên máy tính để tải.",
+      rec: "đề xuất cho máy này",
+      linuxSteps: {
+        s1h: "Cài gói vừa tải",
+        s1p: {
+          deb: (f) => `Mở Terminal ở thư mục chứa file rồi chạy <code>sudo apt install ./${f}</code>.`,
+          rpm: (f) => `Mở Terminal ở thư mục chứa file rồi chạy <code>sudo dnf install ./${f}</code>.`,
+          tar: (f) => `Giải nén <code>${f}</code>, rồi trong thư mục đó chạy <code>sudo ./install.sh</code>.`,
+          appimage: (f) => `Cho phép file chạy (<em>Properties → Permissions</em> hoặc <code>chmod +x ${f}</code>) rồi mở nó.`,
+        },
+        s2h: "Mở Ghostline", s2p: "Tìm Ghostline trong menu ứng dụng. Nếu cửa sổ báo dịch vụ nền chưa chạy, bấm nút trong cửa sổ và nhập mật khẩu.",
+      },
       version: (v, s) => `Phiên bản ${v}${s ? `, ${s}` : ""}.`,
       beta: (v) => `Có bản beta ${v} để dùng thử.`,
       shotAlt: "Cửa sổ Ghostline: nút nguồn và dòng chữ Đã bảo vệ",
@@ -243,9 +264,23 @@
       lede: "Ghostline encrypts DNS and gets past deep packet inspection (DPI) for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
       source: "Source code",
       getWin: "Download for Windows", getLinux: "See the Linux downloads", getOther: "See all downloads",
+      getPkg: { deb: "Download for Ubuntu, Debian", rpm: "Download for Fedora", tar: "Download for Arch Linux", appimage: "Download for Linux" },
       metaWin: "Windows 10 and 11, 64-bit.",
       metaLinux: "Pick the package for your Linux in the table below.",
+      metaPkg: "Another Linux? See <a href=\"#all\">all downloads</a>.",
+      metaMac: "There is no macOS version yet: Ghostline runs on Windows and Linux.",
       metaOther: "Ghostline runs on Windows and Linux. Open this page on a computer to download it.",
+      rec: "recommended for this computer",
+      linuxSteps: {
+        s1h: "Install the package",
+        s1p: {
+          deb: (f) => `Open a terminal in the file's folder and run <code>sudo apt install ./${f}</code>.`,
+          rpm: (f) => `Open a terminal in the file's folder and run <code>sudo dnf install ./${f}</code>.`,
+          tar: (f) => `Unpack <code>${f}</code>, then run <code>sudo ./install.sh</code> in that folder.`,
+          appimage: (f) => `Allow the file to run (<em>Properties → Permissions</em> or <code>chmod +x ${f}</code>), then open it.`,
+        },
+        s2h: "Open Ghostline", s2p: "Find Ghostline in your applications menu. If the window says the background service is not running, press its button and enter your password.",
+      },
       version: (v, s) => `Version ${v}${s ? `, ${s}` : ""}.`,
       beta: (v) => `Beta ${v} is available to try.`,
       shotAlt: "The Ghostline window: the power button and the word Protected",
@@ -286,9 +321,22 @@
   ];
 
   const ua = navigator.userAgent;
-  const os = /Windows/.test(ua) ? "win"
-    : /Android|iPhone|iPad|Mac OS X/.test(ua) ? "other"
+  // iPads ask for the desktop site and say "Macintosh"; touch gives them away.
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const os = mobile ? "mobile"
+    : /Windows/.test(ua) ? "win"
+    : /Mac OS X|Macintosh/.test(ua) ? "mac"
+    : /CrOS/.test(ua) ? "other"
     : /Linux|X11/.test(ua) ? "linux" : "other";
+  // Which Linux package to offer. Few browsers name the distribution (Firefox
+  // on Ubuntu and Fedora do); the AppImage runs on the rest.
+  const pkg = os !== "linux" ? null
+    : /Ubuntu|Debian|Mint|Pop!_OS|elementary|Zorin/i.test(ua) ? "deb"
+    : /Fedora|Red Hat|CentOS|Rocky|Alma|SUSE/i.test(ua) ? "rpm"
+    : /\bArch\b|Manjaro|CachyOS|EndeavourOS/i.test(ua) ? "tar"
+    : "appimage";
+  const recRow = os === "win" ? "installer" : pkg;
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
   // The visitor's choice, else the browser's language.
   let lang = (navigator.language || "").toLowerCase().startsWith("vi") ? "vi" : "en";
@@ -320,17 +368,35 @@
     // The main button: the installer on Windows, the table elsewhere.
     const get = $("get");
     const inst = release?.assets["ghostline-amd64-installer.exe"];
+    const pkgMatch = pkg && ROWS.find(([k]) => k === pkg)[1];
+    const pkgFile = pkgMatch && release ? Object.keys(release.assets).find(pkgMatch) : null;
     if (os === "win") {
       get.href = inst?.url || `${LATEST}/download/ghostline-amd64-installer.exe`;
       $("get-label").textContent = t.getWin;
       $("get-file").textContent = "ghostline-amd64-installer.exe";
       $("meta").textContent = t.metaWin + (release ? " " + t.version(release.tag.replace(/^v/, ""), mb(inst?.size)) : "");
+    } else if (pkgFile) {
+      // The package for this Linux, straight from the release.
+      get.href = release.assets[pkgFile].url;
+      $("get-label").textContent = t.getPkg[pkg];
+      $("get-file").textContent = pkgFile;
+      $("get-file").hidden = false;
+      $("meta").innerHTML = esc(t.version(release.tag.replace(/^v/, ""), mb(release.assets[pkgFile].size))) + " " + t.metaPkg;
     } else {
       get.href = "#all";
       $("get-label").textContent = os === "linux" ? t.getLinux : t.getOther;
       $("get-file").textContent = release ? release.tag : "";
       $("get-file").hidden = !release;
-      $("meta").textContent = os === "linux" ? t.metaLinux : t.metaOther;
+      $("meta").textContent = os === "linux" ? t.metaLinux : os === "mac" ? t.metaMac : t.metaOther;
+    }
+
+    // Linux installs differently: the steps follow the package offered.
+    if (pkgFile) {
+      const st = t.linuxSteps;
+      document.querySelector('[data-t="s1h"]').innerHTML = st.s1h;
+      document.querySelector('[data-t="s1p"]').innerHTML = st.s1p[pkg](esc(pkgFile));
+      document.querySelector('[data-t="s2h"]').innerHTML = st.s2h;
+      document.querySelector('[data-t="s2p"]').innerHTML = st.s2p;
     }
 
     const b = $("beta");
@@ -348,7 +414,8 @@
       const tr = document.createElement("tr");
       const a = name ? release.assets[name] : null;
       const td1 = document.createElement("td");
-      td1.innerHTML = `${who}<span class="note">${note}</span>`;
+      td1.innerHTML = `${who}${key === recRow ? `<span class="rec-tag">${t.rec}</span>` : ""}<span class="note">${note}</span>`;
+      if (key === recRow) tr.className = "rec";
       const td2 = document.createElement("td");
       const link = document.createElement("a");
       if (a) {
