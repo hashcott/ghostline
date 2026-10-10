@@ -18,36 +18,20 @@ body:
       placeholder: "0.7.0"
     validations:
       required: true
-  - type: dropdown
-    id: os
-    attributes:
-      label: Hệ điều hành / Operating system
-      options:
-        - Windows 11
-        - Windows 10
-        - Linux
-    validations:
-      required: true
   - type: input
     id: os-version
     attributes:
-      label: Phiên bản hệ điều hành / OS version
+      label: Hệ điều hành và phiên bản / OS and version
       description: "Windows: Win + R, gõ `winver`, chép dòng Version và OS Build. Linux: tên và phiên bản bản phân phối. / Windows: Win + R, type `winver`, copy Version and OS Build. Linux: distribution and version."
       placeholder: "Windows 10 22H2, OS Build 19045.4529 / Ubuntu 24.04"
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: package
     attributes:
       label: Bạn cài bằng gói nào? / Which package?
-      options:
-        - Windows installer (.exe)
-        - Windows portable (.zip)
-        - Linux .deb
-        - Linux .rpm
-        - Linux AppImage
-        - Linux tar.gz
-        - Arch PKGBUILD
+      description: "Windows installer (.exe), Windows portable (.zip), Linux .deb, Linux .rpm, Linux AppImage, Linux tar.gz hoặc/or Arch PKGBUILD"
+      placeholder: Windows installer (.exe)
     validations:
       required: true
   - type: textarea

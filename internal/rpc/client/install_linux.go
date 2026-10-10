@@ -41,7 +41,7 @@ func (in *installer) info() app.InstallInfo {
 // issueFields is this install as the bug form names it.
 func (in *installer) issueFields() issue.Fields {
 	osr := in.osRelease()
-	return issue.Fields{Version: brand.Version, OS: "Linux", OSVersion: issue.LinuxVersion(osr),
+	return issue.Fields{Version: brand.Version, OSVersion: issue.LinuxVersion(osr),
 		Package: issue.LinuxPackage(in.info().Kind, osr)}
 }
 

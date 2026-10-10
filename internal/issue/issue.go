@@ -10,16 +10,15 @@ import (
 	"strings"
 )
 
-// Fields are bug.yml's fields the app can fill. OS and Package must be one
-// of the form's dropdown options word for word; "" leaves a field empty.
+// Fields are bug.yml's fields the app can fill; "" leaves a field empty.
+// They are text inputs: GitHub fills inputs from the link, not dropdowns.
 type Fields struct {
 	Version   string // "0.7.0"
-	OS        string // "Windows 11", "Windows 10" or "Linux"
 	OSVersion string // "Windows 11 23H2, OS Build 22631.4317", "Ubuntu 24.04 LTS"
 	Package   string // "Windows installer (.exe)", "Linux AppImage", …
 }
 
-// The form's dropdown options.
+// The packages, as the form's description lists them.
 const (
 	PkgInstaller = "Windows installer (.exe)"
 	PkgPortable  = "Windows portable (.zip)"
@@ -33,7 +32,7 @@ const (
 // URL is repo's new-issue link for the bug form, prefilled with f.
 func URL(repo string, f Fields) string {
 	q := url.Values{"template": {"bug.yml"}}
-	for k, v := range map[string]string{"version": f.Version, "os": f.OS, "os-version": f.OSVersion, "package": f.Package} {
+	for k, v := range map[string]string{"version": f.Version, "os-version": f.OSVersion, "package": f.Package} {
 		if v != "" {
 			q.Set(k, v)
 		}
