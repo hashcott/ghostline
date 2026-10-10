@@ -249,3 +249,28 @@ func TestReport_ListsUpAdaptersWithTheirDNS(t *testing.T) {
 	require.Equal(t, []string{"203.162.4.191"}, got[1].IPv4)
 	require.Nil(t, got[1].IPv6)
 }
+
+// Windows before 2004 may take SetInterfaceDnsSettings without the DNS
+// client using the new servers; ApplyLoopbackNetsh sets them the way netsh
+// does, by interface index.
+func TestApplyLoopbackNetsh_SetsEachAdapterByIfIndex(t *testing.T) {
+	a, b := eth("{A}", 7), eth("{B}", 9)
+	b.HasIPv6 = false
+	api := &fakeAPI{adapters: []sysdns.Adapter{a, b}, dns: map[string][]string{}}
+	m, _ := newMgr(api)
+	snaps := []model.AdapterSnapshot{{GUID: "{A}", IfIndex: 7}, {GUID: "{B}", IfIndex: 9}}
+	require.NoError(t, m.ApplyLoopbackNetsh(snaps, true))
+	require.Equal(t, []string{"netsh:7:v4:127.0.0.1", "netsh:7:v6:::1", "netsh:9:v4:127.0.0.1"}, api.netshCalls)
+	require.Zero(t, api.setCalls)
+}
+
+func TestApplyLoopbackNetsh_ReportsFailedAdapter(t *testing.T) {
+	a := eth("{A}", 7)
+	a.Alias = "Ethernet"
+	api := &fakeAPI{adapters: []sysdns.Adapter{a}, dns: map[string][]string{}, netshErr: errors.New("netsh failed")}
+	m, _ := newMgr(api)
+	err := m.ApplyLoopbackNetsh([]model.AdapterSnapshot{{GUID: "{A}", IfIndex: 7, Alias: "Ethernet"}}, false)
+	var ae *sysdns.ApplyError
+	require.ErrorAs(t, err, &ae)
+	require.Equal(t, []string{"Ethernet"}, ae.Failed)
+}

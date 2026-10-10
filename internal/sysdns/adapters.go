@@ -44,6 +44,12 @@ func (b *adapterBackend) Report() ([]AdapterDNS, error) { return b.m.Report() }
 
 func (b *adapterBackend) Apply(s Snapshot, v6 bool) error { return b.m.ApplyLoopback(s.Windows, v6) }
 
+// ApplyLoopbackNetsh sets loopback again through netsh (see
+// Manager.ApplyLoopbackNetsh).
+func (b *adapterBackend) ApplyLoopbackNetsh(s Snapshot, v6 bool) error {
+	return b.m.ApplyLoopbackNetsh(s.Windows, v6)
+}
+
 // Reconcile records adapters that appeared since s was taken; toApply
 // holds only them, so adapters already handled are not touched again.
 func (b *adapterBackend) Reconcile(s Snapshot, sel Selection) (Snapshot, Snapshot, []Change, error) {

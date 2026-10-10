@@ -126,6 +126,36 @@ func (m *Manager) setLoopback(a Adapter, v6 bool) error {
 	return nil
 }
 
+// ApplyLoopbackNetsh points the snapshotted adapters at loopback through
+// netsh, by interface index. On Windows before 2004 (build 19041)
+// SetInterfaceDnsSettings can succeed while the DNS client keeps using the
+// old servers; netsh's change reaches it.
+func (m *Manager) ApplyLoopbackNetsh(snaps []model.AdapterSnapshot, v6 bool) error {
+	ads, err := m.byGUID()
+	if err != nil {
+		return err
+	}
+	var failed []string
+	var errs []error
+	for _, s := range snaps {
+		a, ok := ads[s.GUID]
+		if !ok {
+			continue
+		}
+		err := m.api.NetshSetDNS(a.IfIndex, false, []string{"127.0.0.1"})
+		if err == nil && v6 && a.HasIPv6 {
+			err = m.api.NetshSetDNS(a.IfIndex, true, []string{"::1"})
+		}
+		if err != nil {
+			failed, errs = append(failed, s.Alias), append(errs, err)
+		}
+	}
+	if failed != nil {
+		return &ApplyError{Failed: failed, Err: errors.Join(errs...)}
+	}
+	return nil
+}
+
 func (m *Manager) byGUID() (map[string]Adapter, error) {
 	all, err := m.api.Adapters()
 	if err != nil {

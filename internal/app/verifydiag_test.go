@@ -63,3 +63,56 @@ func TestVerifyLeak_Reasons(t *testing.T) {
 		})
 	}
 }
+
+// fNetshDNS is a Windows backend that can set loopback again through netsh.
+type fNetshDNS struct {
+	*fDNS
+	onApply func()
+	err     error
+}
+
+func (d *fNetshDNS) ApplyLoopbackNetsh(sysdns.Snapshot, bool) error {
+	_ = d.r.add("dns.applynetsh")
+	if d.err == nil && d.onApply != nil {
+		d.onApply()
+	}
+	return d.err
+}
+
+// Windows 10 1909: SetInterfaceDnsSettings succeeded, yet the DNS client
+// kept asking the old servers (NXDOMAIN, engine never saw the query). Set
+// through netsh, the check passes and Ghostline connects.
+func TestVerify_NetshRetryConnectsWhenEngineNeverSawQuery(t *testing.T) {
+	h := newHarness(t)
+	h.res.err = &net.DNSError{Err: "no such host", IsNotFound: true}
+	h.eng.saw = false
+	h.o.d.DNS = &fNetshDNS{fDNS: h.dns, onApply: func() { h.res.err, h.eng.saw = nil, true }}
+
+	require.NoError(t, h.o.Connect(context.Background()))
+	require.Equal(t, StatusProtected, h.o.Snapshot().Status)
+	require.Contains(t, h.r.list(), "dns.applynetsh")
+}
+
+func TestVerify_NetshRetryStillLeaking(t *testing.T) {
+	h := newHarness(t)
+	h.res.err = &net.DNSError{Err: "no such host", IsNotFound: true}
+	h.eng.saw = false
+	h.o.d.DNS = &fNetshDNS{fDNS: h.dns}
+
+	require.Error(t, h.o.Connect(context.Background()))
+	p := h.o.Snapshot().Error.Params
+	require.Equal(t, CodeVerifyLeak, h.o.Snapshot().Error.Code)
+	require.Equal(t, verifyNXDomain, p["reason"])
+	require.Equal(t, true, p["netshRetried"])
+}
+
+// A query the engine saw needs no second try: something else is wrong.
+func TestVerify_NoNetshRetryWhenEngineSawQuery(t *testing.T) {
+	h := newHarness(t)
+	h.res.ips = []netip.Addr{netip.MustParseAddr("1.2.3.4")}
+	h.o.d.DNS = &fNetshDNS{fDNS: h.dns}
+
+	require.Error(t, h.o.Connect(context.Background()))
+	require.NotContains(t, h.r.list(), "dns.applynetsh")
+	require.NotContains(t, h.o.Snapshot().Error.Params, "netshRetried")
+}
