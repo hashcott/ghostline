@@ -599,3 +599,12 @@ What to do:
 3. To see for yourself what holds the port: on Windows, run `netstat -ano | findstr ":53 "` in Command Prompt and look up the PID in the last column in Task Manager (*Details* tab); on Linux, run `sudo ss -lunp 'sport = :53'`.
 
 The same error on another port: if the **proxy port** (8080 by default) or the DNS server's **DoH port** (443 by default) is in use, pick another port on the Proxy or DNS server page, or close the program holding it.
+
+**My PC runs an old Windows 10. Will Ghostline work?**
+Ghostline runs on 64-bit Windows 10 and 11. Windows 7, 8, 8.1 and 32-bit Windows are not supported. To see which version you have, press **Win + R**, type `winver` and press Enter: the window shows the *Version* (for example 1909 or 22H2) and the *OS Build*.
+
+- **Windows 10 version 2004 or later, and Windows 11:** works as usual.
+- **Windows 10 version 1909 or older:** use Ghostline 0.6.3 or later. On these versions Windows can accept the new DNS setting and keep asking the old servers, so connecting fails with *DNS queries are not going through Ghostline*; since 0.6.3 Ghostline notices this, sets the DNS again the way `netsh` does and checks once more. These versions are less tested; if it still fails, please [report it](https://github.com/hashcott/ghostline/issues) with the *OS Build* and a screenshot of the message.
+- **Windows 10 LTSC/LTSB** does not come with Microsoft Edge WebView2, which Ghostline uses to draw its window. The installer installs it (this needs the internet). With the portable build, if Ghostline says WebView2 is missing, install the *WebView2 Runtime* from [Microsoft's page](https://go.microsoft.com/fwlink/p/?LinkId=2124703) and open Ghostline again.
+
+If you can, update Windows through *Windows Update*: old versions no longer get security fixes.
