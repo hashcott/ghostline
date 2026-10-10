@@ -574,3 +574,14 @@ No. When a new version is out, Ghostline shows **update to vX**. With the Window
 
 **What is a beta, and should I use one?**
 A beta has new features earlier but is less tested than a regular release. By default Ghostline only offers regular releases; to try betas, turn on **receive beta versions** in Settings. When a newer regular release is out, a beta is offered that one too.
+
+**Windows Defender or my antivirus says Ghostline is a virus?** (Windows)
+It is a false alarm. To get past DPI, Ghostline ships zapret2 and GoodbyeDPI, two tools that use the **WinDivert** driver to read and change network packets. Antivirus products distrust this kind of tool and may flag it as a trojan by mistake, for example `Trojan:Win32/Bearfoos.A!ml` or `Trojan:Win32/Suschil!rfn`. Releases are not code-signed yet either, so SmartScreen warns too. All of Ghostline's source code is open on GitHub, and every release is built automatically by GitHub Actions from that code.
+
+What to do:
+
+1. Download Ghostline only from the [download page](https://hashcott.github.io/ghostline/) or the [Releases](https://github.com/hashcott/ghostline/releases) page, and compare its SHA-256 with `SHA256SUMS` (see *Verify the download* in section 2). Do not use copies from anywhere else.
+2. Add the Ghostline folder to Defender's exclusions: *Windows Security → Virus & threat protection → Manage settings → Exclusions → Add or remove exclusions → Add an exclusion → Folder*, and pick `C:\Program Files\Ghostline\Ghostline` (or the folder you unzipped the portable build to). Or run `Add-MpPreference -ExclusionPath "C:\Program Files\Ghostline\Ghostline"` in an administrator PowerShell.
+3. If Defender already quarantined a file, restore it from *Protection history*, or reinstall Ghostline after adding the exclusion.
+
+If Defender stops Ghostline while it is connected, the *Ghostline Network Guard* task puts your DNS back within about a minute, so you do not lose the internet.

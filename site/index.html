@@ -69,6 +69,17 @@
   .steps code { font-family: var(--mono); font-size: 0.9em; color: var(--text); word-break: break-all; }
   .after { margin: 20px 0 0; font-size: 15px; color: var(--dim); }
 
+  /* The antivirus warning: amber, the colour the app uses for warnings. */
+  .av {
+    margin: 0 0 56px; padding: 22px 24px; max-width: 46em;
+    border: 1px solid rgba(255, 200, 87, 0.45); border-left: 4px solid var(--amber);
+    background: rgba(255, 200, 87, 0.06); border-radius: 4px;
+  }
+  .av h2 { font-size: 20px; margin: 0 0 10px; color: var(--amber); }
+  .av h2::before { content: "⚠ "; }
+  .av p { margin: 0 0 10px; color: var(--text); font-size: 16px; }
+  .av p:last-child { margin-bottom: 0; }
+  .av code { font-family: var(--mono); font-size: 0.88em; overflow-wrap: anywhere; }
   .updates { max-width: 40em; }
   .updates p { color: var(--dim); margin: 0 0 14px; }
   .updates p strong { color: var(--text); font-weight: 600; }
@@ -119,6 +130,12 @@
         <li><h3 data-t="s3h">Bấm nút nguồn</h3><p data-t="s3p">Ghostline tự tìm máy chủ nhanh nhất. Thấy <em>[ ĐÃ BẢO VỆ ]</em> là xong.</p></li>
       </ol>
     </section>
+
+    <aside class="av" id="av" aria-labelledby="h-av">
+      <h2 id="h-av" data-t="avTitle">Phần mềm diệt virus có thể báo nhầm</h2>
+      <p data-t="av1"></p>
+      <p data-t="av2"></p>
+    </aside>
 
     <section id="all" aria-labelledby="h-all">
       <h2 id="h-all" data-t="allTitle">Mọi bản tải</h2>
@@ -178,6 +195,9 @@
       s1h: "Mở file vừa tải", s1p: "Windows hỏi quyền quản trị: chọn <em>Yes</em>. Ghostline cần quyền này để đổi DNS của máy.",
       s2h: "Nếu Windows chặn", s2p: "Bản phát hành chưa được ký số nên có thể hiện <em>Windows protected your PC</em>. Chọn <em>More info</em> rồi <em>Run anyway</em>.",
       s3h: "Bấm nút nguồn", s3p: "Ghostline tự tìm máy chủ nhanh nhất. Thấy <em>[ ĐÃ BẢO VỆ ]</em> là xong.",
+      avTitle: "Phần mềm diệt virus có thể báo nhầm",
+      av1: "Windows Defender đôi khi báo Ghostline là virus, ví dụ <code>Trojan:Win32/Bearfoos.A!ml</code>. Đây là báo nhầm: để vượt DPI, Ghostline dùng driver WinDivert để đọc và sửa gói tin mạng, loại công cụ mà antivirus hay nghi ngờ. Mã nguồn mở hoàn toàn, và mỗi bản được build tự động trên GitHub từ mã nguồn đó.",
+      av2: "Chỉ tải từ trang này hoặc GitHub, so mã SHA-256 với <code>SHA256SUMS</code>, rồi thêm thư mục Ghostline vào danh sách loại trừ của Defender. <a href=\"faq.html#windows-defender-hoặc-phần-mềm-diệt-virus-báo-ghostline-có-virus-windows\">Xem cách làm</a>.",
       allTitle: "Mọi bản tải", colFor: "Dành cho", colFile: "File", colSize: "Dung lượng",
       sums: "Muốn chắc file không bị sửa? So mã SHA-256 với", older: "Các phiên bản cũ ở", releases: "trang phát hành",
       updTitle: "Cập nhật không cần cài lại",
@@ -222,6 +242,9 @@
       s1h: "Open the downloaded file", s1p: "Windows asks for administrator rights: choose <em>Yes</em>. Ghostline needs them to change the computer's DNS.",
       s2h: "If Windows blocks it", s2p: "Releases are not code-signed yet, so <em>Windows protected your PC</em> may appear. Choose <em>More info</em>, then <em>Run anyway</em>.",
       s3h: "Press the power button", s3p: "Ghostline finds the fastest server by itself. When you see <em>[ PROTECTED ]</em>, you're done.",
+      avTitle: "Antivirus may raise a false alarm",
+      av1: "Windows Defender sometimes flags Ghostline as a virus, for example <code>Trojan:Win32/Bearfoos.A!ml</code>. It is a false alarm: to get past DPI, Ghostline uses the WinDivert driver to read and change network packets, the kind of tool antivirus products distrust. The source code is fully open, and every release is built automatically on GitHub from that code.",
+      av2: "Download only from this page or GitHub, compare the SHA-256 with <code>SHA256SUMS</code>, then add the Ghostline folder to Defender's exclusions. <a href=\"faq.html#windows-defender-or-my-antivirus-says-ghostline-is-a-virus-windows\">See how</a>.",
       allTitle: "All downloads", colFor: "For", colFile: "File", colSize: "Size",
       sums: "Want to be sure a file was not altered? Compare its SHA-256 with", older: "Older versions are on the", releases: "releases page",
       updTitle: "Updates without reinstalling",
@@ -321,6 +344,9 @@
       document.querySelector('[data-t="s2h"]').innerHTML = st.s2h;
       document.querySelector('[data-t="s2p"]').innerHTML = st.s2p;
     }
+
+    // WinDivert is Windows only.
+    $("av").hidden = os === "linux";
 
     const b = $("beta");
     if (beta) {
