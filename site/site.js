@@ -7,7 +7,7 @@ window.Site = (() => {
 
   const STR = {
     vi: {
-      pages: { index: "Tải về", guide: "Hướng dẫn", faq: "Hỏi đáp", changelog: "Thay đổi", disclaimer: "Miễn trừ trách nhiệm" },
+      pages: { index: "Tải về", guide: "Hướng dẫn", faq: "Hỏi đáp", changelog: "Thay đổi", report: "Báo lỗi", disclaimer: "Miễn trừ trách nhiệm" },
       source: "Mã nguồn", issues: "Báo lỗi",
       license: "Ghostline là phần mềm mã nguồn mở theo giấy phép GPL-3.0.",
       lawful: 'Hãy dùng Ghostline đúng pháp luật nơi bạn sống. Xem <a href="disclaimer.html">miễn trừ trách nhiệm</a>.',
@@ -16,7 +16,7 @@ window.Site = (() => {
       callout: { NOTE: "Lưu ý", TIP: "Mẹo", IMPORTANT: "Quan trọng", WARNING: "Cảnh báo", CAUTION: "Thận trọng" },
     },
     en: {
-      pages: { index: "Download", guide: "Guide", faq: "FAQ", changelog: "Changelog", disclaimer: "Disclaimer" },
+      pages: { index: "Download", guide: "Guide", faq: "FAQ", changelog: "Changelog", report: "Report", disclaimer: "Disclaimer" },
       source: "Source code", issues: "Report a problem",
       license: "Ghostline is open-source software under the GPL-3.0 license.",
       lawful: 'Use Ghostline within the law where you live. See the <a href="disclaimer.html">disclaimer</a>.',
@@ -55,7 +55,7 @@ window.Site = (() => {
       <nav>
         <a href="${GH}">${s.source}</a>
         <a href="${GH}/releases">Releases</a>
-        <a href="${GH}/issues">${s.issues}</a>
+        <a href="report.html">${s.issues}</a>
       </nav>`;
   }
 

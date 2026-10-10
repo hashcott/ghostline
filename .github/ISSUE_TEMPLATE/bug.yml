@@ -1,0 +1,94 @@
+name: Báo lỗi / Bug report
+description: Ghostline không chạy như mong đợi. / Ghostline does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo lỗi! Viết bằng tiếng Việt hay tiếng Anh đều được.
+        Thanks for reporting! Vietnamese or English, either is fine.
+
+        Trước khi gửi, hãy xem [Hỏi đáp / FAQ](https://hashcott.github.io/ghostline/faq.html) và phần [xử lý sự cố / troubleshooting](https://hashcott.github.io/ghostline/guide.html#7-xử-lý-sự-cố): nhiều lỗi đã có cách sửa ở đó.
+        Lỗ hổng bảo mật **không** gửi ở đây: dùng [báo cáo riêng](https://github.com/hashcott/ghostline/security/advisories/new). / Security issues go to a [private report](https://github.com/hashcott/ghostline/security/advisories/new), not here.
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản Ghostline / Ghostline version
+      description: Ghi ở đầu trang Cài đặt. / Shown at the top of Settings.
+      placeholder: "0.7.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Hệ điều hành / Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Phiên bản hệ điều hành / OS version
+      description: "Windows: Win + R, gõ `winver`, chép dòng Version và OS Build. Linux: tên và phiên bản bản phân phối. / Windows: Win + R, type `winver`, copy Version and OS Build. Linux: distribution and version."
+      placeholder: "Windows 10 22H2, OS Build 19045.4529 / Ubuntu 24.04"
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Bạn cài bằng gói nào? / Which package?
+      options:
+        - Windows installer (.exe)
+        - Windows portable (.zip)
+        - Linux .deb
+        - Linux .rpm
+        - Linux AppImage
+        - Linux tar.gz
+        - Arch PKGBUILD
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Chuyện gì đã xảy ra? / What happened?
+      description: Bạn mong đợi điều gì và thực tế ra sao. / What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước để gặp lại lỗi / Steps to reproduce
+      placeholder: |
+        1. Mở Ghostline, chọn mức "DNS + vượt DPI" / Open Ghostline, pick "DNS + DPI bypass"
+        2. Bấm nút nguồn / Press the power button
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Thông báo lỗi / Error message
+      description: Chép nguyên văn dòng lỗi Ghostline hiện ra, hoặc kéo ảnh chụp màn hình vào đây. / Copy the error Ghostline shows word for word, or drag a screenshot here.
+  - type: textarea
+    id: log
+    attributes:
+      label: Nhật ký / Log
+      description: "Trong Ghostline: công cụ › nhật ký › copy, rồi dán vào đây. Đọc lại trước khi gửi và xoá những gì bạn không muốn công khai. / In Ghostline: tools › logs › copy, then paste here. Read it first and remove anything you don't want public."
+      render: text
+  - type: textarea
+    id: other
+    attributes:
+      label: Thông tin thêm / Anything else
+      description: VPN, phần mềm diệt virus, phần mềm DNS hay chặn quảng cáo đang chạy, nhà mạng… / VPNs, antivirus, DNS or ad-blocking tools running, your ISP…
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Kiểm tra / Checks
+      options:
+        - label: Tôi đã tìm trong các issue có sẵn và Hỏi đáp. / I searched existing issues and the FAQ.
+          required: true
+        - label: Tôi đã xoá thông tin cá nhân khỏi nhật ký và ảnh chụp. / I removed personal information from the log and screenshots.
+          required: true
