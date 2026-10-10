@@ -17,6 +17,7 @@ import (
 	"github.com/hashcott/ghostline/internal/rpc/client"
 	"github.com/hashcott/ghostline/internal/store"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // runClient is the Linux GUI: a window and tray over ghostlined. The
@@ -100,7 +101,10 @@ func runClient(o Options) error {
 	em.app = wapp
 	ui.app = wapp
 	if o.Mode.Kind != cli.KindAutostart {
-		ui.createWindow()
+		// Opened once GTK is up, through show(), which centres it: a window
+		// created before Run is centred by Wails alone, off-screen with
+		// display scaling (see centre).
+		wapp.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { ui.show() })
 	}
 	ui.createTray()
 	em.onState = ui.onState

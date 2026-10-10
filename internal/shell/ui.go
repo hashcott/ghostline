@@ -116,8 +116,11 @@ func (u *ui) show() {
 	application.InvokeSync(func() {
 		if u.win == nil {
 			u.createWindow()
+			u.win.Show()
+			centre(u.win)
+		} else {
+			u.win.Show()
 		}
-		u.win.Show()
 		u.win.Focus()
 	})
 }
@@ -133,7 +136,7 @@ func (u *ui) resize(mode string) {
 	}
 	x, y := u.win.Position()
 	w0, h0 := u.win.Size()
-	cx, cy := x+w0/2, y+h0/2
+	scale := windowScale(u.win)
 	s := u.b.GetSettings()
 	w, h := simpleW, simpleH
 	if mode == store.ModeFull {
@@ -148,7 +151,7 @@ func (u *ui) resize(mode string) {
 		u.win.SetResizable(false)
 	}
 	u.win.SetSize(w, h)
-	u.win.SetPosition(cx-w/2, cy-h/2)
+	u.win.SetPosition(recentred(x, y, w0, h0, w, h, scale))
 }
 
 func (u *ui) createTray() {
