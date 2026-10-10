@@ -64,7 +64,7 @@ Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points the system's DN
 - **Signed server list:** updated daily and verified with ed25519; the DNSCrypt list is checked with minisign.
 - **Simple and Full interfaces**, a tray icon, Vietnamese and English UI, and a neon-terminal look.
 - **Installer, portable or Linux packages:** on Windows, an installer or a portable build that keeps all data in a `data\` folder next to the exe; on Linux, `.deb`, `.rpm`, AppImage, `tar.gz` and a PKGBUILD.
-- **Update notifications only:** Ghostline tells you about a new version and never updates itself silently.
+- **One-click updates, never silent:** Ghostline tells you about a new version; with the installer build, **update** downloads it, checks its signature, installs it and reopens the app with your settings. Regular releases by default; turn on *receive beta versions* to try new features early.
 
 ## Video
 
@@ -92,7 +92,7 @@ A narrated walkthrough of a little over 3 minutes: one-click connect, protection
 
 ## Install
 
-**[⬇ Download the latest release](https://github.com/hashcott/ghostline/releases/latest)** — or pick a file below. Older versions are on the [Releases](https://github.com/hashcott/ghostline/releases) page.
+**[⬇ Download page](https://hashcott.github.io/ghostline/)** picks the right file for your computer. Or pick a file below; older versions and betas are on the [Releases](https://github.com/hashcott/ghostline/releases) page.
 
 | File | What it is | Download |
 | --- | --- | --- |
@@ -109,6 +109,8 @@ Get-FileHash .\Ghostline-0.1.0-portable.zip -Algorithm SHA256
 ```
 
 **Requirements:** Windows 10/11 x64 and administrator rights. Changing adapter DNS and loading the WinDivert driver both need admin. When Ghostline starts with Windows it runs through Task Scheduler, so there is no UAC prompt.
+
+**Updating:** when a new version is out, the app shows **update to vX** (Settings, the main screen and the tray). The installer build downloads it, checks it against the signed `SHA256SUMS`, closes, installs it and opens again, connected if it was. Nothing to uninstall, and settings in `%APPDATA%\Ghostline` are kept. The portable build opens the release page instead: unzip the new version over the old folder (`data\` is kept). Running a newer installer by hand over an installed Ghostline also keeps everything.
 
 > [!NOTE]
 > Releases are not code-signed yet, so SmartScreen shows "Windows protected your PC". After checking the SHA-256, choose **More info → Run anyway**.

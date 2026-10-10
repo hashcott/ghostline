@@ -39,7 +39,7 @@ Most importantly, **Ghostline always gives your original DNS back** when you dis
 
 ## 2. Installing
 
-Download from [Releases](https://github.com/hashcott/ghostline/releases).
+Download from the [download page](https://hashcott.github.io/ghostline/) (it picks the file for your computer) or from [Releases](https://github.com/hashcott/ghostline/releases).
 
 ### Windows
 
@@ -63,6 +63,8 @@ Compare the result with the matching line in `SHA256SUMS` on the Releases page. 
 **Administrator rights.** Ghostline needs admin rights to change DNS and run GoodbyeDPI, so Windows shows a UAC prompt each time you open it. Choose **Yes**. If you turn on *start with windows*, the app is launched through Task Scheduler and no longer asks.
 
 **Antivirus.** zapret2 and GoodbyeDPI use the **WinDivert** driver, which antivirus products often flag by mistake. Ghostline checks the engine's hash before every start. If zapret2 is blocked, Ghostline runs GoodbyeDPI for now and the DPI page shows the `bin\zapret2` folder to add to Windows Defender's exclusions.
+
+**Updating.** You never need to uninstall first. When a new version is out, Ghostline shows **update to vX** on the main screen, in Settings and in the tray. With the installer build, press it and confirm: Ghostline downloads the installer, checks it against the release's signed `SHA256SUMS`, closes, installs the new version and opens again, connecting again if it was connected. If the download or the check fails, the button opens the release page instead. The portable build always opens the release page: unzip the new version over the old folder, `data\` is kept. Your settings, rules and server choices survive every update.
 
 ### Linux
 
@@ -278,7 +280,8 @@ Records events: connecting, switching servers, DPI bypass on/off, errors.
 | bootstrap | Plain DNS servers used only to look up the addresses of DoH servers at startup (default `1.1.1.1:53`, `8.8.8.8:53`). This is the only unencrypted DNS traffic, and it is only used to look up DoH server names |
 | max servers | How many servers to use in parallel (default 5). More is steadier but uses slightly more bandwidth |
 | update server list | Download a fresh server list daily (signature-checked) |
-| notify about new versions | Show a notice when a new version is out. Ghostline **never updates itself** |
+| notify about new versions | Show a notice when a new version is out. Ghostline **never updates without asking**: installing takes your click (see *Updating* in section 2) |
+| receive beta versions | Also offer pre-releases (for example `v0.8.0-beta.1`): new features earlier, less tested. Off by default. Turning it off hides a beta notice; you stay on the beta until the next regular release is newer |
 | ⚠ RESTORE DNS NOW | Put the system's DNS back to its saved state. Use it if DNS ever looks wrong |
 
 ### 4.6. Proxy

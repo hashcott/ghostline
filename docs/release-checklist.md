@@ -2,6 +2,12 @@
 
 Phần Windows chạy trên Windows 11 x64, terminal **admin**; phần Linux ở mục *Kiểm tra thủ công Linux* bên dưới. Đánh dấu từng mục; mục nào hỏng thì không phát hành.
 
+## Kênh phát hành
+
+- **Bản chính thức:** tag `vX.Y.Z`. Mọi người dùng được báo; trang tải và nút tải trên README trỏ tới nó.
+- **Bản beta:** tag có hậu tố, ví dụ `vX.Y.Z-beta.1`, `vX.Y.Z-rc.1`. CI tạo release dạng **pre-release**: `releases/latest`, trang tải và kênh mặc định trong app bỏ qua nó; chỉ ai bật *nhận bản beta* mới được báo. Thay đổi hằng ngày phát hành dạng beta, gom lại thành bản chính thức khi đã ổn.
+- CI ký `SHA256SUMS` bằng secret `SERVERLIST_SIGNING_KEY` thành `SHA256SUMS.sig`. Thiếu secret thì job publish dừng; release thiếu `.sig` thì nút cập nhật trong app chuyển sang mở trang phát hành.
+
 ## Test tự động
 
 - [ ] `go test ./...` và `cd frontend && npm test` xanh
@@ -23,6 +29,15 @@ Phần Windows chạy trên Windows 11 x64, terminal **admin**; phần Linux ở
 - [ ] **Vượt DPI**: bật GoodbyeDPI preset Nhẹ → chạy; tắt → service `WinDivert1.4` biến mất (`sc query WinDivert1.4`).
 - [ ] **Installer**: cài, chạy, kết nối; gỡ cài đặt khi đang kết nối → DNS khôi phục, tác vụ `Ghostline` và `Ghostline Recovery` bị xoá, service `WinDivert1.4` bị xoá.
 - [ ] **Ngôn ngữ**: chuyển VI ↔ EN, không còn chuỗi nào chưa dịch.
+
+## Kiểm tra thủ công cập nhật một nút
+
+- [ ] **Cập nhật khi đang kết nối:** cài bản trước (đã có tính năng này) bằng installer, Connect, bấm **cập nhật lên vX** → app đóng, installer chạy ngầm, app mở lại ở bản mới và tự kết nối; `settings.json` và rules còn nguyên; sau khi xong `Get-DnsClientServerAddress` trỏ đúng loopback.
+- [ ] **Cập nhật khi đang ngắt:** app mở lại, không tự kết nối.
+- [ ] **File bị sửa:** trên một release thử, đổi một byte trong installer (hoặc xoá `SHA256SUMS.sig`) → nút báo lỗi và chuyển thành mở trang phát hành; không có gì được chạy.
+- [ ] **Bản portable:** chỉ có nút mở trang phát hành.
+- [ ] **Kênh beta:** bật *nhận bản beta* khi có pre-release mới hơn → được báo ngay; tắt → thông báo biến mất (cả trên khay).
+- [ ] **Trang tải** (https://hashcott.github.io/ghostline/): trên Windows nút tải đúng installer của bản chính thức mới nhất; trên Linux và điện thoại nút dẫn tới bảng; dòng beta hiện khi có pre-release mới hơn.
 
 ## Kiểm tra thủ công giai đoạn 2A (spec 2A §11)
 
