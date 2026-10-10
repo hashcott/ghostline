@@ -4,7 +4,7 @@
 
 # Ghostline
 
-**Mã hoá DNS và vượt DPI cho Windows và Linux, chỉ với một nút bấm.**
+**Mã hoá DNS và chống can thiệp DPI cho Windows và Linux, chỉ với một nút bấm.**
 
 [![CI](https://github.com/hashcott/ghostline/actions/workflows/ci.yml/badge.svg)](https://github.com/hashcott/ghostline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hashcott/ghostline?include_prereleases)](https://github.com/hashcott/ghostline/releases)
@@ -22,6 +22,8 @@
 ---
 
 Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ DNS của hệ thống về đó (mọi card mạng trên Windows; NetworkManager, systemd-resolved hoặc `/etc/resolv.conf` trên Linux), rồi chuyển tiếp truy vấn qua **DoH, DoT, DoQ hoặc DNSCrypt** tới máy chủ nhanh nhất còn hoạt động. Khi kết nối mã hoá bị can thiệp bằng cách soi gói tin (DPI), Ghostline có thể chạy thêm một engine vượt DPI: **zapret2** (khuyên dùng), hoặc **GoodbyeDPI** trên Windows. Trên hết, Ghostline được thiết kế để **luôn trả lại DNS gốc của bạn**, kể cả khi app bị tắt đột ngột hay máy mất điện.
+
+> ⚖️ Khi tải hoặc dùng Ghostline, bạn đồng ý với [Tuyên bố miễn trừ trách nhiệm](#tuyên-bố-miễn-trừ-trách-nhiệm) và [giấy phép GPL-3.0](LICENSE). Ghostline dành cho quyền riêng tư, bảo mật và nghiên cứu; bạn tự chịu trách nhiệm dùng Ghostline đúng pháp luật nơi bạn sống và điều khoản của nhà mạng.
 
 <p align="center">
   <img src="docs/screenshots/simple-vi.png" height="360" alt="Giao diện Đơn giản">
@@ -54,7 +56,7 @@ Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ DN
 - **Xác minh không rò rỉ:** sau khi kết nối, Ghostline kiểm tra truy vấn thật sự đi qua nó.
 - **Vượt DPI:** đi kèm [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (gói giả, nhiều kiểu cắt, hỗ trợ QUIC cho YouTube/Google), chạy qua WinDivert trên Windows và hàng đợi nftables trên Linux, cùng GoodbyeDPI 0.2.3rc3 trên Windows, đều được khoá mã băm. Chiến lược zapret2 lấy từ danh sách có chữ ký, cập nhật hằng ngày; có tự dò, danh sách đen, tự phát hiện trang bị chặn, và chia nhỏ (fragment) truy vấn DoH. Trên Windows, nếu antivirus chặn zapret2, Ghostline tạm chạy GoodbyeDPI và cho phép thử lại.
 - **Proxy cục bộ (HTTP / HTTPS / SOCKS4/5):** chạy cùng nút Connect, có thể đặt làm proxy hệ thống (Windows, GNOME, KDE), và chia sẻ cho điện thoại hay thiết bị khác cùng Wi-Fi (có mã QR). Tên miền luôn được phân giải qua DNS mã hoá của Ghostline.
-- **Fragment web không cần driver:** lưu lượng qua proxy được tự động cắt nhỏ ClientHello khi trang bị chặn theo SNI, và Ghostline ghi nhớ cách vượt cho từng mạng.
+- **Fragment web không cần driver:** lưu lượng qua proxy được tự động cắt nhỏ ClientHello khi nhà mạng soi SNI rồi cắt kết nối, và Ghostline ghi nhớ cách xử lý cho từng mạng.
 - **Rules và danh sách cộng đồng:** chặn, cho phép, DNS giả, fragment hoặc đi qua upstream proxy theo domain, keyword, regexp hay CIDR. Import danh sách hosts, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash, v2ray, sing-box hoặc CIDR thẳng từ link GitHub, tự cập nhật theo lịch.
 - **DNS server cho mạng nhà:** DNS mã hoá cho điện thoại, TV, máy chơi game và router trong Wi-Fi: DNS cổng 53 (không cần chứng chỉ) hoặc DNS-over-HTTPS, có trang cài đặt qua mã QR và profile cho iOS.
 - **Fake SNI (nâng cao, mặc định tắt):** với trang nằm sau CDN cho phép domain fronting, proxy gửi ra mạng một tên miền khác được phép. Chỉ giải mã HTTPS của những tên miền bạn chọn, bằng chứng chỉ chỉ ký được cho đúng các tên miền đó và bị gỡ khi ngắt kết nối.
@@ -91,7 +93,7 @@ Video hơn 3 phút có lồng tiếng: kết nối bằng một nút bấm, mứ
 
 ## Cài đặt
 
-**[⬇ Trang tải về](https://hashcott.github.io/ghostline/)** tự chọn đúng file cho máy của bạn. Hoặc chọn một file bên dưới; các phiên bản cũ và bản beta nằm ở trang [Releases](https://github.com/hashcott/ghostline/releases).
+**[⬇ Trang tải về](https://hashcott.github.io/ghostline/)** tự chọn đúng file cho máy của bạn. Hoặc chọn một file bên dưới; các phiên bản cũ và bản beta nằm ở trang [Releases](https://github.com/hashcott/ghostline/releases). Khi tải về, bạn đồng ý với [Tuyên bố miễn trừ trách nhiệm](#tuyên-bố-miễn-trừ-trách-nhiệm) và [giấy phép GPL-3.0](LICENSE).
 
 | File | Là gì | Tải về |
 | --- | --- | --- |
@@ -141,7 +143,7 @@ Trên Linux, Ghostline gồm hai phần: dịch vụ nền (`ghostline.service`,
 > 📖 Hướng dẫn chi tiết từng màn hình, cách xử lý khi không vào được trang và xử lý sự cố: **[docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md)**
 
 1. Mở Ghostline và bấm **Kết nối**. App tự chọn máy chủ, chuyển hướng DNS và kiểm tra rò rỉ.
-2. Nếu vẫn còn trang bị chặn, hoặc bật **proxy** (Đầy đủ → Proxy → bật proxy + dùng cho máy này) để trình duyệt được fragment tự động, hoặc vào **Đầy đủ → Vượt DPI**, chọn engine (khuyên dùng **zapret2**), bật lên rồi bấm **tự dò**.
+2. Nếu vẫn còn trang không vào được (kết nối bị reset hoặc treo), hoặc bật **proxy** (Đầy đủ → Proxy → bật proxy + dùng cho máy này) để trình duyệt được fragment tự động, hoặc vào **Đầy đủ → Vượt DPI**, chọn engine (khuyên dùng **zapret2**), bật lên rồi bấm **tự dò**.
    Muốn chia sẻ cho thiết bị khác, bật **chia sẻ LAN** rồi quét mã QR bằng điện thoại (trên Windows, mạng phải là *Private*).
 3. Bấm **Ngắt kết nối** (hoặc thoát từ icon khay) để trả lại DNS gốc.
 
@@ -264,6 +266,7 @@ Vui lòng **không** báo lỗ hổng bảo mật qua issue công khai. Xem [SEC
 Ghostline được phát triển với mục đích nghiên cứu và học tập về DNS mã hoá, cơ chế lọc mạng và DPI. Mục tiêu chính là bảo vệ quyền riêng tư (truy vấn DNS không bị đọc hay ghi lại), chống giả mạo và chiếm quyền DNS, và chẩn đoán mạng. Người dùng tự chịu hoàn toàn trách nhiệm về cách sử dụng phần mềm, cũng như việc tuân thủ pháp luật nơi mình sinh sống và điều khoản của nhà cung cấp mạng. Không sử dụng Ghostline vào bất kỳ mục đích vi phạm pháp luật nào, bao gồm:
 
 - truy cập trang web, dịch vụ hay nội dung mà cơ quan có thẩm quyền đã yêu cầu chặn theo quy định của pháp luật;
+- hướng dẫn hay chia sẻ cho người khác cách truy cập những trang web, ứng dụng hay nền tảng đó;
 - cờ bạc trực tuyến, vi phạm bản quyền, lừa đảo, hoặc phát tán nội dung bị pháp luật cấm;
 - tấn công, gây gián đoạn hoặc truy cập trái phép vào bất kỳ mạng hay hệ thống nào.
 

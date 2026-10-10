@@ -4,7 +4,7 @@
 
 # Ghostline
 
-**One-click encrypted DNS and DPI bypass for Windows and Linux.**
+**One-click encrypted DNS and protection against DPI interference for Windows and Linux.**
 
 [![CI](https://github.com/hashcott/ghostline/actions/workflows/ci.yml/badge.svg)](https://github.com/hashcott/ghostline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hashcott/ghostline?include_prereleases)](https://github.com/hashcott/ghostline/releases)
@@ -22,6 +22,8 @@ English · [Tiếng Việt](README.vi.md)
 ---
 
 Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points the system's DNS at it (every network adapter on Windows; NetworkManager, systemd-resolved or `/etc/resolv.conf` on Linux), and forwards your queries over **DoH, DoT, DoQ or DNSCrypt** to the fastest healthy resolver. When your network interferes with encrypted connections by inspecting packets (DPI), it can also run a DPI bypass engine: **zapret2** (recommended), or **GoodbyeDPI** on Windows. Above all, it is built to **always give your original DNS back**, even if the app crashes or the machine loses power.
+
+> ⚖️ By downloading or using Ghostline you agree to the [Disclaimer](#disclaimer) and the [GPL-3.0 license](LICENSE). Ghostline is for privacy, security and research; you are responsible for using it within the law of your country and your network provider's terms.
 
 <p align="center">
   <img src="docs/screenshots/simple-en.png" height="360" alt="Simple interface">
@@ -55,7 +57,7 @@ Ghostline runs a local DNS server on `127.0.0.1` / `::1`, points the system's DN
 - **Leak verification:** after connecting, Ghostline checks that queries really go through it.
 - **DPI bypass:** bundled, hash-pinned [zapret2](https://github.com/bol-van/zapret2) v1.0.5.2 (fake packets, more split methods, QUIC for YouTube/Google), through WinDivert on Windows and an nftables queue on Linux, plus GoodbyeDPI 0.2.3rc3 on Windows. zapret2 strategies come from a signed list refreshed daily, with auto-tune, a site blacklist, automatic detection of blocked sites, and DoH request fragmentation. On Windows, if antivirus blocks zapret2, Ghostline falls back to GoodbyeDPI and offers to retry.
 - **Local proxy (HTTP / HTTPS / SOCKS4/5):** runs with Connect, can become the system proxy (Windows, GNOME, KDE), and can be shared with phones and other devices on your Wi-Fi (QR code included). Names are always resolved through Ghostline's encrypted DNS.
-- **Web fragmentation without a driver:** traffic through the proxy gets its TLS ClientHello split automatically when a site is blocked by SNI, and the fix is remembered per network.
+- **Web fragmentation without a driver:** traffic through the proxy gets its TLS ClientHello split automatically when the network cuts a connection by inspecting its SNI, and the fix is remembered per network.
 - **Rules and community lists:** block, allow, fake DNS, fragment or route through an upstream proxy by domain, keyword, regexp or CIDR. Import hosts, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash, v2ray, sing-box or CIDR lists straight from a GitHub link, updated on a schedule.
 - **DNS server for your home network:** encrypted DNS for phones, TVs, consoles and routers on your Wi-Fi: plain DNS on port 53 (no certificate needed) or DNS-over-HTTPS, with a QR-code setup page and an iOS profile.
 - **Fake SNI (advanced, off by default):** for sites behind CDNs that allow domain fronting, the proxy sends a different, allowed domain name to the network. It decrypts HTTPS only for domains you choose, with a certificate that can sign only those domains and is removed on disconnect.
@@ -92,7 +94,7 @@ A narrated walkthrough of a little over 3 minutes: one-click connect, protection
 
 ## Install
 
-**[⬇ Download page](https://hashcott.github.io/ghostline/)** picks the right file for your computer. Or pick a file below; older versions and betas are on the [Releases](https://github.com/hashcott/ghostline/releases) page.
+**[⬇ Download page](https://hashcott.github.io/ghostline/)** picks the right file for your computer. Or pick a file below; older versions and betas are on the [Releases](https://github.com/hashcott/ghostline/releases) page. By downloading, you agree to the [Disclaimer](#disclaimer) and the [GPL-3.0 license](LICENSE).
 
 | File | What it is | Download |
 | --- | --- | --- |
@@ -137,10 +139,10 @@ Ghostline on Linux is two parts: a background service (`ghostline.service`, root
 
 ## Usage
 
-> 📖 A detailed user guide covering every screen, unblocking sites and troubleshooting: **[docs/user-guide.md](docs/user-guide.md)** ([Tiếng Việt](docs/huong-dan-su-dung.md))
+> 📖 A detailed user guide covering every screen, sites that won't load and troubleshooting: **[docs/user-guide.md](docs/user-guide.md)** ([Tiếng Việt](docs/huong-dan-su-dung.md))
 
 1. Start Ghostline and press **Connect**. It picks a server, redirects DNS and verifies there is no leak.
-2. If some sites are still blocked, either turn on the **proxy** (Full → Proxy → enable proxy + use for this PC) so browsers get automatic fragmentation, or open **Full → DPI bypass**, pick an engine (**zapret2** is recommended), turn it on and press **auto-tune**.
+2. If some sites still won't load (the connection is reset or times out), either turn on the **proxy** (Full → Proxy → enable proxy + use for this PC) so browsers get automatic fragmentation, or open **Full → DPI bypass**, pick an engine (**zapret2** is recommended), turn it on and press **auto-tune**.
    To share with other devices, turn on **share on LAN** and scan the QR code on your phone (on Windows the network must be *Private*).
 3. Press **Disconnect** (or quit from the tray) to restore your original DNS.
 
@@ -259,7 +261,7 @@ Before a release, go through [`docs/release-checklist.md`](docs/release-checklis
 | `internal/sysproxy`, `internal/certstore`, `internal/firewall` | System proxy, certificate stores and firewall per OS |
 | `cmd/ghostlined`, `internal/rpc`, `internal/session` | Linux service, its socket protocol, and tasks run in the user's desktop session |
 | `internal/sysinstall`, `build/linux` | Linux systemd unit, service install, and the deb/rpm/AppImage/tar.gz/PKGBUILD packaging |
-| `internal/scanner`, `internal/probe` | Server latency scan and blocked-site probes |
+| `internal/scanner`, `internal/probe` | Server latency scan and test-site reachability probes |
 | `internal/servers`, `internal/upstreams` | Signed server list and DNSCrypt list |
 | `internal/shell` | Window, tray and OS events (Wails) |
 | `frontend/` | React + TypeScript UI |
@@ -278,6 +280,7 @@ Please do **not** open a public issue for vulnerabilities. See [SECURITY.md](SEC
 Ghostline is provided for research and educational purposes, to study encrypted DNS, network filtering and DPI. Its main goals are privacy (keeping DNS queries from being read or logged), protection against DNS spoofing and hijacking, and network diagnostics. You are solely responsible for how you use it and for complying with the laws and regulations of your country and the terms of your network provider. Do not use Ghostline for any unlawful purpose, including:
 
 - reaching websites, services or content that a competent authority has ordered to be blocked under the law of your country;
+- guiding or showing others how to reach such websites, apps or platforms;
 - online gambling, copyright infringement, fraud, or spreading content that is prohibited by law;
 - attacking, disrupting or getting unauthorized access to any network or system.
 

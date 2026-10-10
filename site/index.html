@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tải Ghostline</title>
-<meta name="description" content="Tải Ghostline: mã hoá DNS và vượt DPI cho Windows và Linux, chỉ với một nút bấm. Miễn phí, mã nguồn mở.">
+<meta name="description" content="Tải Ghostline: mã hoá DNS, giữ truy vấn riêng tư và chống nhà mạng can thiệp kết nối (DPI) cho Windows và Linux, chỉ với một nút bấm. Miễn phí, mã nguồn mở.">
 <meta name="color-scheme" content="dark">
 <meta name="google-site-verification" content="GV7fKnHLmVdUuoMFdmkAu6sCeW4KJw4aZWJc7l84gvE">
 <link rel="icon" href="appicon.png">
@@ -35,6 +35,7 @@
   .meta { margin: 14px 0 0; font-size: 14px; color: var(--dim); }
   .meta code, td code { font-family: var(--mono); font-size: 0.92em; color: var(--text); }
   .beta { margin: 6px 0 0; font-size: 14px; color: var(--dim); }
+  .terms { margin: 14px 0 0; max-width: 34em; font-size: 13px; color: var(--dim); }
   .shot { justify-self: center; width: 100%; max-width: 300px; }
   .shot img {
     display: block; width: 100%; height: auto; border: 1px solid var(--line);
@@ -111,14 +112,15 @@
   <main>
     <div class="hero">
       <div>
-        <h1 data-t="title">Mở lại những trang bị chặn, chỉ với một nút bấm.</h1>
-        <p class="lede" data-t="lede">Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.</p>
+        <h1 data-t="title">Mã hoá DNS, giữ riêng tư, chỉ với một nút bấm.</h1>
+        <p class="lede" data-t="lede">Ghostline mã hoá DNS để nhà mạng không đọc hay giả mạo được truy vấn của bạn, và chống can thiệp kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.</p>
         <a class="get" id="get" href="https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe">
           <strong id="get-label">Tải cho Windows</strong>
           <span id="get-file">ghostline-amd64-installer.exe</span>
         </a>
         <p class="meta" id="meta" data-t="metaWin">Windows 10 và 11, 64-bit.</p>
         <p class="beta" id="beta" hidden></p>
+        <p class="terms" data-t="terms">Khi tải và dùng Ghostline, bạn đồng ý với <a href="disclaimer.html">tuyên bố miễn trừ trách nhiệm</a> và <a href="https://github.com/hashcott/ghostline/blob/main/LICENSE">giấy phép GPL-3.0</a>, và tự chịu trách nhiệm dùng Ghostline đúng pháp luật nơi bạn sống.</p>
       </div>
       <div class="shot"><img id="shot" src="simple-vi.png" width="475" height="725" alt="Cửa sổ Ghostline: nút nguồn và dòng chữ Đã bảo vệ"></div>
     </div>
@@ -147,6 +149,7 @@
         </table>
       </div>
       <p class="after"><span data-t="sums">Muốn chắc file không bị sửa? So mã SHA-256 với</span> <a id="sums" href="https://github.com/hashcott/ghostline/releases/latest/download/SHA256SUMS">SHA256SUMS</a>. <span data-t="older">Các phiên bản cũ ở</span> <a href="https://github.com/hashcott/ghostline/releases" data-t="releases">trang phát hành</a>.</p>
+      <p class="after" data-t="terms">Khi tải và dùng Ghostline, bạn đồng ý với <a href="disclaimer.html">tuyên bố miễn trừ trách nhiệm</a> và <a href="https://github.com/hashcott/ghostline/blob/main/LICENSE">giấy phép GPL-3.0</a>, và tự chịu trách nhiệm dùng Ghostline đúng pháp luật nơi bạn sống.</p>
     </section>
 
     <section aria-labelledby="h-upd">
@@ -169,8 +172,8 @@
 
   const T = {
     vi: {
-      title: "Mở lại những trang bị chặn, chỉ với một nút bấm.",
-      lede: "Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
+      title: "Mã hoá DNS, giữ riêng tư, chỉ với một nút bấm.",
+      lede: "Ghostline mã hoá DNS để nhà mạng không đọc hay giả mạo được truy vấn của bạn, và chống can thiệp kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
       getWin: "Tải cho Windows", getLinux: "Xem các bản cho Linux", getOther: "Xem mọi bản tải",
       getPkg: { deb: "Tải cho Ubuntu, Debian", rpm: "Tải cho Fedora", tar: "Tải cho Arch Linux", appimage: "Tải cho Linux" },
       metaWin: "Windows 10 và 11, 64-bit.",
@@ -197,9 +200,10 @@
       s2h: "Nếu Windows chặn", s2p: "Bản phát hành chưa được ký số nên có thể hiện <em>Windows protected your PC</em>. Chọn <em>More info</em> rồi <em>Run anyway</em>.",
       s3h: "Bấm nút nguồn", s3p: "Ghostline tự tìm máy chủ nhanh nhất. Thấy <em>[ ĐÃ BẢO VỆ ]</em> là xong.",
       avTitle: "Phần mềm diệt virus có thể báo nhầm",
-      av1: "Windows Defender đôi khi báo Ghostline là virus, ví dụ <code>Trojan:Win32/Bearfoos.A!ml</code>. Đây là báo nhầm: để vượt DPI, Ghostline dùng driver WinDivert để đọc và sửa gói tin mạng, loại công cụ mà antivirus hay nghi ngờ. Mã nguồn mở hoàn toàn, và mỗi bản được build tự động trên GitHub từ mã nguồn đó.",
+      av1: "Windows Defender đôi khi báo Ghostline là virus, ví dụ <code>Trojan:Win32/Bearfoos.A!ml</code>. Đây là báo nhầm: để chống can thiệp DPI, Ghostline dùng driver WinDivert để đọc và sửa gói tin mạng, loại công cụ mà antivirus hay nghi ngờ. Mã nguồn mở hoàn toàn, và mỗi bản được build tự động trên GitHub từ mã nguồn đó.",
       av2: "Chỉ tải từ trang này hoặc GitHub, so mã SHA-256 với <code>SHA256SUMS</code>, rồi thêm thư mục Ghostline vào danh sách loại trừ của Defender. <a href=\"faq.html#windows-defender-hoặc-phần-mềm-diệt-virus-báo-ghostline-có-virus-windows\">Xem cách làm</a>.",
       allTitle: "Mọi bản tải", colFor: "Dành cho", colFile: "File", colSize: "Dung lượng",
+      terms: "Khi tải và dùng Ghostline, bạn đồng ý với <a href=\"disclaimer.html\">tuyên bố miễn trừ trách nhiệm</a> và <a href=\"https://github.com/hashcott/ghostline/blob/main/LICENSE\">giấy phép GPL-3.0</a>, và tự chịu trách nhiệm dùng Ghostline đúng pháp luật nơi bạn sống.",
       sums: "Muốn chắc file không bị sửa? So mã SHA-256 với", older: "Các phiên bản cũ ở", releases: "trang phát hành",
       updTitle: "Cập nhật không cần cài lại",
       upd1: "Khi có bản mới, Ghostline báo ngay trong app. Bấm <strong>cập nhật</strong>: app tự tải, kiểm tra chữ ký, cài rồi mở lại. Cài đặt của bạn giữ nguyên, đang kết nối thì tự kết nối lại.",
@@ -216,8 +220,8 @@
       readme: "xem hướng dẫn",
     },
     en: {
-      title: "Open blocked sites again, with one button.",
-      lede: "Ghostline encrypts DNS and gets past deep packet inspection (DPI) for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
+      title: "Encrypted DNS and privacy, with one button.",
+      lede: "Ghostline encrypts DNS so your network cannot read or spoof your queries, and gets past deep packet inspection (DPI) interference for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
       getWin: "Download for Windows", getLinux: "See the Linux downloads", getOther: "See all downloads",
       getPkg: { deb: "Download for Ubuntu, Debian", rpm: "Download for Fedora", tar: "Download for Arch Linux", appimage: "Download for Linux" },
       metaWin: "Windows 10 and 11, 64-bit.",
@@ -244,9 +248,10 @@
       s2h: "If Windows blocks it", s2p: "Releases are not code-signed yet, so <em>Windows protected your PC</em> may appear. Choose <em>More info</em>, then <em>Run anyway</em>.",
       s3h: "Press the power button", s3p: "Ghostline finds the fastest server by itself. When you see <em>[ PROTECTED ]</em>, you're done.",
       avTitle: "Antivirus may raise a false alarm",
-      av1: "Windows Defender sometimes flags Ghostline as a virus, for example <code>Trojan:Win32/Bearfoos.A!ml</code>. It is a false alarm: to get past DPI, Ghostline uses the WinDivert driver to read and change network packets, the kind of tool antivirus products distrust. The source code is fully open, and every release is built automatically on GitHub from that code.",
+      av1: "Windows Defender sometimes flags Ghostline as a virus, for example <code>Trojan:Win32/Bearfoos.A!ml</code>. It is a false alarm: to get past DPI interference, Ghostline uses the WinDivert driver to read and change network packets, the kind of tool antivirus products distrust. The source code is fully open, and every release is built automatically on GitHub from that code.",
       av2: "Download only from this page or GitHub, compare the SHA-256 with <code>SHA256SUMS</code>, then add the Ghostline folder to Defender's exclusions. <a href=\"faq.html#windows-defender-or-my-antivirus-says-ghostline-is-a-virus-windows\">See how</a>.",
       allTitle: "All downloads", colFor: "For", colFile: "File", colSize: "Size",
+      terms: "By downloading or using Ghostline, you agree to the <a href=\"disclaimer.html\">disclaimer</a> and the <a href=\"https://github.com/hashcott/ghostline/blob/main/LICENSE\">GPL-3.0 license</a>, and you are responsible for using it within the law where you live.",
       sums: "Want to be sure a file was not altered? Compare its SHA-256 with", older: "Older versions are on the", releases: "releases page",
       updTitle: "Updates without reinstalling",
       upd1: "When a new version is out, Ghostline tells you in the app. Press <strong>update</strong>: it downloads the new version, checks its signature, installs it and opens again. Your settings are kept, and it reconnects if it was connected.",

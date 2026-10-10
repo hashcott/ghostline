@@ -4,11 +4,12 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <name>Ghostline</name>
-  <summary>Encrypted DNS and DPI bypass</summary>
+  <summary>Encrypted DNS and protection against DPI interference</summary>
   <description>
     <p>
       Ghostline sends every DNS query of the system over an encrypted
-      resolver it picks automatically, gets past deep packet inspection
+      resolver it picks automatically, so the network cannot read or spoof
+      it, protects connections from deep packet inspection interference
       with zapret2, and offers a local proxy, rules and a DNS server for
       the LAN. Turning it off puts the network back exactly as it was.
     </p>

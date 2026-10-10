@@ -22,7 +22,7 @@ Hướng dẫn này dành cho người dùng Windows 10/11 và Linux, không c�
    - [Công cụ](#410-công-cụ)
    - [Sao lưu và chuyển máy](#411-sao-lưu-và-chuyển-máy)
 5. [Icon ở khay hệ thống](#5-icon-ở-khay-hệ-thống)
-6. [Khi một trang web vẫn bị chặn](#6-khi-một-trang-web-vẫn-bị-chặn)
+6. [Khi một trang web vẫn không vào được](#6-khi-một-trang-web-vẫn-không-vào-được)
 7. [Xử lý sự cố](#7-xử-lý-sự-cố)
 8. [Gỡ cài đặt](#8-gỡ-cài-đặt)
 9. [Câu hỏi thường gặp](#9-câu-hỏi-thường-gặp)
@@ -112,9 +112,9 @@ Muốn huỷ khi đang kết nối: bấm nút nguồn lần nữa. Muốn tắt
 
 | Mức | Bật gì | Khi nào |
 | --- | --- | --- |
-| **Chỉ DNS** | DNS mã hoá | Nhà mạng chỉ chặn bằng DNS; nhẹ nhất |
-| **DNS + vượt DPI** *(khuyên dùng)* | Thêm vượt DPI cho mọi ứng dụng | Đổi DNS rồi mà trang vẫn bị chặn |
-| **Tối đa** | Thêm proxy cho máy này (đặt proxy hệ thống); trình duyệt tự được fragment khi gặp trang bị chặn | Vượt DPI vẫn chưa đủ với vài trang |
+| **Chỉ DNS** | DNS mã hoá | Nhà mạng chỉ can thiệp vào DNS; nhẹ nhất |
+| **DNS + vượt DPI** *(khuyên dùng)* | Thêm vượt DPI cho mọi ứng dụng | Đổi DNS rồi mà kết nối mã hoá vẫn bị reset |
+| **Tối đa** | Thêm proxy cho máy này (đặt proxy hệ thống); trình duyệt tự được fragment khi kết nối bị can thiệp | Vượt DPI vẫn chưa đủ với vài trang |
 | **Tuỳ chỉnh** | Tổ hợp bạn tự chỉnh ở giao diện Đầy đủ | Sáng lên khi cài đặt ở đó không khớp mức nào |
 
 Chọn một mức cũng là tìm máy chủ tốt nhất: app quét lại toàn bộ danh sách (dòng dưới các mức hiện *Đang tìm máy chủ tốt nhất 120/906…*) và, khi đang kết nối, chuyển sang những máy chủ nhanh nhất mà không ngắt kết nối. Bấm lại mức đang chọn để tìm lại.
@@ -198,13 +198,13 @@ Danh sách toàn bộ máy chủ DNS mã hoá mà Ghostline biết (vài trăm m
 
 *Ảnh động được tua nhanh, không có tiếng; bấm vào để xem video có lồng tiếng.*
 
-**Từng bước: mở một trang đang bị chặn**
+**Từng bước: khi nhà mạng can thiệp làm hỏng kết nối mã hoá tới một trang hợp pháp**
 
 1. Bấm **Kết nối** trước; engine chỉ chạy khi đang kết nối.
 2. Ở **Vượt DPI**, bật công tắc và giữ engine **zapret2**.
 3. Thêm trang đó vào **Trang mẫu** (mỗi dòng một trang) rồi bấm **⟳ thử lại**.
 4. Kết quả **✕ TLS** thường là do DPI: bấm **⚡ tự dò** và chờ. Ghostline giữ chiến lược nhẹ nhất mở được mọi trang mẫu.
-5. Nếu chỉ vài trang bị chặn, đặt **phạm vi** là **danh sách đen** và chỉ liệt kê các trang đó.
+5. Nếu chỉ vài trang bị ảnh hưởng, đặt **phạm vi** là **danh sách đen** và chỉ liệt kê các trang đó.
 
 Dùng khi DNS đã được mã hoá nhưng kết nối tới một trang **vẫn bị can thiệp**: thiết bị trên đường truyền soi tên trang trong gói tin (SNI) rồi ngắt kết nối.
 
@@ -221,14 +221,14 @@ Dùng khi DNS đã được mã hoá nhưng kết nối tới một trang **vẫ
   - **GoodbyeDPI** (Windows): engine cũ. Bản cài từ trước khi có zapret2 vẫn dùng GoodbyeDPI cho tới khi bạn tự đổi.
   - Trên Windows, nếu zapret2 bị antivirus chặn, Ghostline tạm chạy GoodbyeDPI, báo *suy giảm* và hiện nút **thử lại zapret2**.
 - **Preset:** mức độ can thiệp vào gói tin.
-  - **Nhẹ → Vừa → Mạnh → Cực mạnh:** mức càng cao càng dễ vượt chặn nhưng có thể làm vài trang chậm hoặc lỗi. Nên bắt đầu từ **Nhẹ**.
+  - **Nhẹ → Vừa → Mạnh → Cực mạnh:** mức càng cao càng chống can thiệp mạnh nhưng có thể làm vài trang chậm hoặc lỗi. Nên bắt đầu từ **Nhẹ**.
   - **Mode 1–6** (chỉ GoodbyeDPI): các cấu hình có sẵn của GoodbyeDPI, thử khi các mức trên không hiệu quả.
   - **Tự nhập:** nhập tham số của riêng bạn. Với zapret2 chỉ nhận `--lua-desync=…` gọi các hàm có sẵn; Ghostline từ chối các tham số nguy hiểm.
 - **⚡ tự dò:** Ghostline tự thử từng preset từ nhẹ đến mạnh và giữ preset nhẹ nhất mở được tất cả *trang mẫu*. Cần **kết nối trước** khi tự dò. Bấm lần nữa để huỷ.
 - **Phạm vi:**
   - **mọi kết nối:** áp dụng cho mọi trang web.
   - **danh sách đen:** chỉ áp dụng cho các domain trong danh sách, mỗi dòng một domain, rồi **lưu**. Cách này ít ảnh hưởng tới các trang khác nhất.
-- **Tự phát hiện trang bị chặn** (zapret2, phạm vi danh sách đen): zapret2 tự nhận ra trang bị chặn và thêm vào một danh sách riêng hiện ngay bên dưới; bạn xoá được từng trang.
+- **Tự phát hiện trang bị can thiệp** (zapret2, phạm vi danh sách đen): zapret2 tự nhận ra trang có kết nối bị can thiệp và thêm vào một danh sách riêng hiện ngay bên dưới; bạn xoá được từng trang.
 - **Dòng lệnh:** cho xem chính xác lệnh engine sẽ chạy.
 
 **Fragment DNS**
@@ -313,7 +313,7 @@ Ghostline có thể chạy một proxy cục bộ trên một cổng (mặc đ�
 
 **Fragment web** cắt nhỏ ClientHello của TLS để DPI không đọc được tên trang:
 
-- **tự động khi bị chặn** (mặc định): kết nối bình thường; nếu bị reset hoặc treo trước khi server trả lời thì thử lại một lần có fragment và ghi nhớ trang đó cho mạng này (7 ngày). Lần đầu vào một trang bị chặn có thể chậm thêm tối đa 3 giây.
+- **tự động khi bị can thiệp** (mặc định): kết nối bình thường; nếu bị reset hoặc treo trước khi server trả lời thì thử lại một lần có fragment và ghi nhớ trang đó cho mạng này (7 ngày). Lần đầu vào một trang bị ảnh hưởng có thể chậm thêm tối đa 3 giây.
 - **luôn bật** / **tắt**.
 - **kiểu cắt:** TCP (cắt quanh SNI), TLS record (cắt thành nhiều bản ghi TLS), hoặc kết hợp (mặc định).
 - Danh sách **domain đã ghi nhớ** cho thấy những gì đã học được ở mạng này; xoá mục nào nếu trang đó đã vào được mà không cần giúp.
@@ -358,7 +358,7 @@ Rules quyết định cách xử lý một tên miền, cho cả DNS lẫn proxy
 
 Sửa rules ở tab **bảng** hoặc chuyển sang **text** (mỗi dòng một rule, `#` là chú thích, `#!` là rule đang tắt). Không có gì được lưu cho tới khi mọi dòng hợp lệ; dòng sai được đánh dấu kèm số dòng.
 
-**Danh sách:** dán link GitHub bất kỳ dạng nào (blob, raw, gist, jsDelivr) hoặc đường dẫn file trên máy, chọn hành động, rồi bấm **+ thêm danh sách**. Ghostline tự nhận diện định dạng (hosts, domain, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash/Surge, v2ray domain-list-community, sing-box JSON, CIDR), cho biết đọc được bao nhiêu mục và bỏ qua dòng nào, và tự cập nhật mỗi 24 giờ. **Thêm nhanh** gợi ý các danh sách phổ biến kèm license và repo gốc. Nếu GitHub bị chặn, Ghostline tự chuyển sang jsDelivr.
+**Danh sách:** dán link GitHub bất kỳ dạng nào (blob, raw, gist, jsDelivr) hoặc đường dẫn file trên máy, chọn hành động, rồi bấm **+ thêm danh sách**. Ghostline tự nhận diện định dạng (hosts, domain, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash/Surge, v2ray domain-list-community, sing-box JSON, CIDR), cho biết đọc được bao nhiêu mục và bỏ qua dòng nào, và tự cập nhật mỗi 24 giờ. **Thêm nhanh** gợi ý các danh sách phổ biến kèm license và repo gốc. Nếu không kết nối được GitHub, Ghostline tự chuyển sang jsDelivr.
 
 **Thử tên miền** cho biết rule hay danh sách nào quyết định một tên, ví dụ *chặn — danh sách HaGeZi Light, dòng 120*.
 
@@ -422,7 +422,7 @@ Tính năng nâng cao cho trang nằm sau CDN cho phép *domain fronting*. Proxy
 
 - Lần đầu phải đọc hết cảnh báo và xác nhận.
 - Cần bật **proxy** và **dùng cho máy này** (chỉ áp dụng cho trình duyệt trên máy này).
-- Bật một **nhóm preset** hoặc viết rule như `youtube.com sni=www.google.com connect=www.google.com`. `sni=none` không gửi tên nào. `connect=` chọn host để lấy địa chỉ kết nối.
+- Bật một **nhóm preset** hoặc viết rule như `app.example sni=front.example connect=front.example` (tên miền bình phong phải cùng CDN). `sni=none` không gửi tên nào. `connect=` chọn host để lấy địa chỉ kết nối.
 - Khi đang chạy, mọi trang có banner tím cho biết đang giải mã bao nhiêu tên miền. **tắt Fake SNI** dừng ngay.
 - Nếu máy chủ từ chối tên giả, Ghostline tự quay về fragment; bộ đếm trên trang cho thấy điều này.
 - Chứng chỉ được cài (vào kho chứng chỉ của Windows; trên Linux vào kho tin cậy của hệ thống, và cho Firefox, Chrome khi chúng dùng kho riêng) chỉ tồn tại khi đang kết nối, chỉ ký được cho các tên miền trong rule, và bị gỡ khi ngắt kết nối, khi app bị tắt đột ngột (watchdog gỡ) và khi gỡ cài đặt.
@@ -465,7 +465,7 @@ Nguồn **DNS nhà mạng** là chỗ duy nhất Ghostline gửi truy vấn khô
 2. 10 địa chỉ nhanh nhất được đo thêm tốc độ tải.
 3. Chọn vài địa chỉ rồi **sao chép**, hoặc **tạo rule**: gõ các domain (ví dụ `example.com` và `*.example.com`), Ghostline thêm rule `ip=` vào trang **Rules**.
 
-Rule `ip=` chỉ có tác dụng với ứng dụng dùng DNS hoặc proxy của Ghostline, và chỉ đúng với domain thật sự nằm sau Cloudflare. Kết quả được lưu theo từng mạng; **kiểm tra lại** thử lại các địa chỉ đang chọn. Địa chỉ dùng được hôm nay có thể bị chặn ngày mai: quét lại khi trang không vào được nữa.
+Rule `ip=` chỉ có tác dụng với ứng dụng dùng DNS hoặc proxy của Ghostline, và chỉ đúng với domain thật sự nằm sau Cloudflare. Kết quả được lưu theo từng mạng; **kiểm tra lại** thử lại các địa chỉ đang chọn. Địa chỉ dùng được hôm nay có thể không dùng được ngày mai: quét lại khi trang không vào được nữa.
 
 **Stamp** đọc và tạo stamp `sdns://`. Dán stamp để xem bên trong có gì, hoặc điền biểu mẫu (hay **điền từ URL**) để tạo stamp, rồi **thêm vào danh sách server**. Stamp relay và ODoH đọc được nhưng Ghostline không dùng.
 
@@ -493,18 +493,18 @@ Ghostline có icon hình vòng tròn ở khay (trên Windows ở góc dưới b�
 - **Mở Ghostline:** hiện lại cửa sổ
 - **Thoát:** trên Windows, ngắt kết nối, trả DNS về như cũ, rồi tắt app. Trên Linux chỉ đóng cửa sổ: dịch vụ nền vẫn bảo vệ cho tới khi bạn bấm **Ngắt kết nối**
 
-## 6. Khi một trang web vẫn bị chặn
+## 6. Khi một trang web vẫn không vào được
 
 > ⚖️ Bạn tự chịu trách nhiệm tuân thủ pháp luật và điều khoản của nhà mạng. Không dùng các tính năng này để truy cập nội dung bị cấm theo quy định của pháp luật. Xem [Tuyên bố miễn trừ trách nhiệm](../README.vi.md#tuyên-bố-miễn-trừ-trách-nhiệm).
 
-Làm lần lượt, dừng lại khi trang đã mở được:
+Mục này dành cho các trang hợp pháp mà nhà mạng can thiệp làm hỏng kết nối mã hoá (bị reset, treo, ✕ TLS). Làm lần lượt, dừng lại khi trang đã mở được:
 
-1. **Kết nối Ghostline.** Nhiều trang chỉ bị chặn bằng DNS, nên kết nối là đủ.
+1. **Kết nối Ghostline.** Nhiều khi chỉ là kết quả DNS bị giả mạo, nên kết nối là đủ.
 2. **Xoá cache trình duyệt** hoặc mở thử bằng cửa sổ ẩn danh (trình duyệt có thể còn nhớ kết quả DNS cũ).
 3. Vào **Vượt DPI**, bật với engine **zapret2** và preset **Nhẹ**.
 4. Bấm **⚡ tự dò** để Ghostline tự tìm preset phù hợp. Thêm trang bạn cần vào **Trang mẫu** trước để tự dò kiểm tra đúng trang đó.
-5. Vẫn bị chặn: thử preset mạnh hơn (trên Windows với GoodbyeDPI, thử **Mode 1–6**).
-6. Nếu chỉ vài trang bị chặn, chuyển **Phạm vi** sang **danh sách đen** và thêm các trang đó, để vượt DPI không ảnh hưởng tới phần còn lại.
+5. Vẫn lỗi: thử preset mạnh hơn (trên Windows với GoodbyeDPI, thử **Mode 1–6**).
+6. Nếu chỉ vài trang bị ảnh hưởng, chuyển **Phạm vi** sang **danh sách đen** và thêm các trang đó, để vượt DPI không ảnh hưởng tới phần còn lại.
 
 > **Lưu ý về trình duyệt:** Chrome, Edge và Firefox có tuỳ chọn *Secure DNS / DNS over HTTPS* riêng. Nếu bật, trình duyệt sẽ bỏ qua Ghostline. Hãy tắt tuỳ chọn đó, hoặc để ở chế độ "dùng DNS của hệ thống".
 
@@ -577,7 +577,7 @@ Không. Khi có bản mới, Ghostline hiện nút **cập nhật lên vX**. V�
 Bản beta có tính năng mới sớm hơn nhưng chưa được thử kỹ bằng bản chính thức. Mặc định Ghostline chỉ báo bản chính thức; muốn dùng thử thì bật **nhận bản beta (thử nghiệm)** trong Cài đặt. Khi có bản chính thức mới hơn, bản beta cũng được báo cập nhật lên đó.
 
 **Windows Defender hoặc phần mềm diệt virus báo Ghostline có virus?** (Windows)
-Đây là báo nhầm. Để vượt DPI, Ghostline đi kèm zapret2 và GoodbyeDPI, hai công cụ dùng driver **WinDivert** để đọc và sửa gói tin mạng. Antivirus hay nghi ngờ loại công cụ này và có thể báo nhầm thành trojan, ví dụ `Trojan:Win32/Bearfoos.A!ml` hoặc `Trojan:Win32/Suschil!rfn`. Bản phát hành cũng chưa được ký số nên SmartScreen hiện cảnh báo. Toàn bộ mã nguồn của Ghostline mở trên GitHub, và mỗi bản phát hành được build tự động bằng GitHub Actions từ mã nguồn đó.
+Đây là báo nhầm. Để chống can thiệp DPI, Ghostline đi kèm zapret2 và GoodbyeDPI, hai công cụ dùng driver **WinDivert** để đọc và sửa gói tin mạng. Antivirus hay nghi ngờ loại công cụ này và có thể báo nhầm thành trojan, ví dụ `Trojan:Win32/Bearfoos.A!ml` hoặc `Trojan:Win32/Suschil!rfn`. Bản phát hành cũng chưa được ký số nên SmartScreen hiện cảnh báo. Toàn bộ mã nguồn của Ghostline mở trên GitHub, và mỗi bản phát hành được build tự động bằng GitHub Actions từ mã nguồn đó.
 
 Nên làm:
 
