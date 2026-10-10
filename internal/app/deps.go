@@ -44,6 +44,12 @@ type DNSReporter interface {
 	Report() ([]sysdns.AdapterDNS, error)
 }
 
+// DNSNetshApplier is a DNS backend that can point the snapshot at loopback
+// again through netsh (Windows), for a leak check the engine never saw.
+type DNSNetshApplier interface {
+	ApplyLoopbackNetsh(s sysdns.Snapshot, v6 bool) error
+}
+
 // DPI runs one DPI bypass engine at a time (dpi.Manager).
 type DPI interface {
 	Start(ctx context.Context, engine string, p dpi.Plan) (int, error)
