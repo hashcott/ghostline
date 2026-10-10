@@ -574,3 +574,14 @@ Không. Khi có bản mới, Ghostline hiện nút **cập nhật lên vX**. V�
 
 **Bản beta là gì, có nên dùng không?**
 Bản beta có tính năng mới sớm hơn nhưng chưa được thử kỹ bằng bản chính thức. Mặc định Ghostline chỉ báo bản chính thức; muốn dùng thử thì bật **nhận bản beta (thử nghiệm)** trong Cài đặt. Khi có bản chính thức mới hơn, bản beta cũng được báo cập nhật lên đó.
+
+**Windows Defender hoặc phần mềm diệt virus báo Ghostline có virus?** (Windows)
+Đây là báo nhầm. Để vượt DPI, Ghostline đi kèm zapret2 và GoodbyeDPI, hai công cụ dùng driver **WinDivert** để đọc và sửa gói tin mạng. Antivirus hay nghi ngờ loại công cụ này và có thể báo nhầm thành trojan, ví dụ `Trojan:Win32/Bearfoos.A!ml` hoặc `Trojan:Win32/Suschil!rfn`. Bản phát hành cũng chưa được ký số nên SmartScreen hiện cảnh báo. Toàn bộ mã nguồn của Ghostline mở trên GitHub, và mỗi bản phát hành được build tự động bằng GitHub Actions từ mã nguồn đó.
+
+Nên làm:
+
+1. Chỉ tải Ghostline từ [trang tải](https://hashcott.github.io/ghostline/) hoặc trang [Releases](https://github.com/hashcott/ghostline/releases), rồi so mã SHA-256 với file `SHA256SUMS` (xem *Kiểm tra file* ở mục 2). Đừng dùng bản tải từ nơi khác.
+2. Thêm thư mục Ghostline vào danh sách loại trừ của Defender: *Windows Security → Virus & threat protection → Manage settings → Exclusions → Add or remove exclusions → Add an exclusion → Folder*, chọn `C:\Program Files\Ghostline\Ghostline` (hoặc thư mục bạn giải nén bản portable). Hoặc mở PowerShell bằng quyền quản trị và chạy `Add-MpPreference -ExclusionPath "C:\Program Files\Ghostline\Ghostline"`.
+3. Nếu Defender đã cách ly file, khôi phục nó trong *Protection history*, hoặc cài lại Ghostline sau khi thêm loại trừ.
+
+Nếu Defender dừng Ghostline khi đang kết nối, tác vụ *Ghostline Network Guard* trả DNS về trong khoảng một phút, nên bạn không bị mất mạng.
