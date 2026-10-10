@@ -42,6 +42,7 @@ type Settings struct {
 	FakeSNI          FakeSNISettings   `json:"fakeSni"`
 	Tools            ToolsSettings     `json:"tools"`
 	Simple           SimpleSettings    `json:"simple"`
+	Terms            TermsSettings     `json:"terms"`
 }
 
 // SimpleSettings belong to the Simple interface's protection levels.
@@ -307,6 +308,14 @@ type DNSServerSettings struct {
 type FakeSNISettings struct {
 	Enabled    bool `json:"enabled"`
 	AckVersion int  `json:"ackVersion"`
+}
+
+// TermsSettings record the terms of use the user accepted on this machine:
+// AckVersion is the version of the terms, AckAt when (RFC 3339, UTC). The
+// window shows the terms until the current version is accepted.
+type TermsSettings struct {
+	AckVersion int    `json:"ackVersion"`
+	AckAt      string `json:"ackAt,omitempty"`
 }
 
 // SetupPagePort is the phone setup page's port (spec 2B 7.2).

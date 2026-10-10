@@ -75,14 +75,14 @@ test("zapret2 strategies come from the engine, in the UI language", async () => 
 
 test("auto-detect is offered only for zapret2 with the blacklist scope", async () => {
   const { rerender } = render(<Dpi />);
-  expect(screen.queryByRole("switch", { name: "tự phát hiện trang bị chặn" })).toBeNull();
+  expect(screen.queryByRole("switch", { name: "tự phát hiện trang bị can thiệp" })).toBeNull();
   withDPI({ scope: "blacklist" });
   rerender(<Dpi />);
-  fireEvent.click(await screen.findByRole("switch", { name: "tự phát hiện trang bị chặn" }));
+  fireEvent.click(await screen.findByRole("switch", { name: "tự phát hiện trang bị can thiệp" }));
   await waitFor(() => expect(saved().dpi.zapret2.autoHostlist).toBe(true));
   withDPI({ scope: "blacklist", engine: "goodbyedpi" });
   rerender(<Dpi />);
-  expect(screen.queryByRole("switch", { name: "tự phát hiện trang bị chặn" })).toBeNull();
+  expect(screen.queryByRole("switch", { name: "tự phát hiện trang bị can thiệp" })).toBeNull();
 });
 
 test("auto-detected sites can be removed", async () => {

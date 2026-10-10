@@ -1,4 +1,19 @@
 {
+  "terms": {
+    "title": "TERMS OF USE",
+    "intro": "Before you use Ghostline, read these terms to the end and agree to them.",
+    "purpose": "Ghostline is open-source software for privacy and network safety: it encrypts DNS queries, protects against DNS spoofing and hijacking, stops the network from inspecting or tampering with encrypted connections, and helps diagnose the network. It is developed for research and education.",
+    "responsible": "You are solely responsible for how you use Ghostline, for complying with the laws of Vietnam or wherever you live, and for your network provider's terms.",
+    "forbidden": "Do not use Ghostline to: reach websites, apps or digital platforms that a competent authority has ordered to be blocked under the law; guide or show others how to reach such websites, apps or platforms; gamble online, infringe copyright, commit fraud or spread content that is prohibited by law; attack, disrupt or get unauthorized access to any network or system.",
+    "lists": "Ghostline does not ship, recommend or maintain lists of sites blocked by authorities. Lists and rules you add yourself are your own responsibility.",
+    "warranty": "The software is provided \"as is\", without warranty of any kind. The authors are not liable for any damage, data loss, service disruption or legal consequences arising from its use.",
+    "license": "Ghostline is free software under the GNU GPL-3.0 license.",
+    "full": "read the full disclaimer and privacy notice",
+    "scroll": "Scroll to the end of the terms to continue.",
+    "agree": "I have read, understood and agree to these terms.",
+    "accept": "agree and continue",
+    "decline": "disagree, quit"
+  },
   "common": {
     "cancel": "cancel",
     "close": "close",
@@ -67,9 +82,9 @@
       "max": "Maximum",
       "custom": "Custom",
       "hint": {
-        "dns": "Encrypted DNS only; the lightest, for ISPs that block with DNS alone.",
+        "dns": "Encrypted DNS only; the lightest, for networks that only tamper with DNS.",
         "dpi": "Adds DPI bypass for every app (recommended).",
-        "max": "Adds the proxy for this PC: browsers get fragmented automatically on blocked sites.",
+        "max": "Adds the proxy for this PC: browsers get fragmented automatically when a connection is interfered with.",
         "custom": "Your own combination from the Full interface."
       },
       "part": {
@@ -234,7 +249,7 @@
       "retry": "retry zapret2"
     },
     "autoHostlist": {
-      "label": "detect blocked sites automatically",
+      "label": "detect interfered sites automatically",
       "empty": "no sites detected yet",
       "removeOne": "remove {{domain}}",
       "clear": "remove all"
@@ -718,7 +733,7 @@
       "title": "web fragmentation",
       "mode": "mode",
       "modes": {
-        "auto": "auto when blocked",
+        "auto": "auto on interference",
         "always": "always",
         "never": "off"
       },
@@ -854,7 +869,7 @@
       "social": "social networks",
       "telemetry": "device telemetry",
       "vietnam": "Vietnam",
-      "bypass": "unblocking",
+      "bypass": "DPI interference",
       "fakesni": "Fake SNI"
     },
     "items": {
@@ -972,7 +987,7 @@
     },
     "lookup": {
       "name": "domain",
-      "placeholder": "e.g. youtube.com, or an IP for PTR",
+      "placeholder": "e.g. example.com, or an IP for PTR",
       "type": "record type",
       "run": "look up",
       "isp": "ISP DNS {{ip}}",

@@ -87,6 +87,7 @@ func TestParse_OldSettings(t *testing.T) {
 func TestParse_SafetyFlags(t *testing.T) {
 	d := sampleData()
 	d.Settings.FakeSNI = store.FakeSNISettings{Enabled: true, AckVersion: 9}
+	d.Settings.Terms = store.TermsSettings{AckVersion: 9, AckAt: "2026-01-01T00:00:00Z"}
 	d.Settings.DNSServer.Enabled, d.Settings.DNSServer.ShareLAN = true, true
 	d.Settings.Proxy.ShareLAN = true
 	d.Settings.StartWithWindows = true
@@ -105,6 +106,7 @@ func TestParse_SafetyFlags(t *testing.T) {
 	s := got.Settings
 	require.False(t, s.FakeSNI.Enabled || s.DNSServer.Enabled || s.DNSServer.ShareLAN || s.Proxy.ShareLAN || s.StartWithWindows)
 	require.Equal(t, 1, s.FakeSNI.AckVersion, "ack comes from this machine")
+	require.Equal(t, current().Settings.Terms, s.Terms, "the terms are accepted on this machine")
 }
 
 func TestResult_ReplaceKeepsMachineFields(t *testing.T) {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { startBridge } from "./app/bridge";
 import { useGhost, type Mode } from "./app/store";
 import { Service } from "./app/api";
@@ -7,6 +7,7 @@ import { SimpleView } from "./modes/simple/SimpleView";
 import { FullView } from "./modes/full/FullView";
 import { FakeSniBanner } from "./components/FakeSniBanner";
 import { ServiceOutdated } from "./components/ServiceOutdated";
+import { Terms } from "./components/Terms";
 import i18n, { initI18n, type Lang } from "./i18n";
 import css from "./App.module.css";
 
@@ -14,6 +15,17 @@ function App() {
   const settings = useGhost((s) => s.settings);
   const setSettings = useGhost((s) => s.setSettings);
   useEffect(() => startBridge(), []);
+  // Asked once settings are there: on Linux the service may not be running
+  // yet, and its install banner must stay usable until then.
+  const [terms, setTerms] = useState<"unknown" | "pending" | "accepted">("unknown");
+  const ready = settings != null;
+  useEffect(() => {
+    if (!ready) return;
+    void Service.TermsAccepted().then(
+      (ok) => setTerms(ok ? "accepted" : "pending"),
+      () => setTerms("pending"),
+    );
+  }, [ready]);
 
   const mode: Mode = settings?.mode === "full" ? "full" : "simple";
   const lang: Lang = (i18n.language as Lang) === "en" ? "en" : "vi";
@@ -37,7 +49,9 @@ function App() {
       <FakeSniBanner />
       <ServiceOutdated />
       <main className={css.main} data-mode={mode}>
-        {mode === "simple" ? (
+        {terms !== "accepted" ? (
+          terms === "pending" && <Terms onAccepted={() => setTerms("accepted")} />
+        ) : mode === "simple" ? (
           <SimpleView
             onOpenLogs={() => {
               useGhost.getState().setPage("logs");

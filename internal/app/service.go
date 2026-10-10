@@ -217,8 +217,8 @@ func (s *Service) GetSettings() store.Settings { return s.x.Settings.Get() }
 // SaveSettings validates and stores settings.
 func (s *Service) SaveSettings(n store.Settings) error { return s.saveSettings(n, false) }
 
-// saveSettings validates and stores n. The DNS server and Fake SNI blocks
-// change only through their own bindings (owned=true): the UI's copy of the
+// saveSettings validates and stores n. The DNS server, Fake SNI and terms
+// blocks change only through their own bindings (owned=true): the UI's copy of the
 // settings may be stale and must not undo them.
 // validateSettings checks the fields every save (and every import) must
 // pass.
@@ -270,7 +270,7 @@ func (s *Service) saveSettings(n store.Settings, owned bool) error {
 		}
 	}
 	if !owned {
-		n.DNSServer, n.FakeSNI = old.DNSServer, old.FakeSNI
+		n.DNSServer, n.FakeSNI, n.Terms = old.DNSServer, old.FakeSNI, old.Terms
 	}
 	if err := store.ValidateDNSServer(n.DNSServer, n.Proxy.Port); err != nil {
 		return err

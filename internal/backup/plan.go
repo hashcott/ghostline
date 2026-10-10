@@ -183,6 +183,7 @@ func (p *Plan) sanitiseSettings(s, cur store.Settings) store.Settings {
 		}
 	}
 	s.FakeSNI.AckVersion = cur.FakeSNI.AckVersion
+	s.Terms = cur.Terms
 	s.Adapters, s.AdapterGUIDs = cur.Adapters, cur.AdapterGUIDs
 	s.FullWindow = cur.FullWindow
 	s.DNSServer.IOSSSID = cur.DNSServer.IOSSSID
