@@ -1,0 +1,82 @@
+/* The terms of use, in place of the window until they are accepted. */
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 560px;
+  min-height: 0;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  padding: 14px 16px;
+  line-height: 1.6;
+}
+
+.title {
+  color: var(--text-strong);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.intro {
+  margin: 0;
+  color: var(--dim);
+}
+
+.text {
+  flex: 1;
+  min-height: 120px;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 4px 4px 4px 0;
+}
+
+.text p {
+  margin: 8px 0;
+}
+
+.warn {
+  color: var(--amber);
+}
+
+.link {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
+.tick {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--text-strong);
+}
+
+.tick input {
+  margin-top: 4px;
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--red);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

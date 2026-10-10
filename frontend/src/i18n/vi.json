@@ -1,4 +1,19 @@
 {
+  "terms": {
+    "title": "ĐIỀU KHOẢN SỬ DỤNG",
+    "intro": "Trước khi dùng Ghostline, hãy đọc hết và đồng ý với các điều khoản dưới đây.",
+    "purpose": "Ghostline là phần mềm mã nguồn mở để bảo vệ quyền riêng tư và an toàn mạng: mã hoá truy vấn DNS, chống giả mạo và chiếm quyền DNS, chống nhà mạng soi hoặc can thiệp kết nối mã hoá, và chẩn đoán mạng. Ghostline được phát triển cho mục đích nghiên cứu và học tập.",
+    "responsible": "Bạn tự chịu hoàn toàn trách nhiệm về cách sử dụng Ghostline, về việc tuân thủ pháp luật Việt Nam hoặc nơi bạn sinh sống, và điều khoản của nhà cung cấp mạng.",
+    "forbidden": "Không dùng Ghostline để: truy cập trang web, ứng dụng hay nền tảng số mà cơ quan có thẩm quyền đã yêu cầu chặn theo quy định của pháp luật; hướng dẫn hay chia sẻ cho người khác cách truy cập những trang, ứng dụng, nền tảng đó; cờ bạc trực tuyến, vi phạm bản quyền, lừa đảo, phát tán nội dung bị pháp luật cấm; tấn công, gây gián đoạn hay truy cập trái phép bất kỳ mạng hay hệ thống nào.",
+    "lists": "Ghostline không đóng gói, không khuyến nghị và không duy trì danh sách các trang bị cơ quan chức năng chặn. Danh sách và rule bạn tự thêm thuộc trách nhiệm của bạn.",
+    "warranty": "Phần mềm được cung cấp \"nguyên trạng\", không kèm bất kỳ bảo đảm nào. Tác giả không chịu trách nhiệm về thiệt hại, mất dữ liệu, gián đoạn dịch vụ hay hậu quả pháp lý phát sinh từ việc sử dụng.",
+    "license": "Ghostline là phần mềm tự do theo giấy phép GNU GPL-3.0.",
+    "full": "đọc bản đầy đủ: tuyên bố miễn trừ trách nhiệm và quyền riêng tư",
+    "scroll": "Cuộn tới cuối điều khoản để tiếp tục.",
+    "agree": "Tôi đã đọc, hiểu và đồng ý với các điều khoản trên.",
+    "accept": "đồng ý và tiếp tục",
+    "decline": "không đồng ý, thoát"
+  },
   "common": {
     "cancel": "huỷ",
     "close": "đóng",
@@ -67,9 +82,9 @@
       "max": "Tối đa",
       "custom": "Tuỳ chỉnh",
       "hint": {
-        "dns": "Chỉ mã hoá DNS; nhẹ nhất, hợp khi nhà mạng chỉ chặn bằng DNS.",
+        "dns": "Chỉ mã hoá DNS; nhẹ nhất, hợp khi nhà mạng chỉ can thiệp vào DNS.",
         "dpi": "Thêm vượt DPI cho mọi ứng dụng (khuyên dùng).",
-        "max": "Thêm proxy cho máy này: trình duyệt tự được fragment khi gặp trang bị chặn.",
+        "max": "Thêm proxy cho máy này: trình duyệt tự được fragment khi kết nối bị can thiệp.",
         "custom": "Tổ hợp bạn tự chỉnh ở giao diện Đầy đủ."
       },
       "part": {
@@ -234,7 +249,7 @@
       "retry": "thử lại zapret2"
     },
     "autoHostlist": {
-      "label": "tự phát hiện trang bị chặn",
+      "label": "tự phát hiện trang bị can thiệp",
       "empty": "chưa phát hiện trang nào",
       "removeOne": "xoá {{domain}}",
       "clear": "xoá hết"
@@ -718,7 +733,7 @@
       "title": "fragment web",
       "mode": "chế độ",
       "modes": {
-        "auto": "tự động khi bị chặn",
+        "auto": "tự động khi bị can thiệp",
         "always": "luôn bật",
         "never": "tắt"
       },
@@ -854,7 +869,7 @@
       "social": "mạng xã hội",
       "telemetry": "telemetry thiết bị",
       "vietnam": "Việt Nam",
-      "bypass": "vượt chặn",
+      "bypass": "chống can thiệp DPI",
       "fakesni": "Fake SNI"
     },
     "items": {
@@ -972,7 +987,7 @@
     },
     "lookup": {
       "name": "tên miền",
-      "placeholder": "ví dụ youtube.com, hoặc một IP khi tra PTR",
+      "placeholder": "ví dụ example.com, hoặc một IP khi tra PTR",
       "type": "loại bản ghi",
       "run": "tra",
       "isp": "DNS nhà mạng {{ip}}",

@@ -9,9 +9,10 @@ section: net
 priority: optional
 maintainer: Harry Nguyen <duchanhstyle@gmail.com>
 description: |
-  Encrypted DNS and DPI bypass.
+  Encrypted DNS and protection against DPI interference.
   Ghostline sends the system's DNS over an encrypted resolver it picks
-  automatically, gets past deep packet inspection with zapret2, and offers
+  automatically, so the network cannot read or spoof it, protects
+  connections from deep packet inspection interference with zapret2, and offers
   a local proxy, rules and a DNS server for the LAN. A background service
   (ghostlined) keeps protecting after the window closes.
 vendor: Ghostline

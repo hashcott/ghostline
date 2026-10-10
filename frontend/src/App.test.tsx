@@ -14,6 +14,7 @@ const svc = vi.hoisted(() => ({
   ServiceInstall: vi.fn(() => Promise.resolve({ kind: "", outdated: false })),
   SetMode: vi.fn(() => Promise.resolve()),
   SaveSettings: vi.fn(() => Promise.resolve()),
+  TermsAccepted: vi.fn(() => Promise.resolve(true)),
 }));
 vi.mock("./app/api", () => ({ Service: svc }));
 

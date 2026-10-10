@@ -24,6 +24,7 @@ import (
 
 // Binding IDs: each method answers the ID Wails gives app.Service's.
 func init() {
+	application.RegisterBindingMethodID((*Service).AcceptTerms, 1771444238)
 	application.RegisterBindingMethodID((*Service).AckFakeSNIWarning, 4079707157)
 	application.RegisterBindingMethodID((*Service).AddList, 925504398)
 	application.RegisterBindingMethodID((*Service).AddScannedServers, 3565303002)
@@ -130,9 +131,14 @@ func init() {
 	application.RegisterBindingMethodID((*Service).StartService, 802367276)
 	application.RegisterBindingMethodID((*Service).StopConflictingService, 3805516582)
 	application.RegisterBindingMethodID((*Service).SysProxyInfo, 3360194344)
+	application.RegisterBindingMethodID((*Service).TermsAccepted, 4106675115)
 	application.RegisterBindingMethodID((*Service).TestUpstreamProxy, 1421704818)
 	application.RegisterBindingMethodID((*Service).UpdateList, 75098978)
 	application.RegisterBindingMethodID((*Service).UseOnlyServer, 2807799011)
+}
+
+func (s *Service) AcceptTerms() error {
+	return s.call(context.Background(), "AcceptTerms", nil)
 }
 
 func (s *Service) AckFakeSNIWarning() error {
@@ -666,6 +672,13 @@ func (s *Service) SysProxyInfo() sysproxy.Info {
 	var r sysproxy.Info
 	err := s.call(context.Background(), "SysProxyInfo", &r)
 	s.logErr("SysProxyInfo", err)
+	return r
+}
+
+func (s *Service) TermsAccepted() bool {
+	var r bool
+	err := s.call(context.Background(), "TermsAccepted", &r)
+	s.logErr("TermsAccepted", err)
 	return r
 }
 

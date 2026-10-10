@@ -22,7 +22,7 @@ This guide is for anyone running Windows 10/11 or Linux; no technical background
    - [Tools](#410-tools)
    - [Backup and moving to another PC](#411-backup-and-moving-to-another-pc)
 5. [The tray icon](#5-the-tray-icon)
-6. [When a site is still blocked](#6-when-a-site-is-still-blocked)
+6. [When a site still won't load](#6-when-a-site-still-wont-load)
 7. [Troubleshooting](#7-troubleshooting)
 8. [Uninstalling](#8-uninstalling)
 9. [FAQ](#9-faq)
@@ -112,9 +112,9 @@ To cancel while connecting, click the power button again. To turn protection off
 
 | Level | What it turns on | When |
 | --- | --- | --- |
-| **DNS only** | Encrypted DNS | Your ISP blocks with DNS alone; the lightest |
-| **DNS + DPI bypass** *(recommended)* | Adds DPI bypass for every app | Sites are still blocked after the DNS change |
-| **Maximum** | Adds the proxy for this PC (it sets the system proxy); browsers get fragmented automatically on blocked sites | DPI bypass is not enough for some sites |
+| **DNS only** | Encrypted DNS | Your network only tampers with DNS; the lightest |
+| **DNS + DPI bypass** *(recommended)* | Adds DPI bypass for every app | Encrypted connections still get reset after the DNS change |
+| **Maximum** | Adds the proxy for this PC (it sets the system proxy); browsers get fragmented automatically when a connection is interfered with | DPI bypass is not enough for some sites |
 | **Custom** | Your own combination from the Full interface | Lit when what you set there matches no level |
 
 Choosing a level also looks for the best servers: Ghostline scans the whole list again (the line under the levels shows *Finding the best servers 120/906…*) and, when connected, switches to the fastest without disconnecting. Click the current level to look again.
@@ -198,13 +198,13 @@ Every encrypted DNS server Ghostline knows about (several hundred), refreshed da
 
 *The preview plays sped up and silent; click it for the narrated video.*
 
-**Step by step: get a blocked site to open**
+**Step by step: when the network breaks encrypted connections to a lawful site**
 
 1. Click **Connect** first; the engine only runs while you are connected.
 2. On **DPI bypass**, turn the switch on and keep the **zapret2** engine.
 3. Add the site to **Test sites** (one per line) and click **⟳ test again**.
 4. A **✕ TLS** result usually means DPI: click **⚡ auto-tune** and wait. Ghostline keeps the lightest strategy that opens every test site.
-5. If only a few sites are blocked, set **scope** to **blacklist** and list just those sites.
+5. If only a few sites are affected, set **scope** to **blacklist** and list just those sites.
 
 Use this when DNS is encrypted but connections to a site are **still interfered with**: equipment on the path reads the site name inside your traffic (SNI) and resets the connection.
 
@@ -228,7 +228,7 @@ Use this when DNS is encrypted but connections to a site are **still interfered 
 - **scope:**
   - **all connections:** applies to every site.
   - **blacklist:** applies only to domains on the list. Click **edit ›**, enter one domain per line, then **save**. This affects other sites the least.
-- **detect blocked sites automatically** (zapret2, blacklist scope): zapret2 notices blocked sites and adds them to a separate list shown below; you can remove any of them.
+- **detect interfered sites automatically** (zapret2, blacklist scope): zapret2 notices sites whose connections are interfered with and adds them to a separate list shown below; you can remove any of them.
 - **command line:** shows exactly what the engine will run.
 
 **DNS fragment**
@@ -313,7 +313,7 @@ Ghostline can run a local proxy on one port (default `8080`) that speaks **HTTP,
 
 **Web fragmentation** splits the TLS ClientHello so DPI cannot read the site name:
 
-- **auto when blocked** (default): connect normally; if the connection is reset or stalls before the server answers, retry once with fragmentation and remember the site for this network (7 days). The first visit to a blocked site can take up to 3 seconds longer.
+- **auto on interference** (default): connect normally; if the connection is reset or stalls before the server answers, retry once with fragmentation and remember the site for this network (7 days). The first visit to an affected site can take up to 3 seconds longer.
 - **always** / **off**.
 - **method:** TCP (split around the SNI), TLS record (split into several TLS records), or combined (default).
 - The **remembered domains** list shows what was learned on this network; remove entries if a site starts working without help.
@@ -358,7 +358,7 @@ Rules decide what happens to a domain, both for DNS and for the proxy. The first
 
 Edit rules in the **table** or switch to **text** (one rule per line, `#` comments, `#!` for a disabled rule). Nothing is saved until every line is valid; bad lines are marked with their number.
 
-**Lists:** paste any GitHub link (blob, raw, gist or jsDelivr) or a local file path, choose the action, and press **+ add list**. Ghostline detects the format (hosts, plain domains, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash/Surge, v2ray domain-list-community, sing-box JSON, CIDR), shows how many entries it read and which lines it skipped, and updates the list every 24 hours. **Quick add** offers well-known lists with their license and repository. If GitHub is blocked, Ghostline falls back to jsDelivr.
+**Lists:** paste any GitHub link (blob, raw, gist or jsDelivr) or a local file path, choose the action, and press **+ add list**. Ghostline detects the format (hosts, plain domains, AdBlock/AdGuard, dnsmasq, Unbound, RPZ, Clash/Surge, v2ray domain-list-community, sing-box JSON, CIDR), shows how many entries it read and which lines it skipped, and updates the list every 24 hours. **Quick add** offers well-known lists with their license and repository. If GitHub can't be reached, Ghostline falls back to jsDelivr.
 
 **Test a domain** tells you which rule or list decides a name, for example *block — list HaGeZi Light, line 120*.
 
@@ -422,7 +422,7 @@ An advanced feature for sites behind CDNs that allow *domain fronting*. The prox
 
 - The first time, read the warning to the end and confirm.
 - It needs the **proxy** with **use for this PC** (it applies only to browsers on this PC).
-- Turn on a **preset group** or write rules such as `youtube.com sni=www.google.com connect=www.google.com`. `sni=none` sends no name. `connect=` chooses which host's address to connect to.
+- Turn on a **preset group** or write rules such as `app.example sni=front.example connect=front.example` (the front domain must be served by the same CDN). `sni=none` sends no name. `connect=` chooses which host's address to connect to.
 - While it runs, a violet banner on every page says how many domains are decrypted. **turn Fake SNI off** stops it at once.
 - If a server refuses the fake name, Ghostline silently falls back to fragmentation; the counters on the page show this.
 - The certificate it installs (in Windows' certificate store; on Linux in the system trust store, and for Firefox and Chrome where they keep their own) exists only while you are connected, can sign only the domains in your rules, and is removed on disconnect, on a crash (by the watchdog) and on uninstall.
@@ -465,7 +465,7 @@ The **ISP DNS** source is the only place Ghostline ever sends an unencrypted que
 2. The 10 fastest also get a download speed test.
 3. Select a few addresses, then **copy** them, or **create rule**: type the domains (for example `example.com` and `*.example.com`) and Ghostline adds an `ip=` rule on the **Rules** page.
 
-An `ip=` rule only affects apps that use Ghostline's DNS or proxy, and only works for domains that really are behind Cloudflare. Results are kept per network; **check again** retests the selected addresses. A clean address today may be blocked tomorrow: scan again when a site stops loading.
+An `ip=` rule only affects apps that use Ghostline's DNS or proxy, and only works for domains that really are behind Cloudflare. Results are kept per network; **check again** retests the selected addresses. An address that works today may stop working tomorrow: scan again when a site stops loading.
 
 **Stamp** reads and builds `sdns://` stamps. Paste stamps to see what is inside, or fill the form (or **fill from URL**) to build one, then **add to servers**. Relay and ODoH stamps can be read but Ghostline does not use them.
 
@@ -493,18 +493,18 @@ Ghostline puts a ring icon in the system tray (on Windows, bottom right next to 
 - **Open Ghostline:** show the window again
 - **Quit:** on Windows, disconnect, restore your DNS, then close the app. On Linux it closes only the window: the background service keeps protecting until you **Disconnect**
 
-## 6. When a site is still blocked
+## 6. When a site still won't load
 
 > ⚖️ You are responsible for complying with the law and your network provider's terms. Do not use these features to reach content that is prohibited by law. See the [Disclaimer](../README.md#disclaimer).
 
-Work through these in order and stop as soon as the site opens:
+This section is for lawful sites whose encrypted connections your network breaks (resets, timeouts, ✕ TLS). Work through these in order and stop as soon as the site opens:
 
-1. **Connect Ghostline.** Many sites are blocked only through DNS, so connecting is enough.
+1. **Connect Ghostline.** Often the problem is only tampered DNS answers, so connecting is enough.
 2. **Clear your browser cache**, or try a private window (the browser may still remember old DNS answers).
 3. Open **DPI bypass** and turn it on with the **zapret2** engine and the **Light** preset.
 4. Click **⚡ auto-tune** to let Ghostline find a preset that works. Add the site you need to **Test sites** first so auto-tune checks that exact site.
-5. Still blocked: try a stronger preset (on Windows with GoodbyeDPI, **Mode 1–6**).
-6. If only a few sites are blocked, switch **scope** to **blacklist** and add just those sites, so DPI bypass doesn't affect anything else.
+5. Still failing: try a stronger preset (on Windows with GoodbyeDPI, **Mode 1–6**).
+6. If only a few sites are affected, switch **scope** to **blacklist** and add just those sites, so DPI bypass doesn't affect anything else.
 
 > **Browser note:** Chrome, Edge and Firefox have their own *Secure DNS / DNS over HTTPS* option. When it's on, the browser bypasses Ghostline. Turn it off, or set it to use the system's DNS.
 
@@ -577,7 +577,7 @@ No. When a new version is out, Ghostline shows **update to vX**. With the Window
 A beta has new features earlier but is less tested than a regular release. By default Ghostline only offers regular releases; to try betas, turn on **receive beta versions** in Settings. When a newer regular release is out, a beta is offered that one too.
 
 **Windows Defender or my antivirus says Ghostline is a virus?** (Windows)
-It is a false alarm. To get past DPI, Ghostline ships zapret2 and GoodbyeDPI, two tools that use the **WinDivert** driver to read and change network packets. Antivirus products distrust this kind of tool and may flag it as a trojan by mistake, for example `Trojan:Win32/Bearfoos.A!ml` or `Trojan:Win32/Suschil!rfn`. Releases are not code-signed yet either, so SmartScreen warns too. All of Ghostline's source code is open on GitHub, and every release is built automatically by GitHub Actions from that code.
+It is a false alarm. To protect connections from DPI interference, Ghostline ships zapret2 and GoodbyeDPI, two tools that use the **WinDivert** driver to read and change network packets. Antivirus products distrust this kind of tool and may flag it as a trojan by mistake, for example `Trojan:Win32/Bearfoos.A!ml` or `Trojan:Win32/Suschil!rfn`. Releases are not code-signed yet either, so SmartScreen warns too. All of Ghostline's source code is open on GitHub, and every release is built automatically by GitHub Actions from that code.
 
 What to do:
 
