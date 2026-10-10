@@ -297,6 +297,7 @@
     "updateServerList": "update server list",
     "checkApp": "notify about new versions",
     "beta": "receive beta versions (earlier, less tested)",
+    "betaRunning": "always on while running a beta",
     "restoreNow": "⚠ RESTORE DNS NOW",
     "restored": "DNS restored",
     "stopService": "Stop service {{name}}",

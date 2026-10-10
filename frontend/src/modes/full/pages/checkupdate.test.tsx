@@ -105,6 +105,15 @@ test("a withdrawn notice (channel switched to stable) hides the update", () => {
   expect(screen.queryByRole("button", { name: /v0.3.0-beta.1/ })).toBeNull();
 });
 
+test("a beta build shows the beta switch on and locked", async () => {
+  useGhost.getState().setInfo({ version: "0.7.0-beta.1", portable: false } as any);
+  render(<Settings />);
+  const sw = await screen.findByRole("switch", { name: "nhận bản beta (thử nghiệm)" });
+  expect(sw.getAttribute("aria-checked")).toBe("true");
+  expect((sw as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(/luôn bật khi đang dùng bản beta/)).toBeTruthy();
+});
+
 test("beta toggle saves updates.beta", async () => {
   render(<Settings />);
   fireEvent.click(screen.getByRole("switch", { name: "nhận bản beta (thử nghiệm)" }));

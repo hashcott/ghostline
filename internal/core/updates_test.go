@@ -92,6 +92,12 @@ func TestReleaseCheck_EverySixHours(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestBetaChannel_OnForBetaBuilds(t *testing.T) {
+	require.False(t, betaChannel("0.6.3", false))
+	require.True(t, betaChannel("0.6.3", true))
+	require.True(t, betaChannel("0.7.0-beta.1", false), "a beta build hears of the next beta")
+}
+
 func TestReleaseCheck_RememberedBetaOnlyOnBetaChannel(t *testing.T) {
 	offline := func() (updater.Release, error) { return updater.Release{}, errors.New("offline") }
 	meta := store.Meta{LatestTag: "v0.3.0-beta.1", LatestURL: "u", LastUpdateCheck: now}

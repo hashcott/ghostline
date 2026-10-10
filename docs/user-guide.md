@@ -281,7 +281,7 @@ Records events: connecting, switching servers, DPI bypass on/off, errors.
 | max servers | How many servers to use in parallel (default 5). More is steadier but uses slightly more bandwidth |
 | update server list | Download a fresh server list daily (signature-checked) |
 | notify about new versions | Show a notice when a new version is out. Ghostline **never updates without asking**: installing takes your click (see *Updating* in section 2) |
-| receive beta versions | Also offer pre-releases (for example `v0.8.0-beta.1`): new features earlier, less tested. Off by default. Turning it off hides a beta notice; you stay on the beta until the next regular release is newer |
+| receive beta versions | Also offer pre-releases (for example `v0.8.0-beta.1`): new features earlier, less tested. Off by default, and always on while you run a beta, so a beta build hears of the next beta. Turning it off hides a beta notice |
 | ⚠ RESTORE DNS NOW | Put the system's DNS back to its saved state. Use it if DNS ever looks wrong |
 
 ### 4.6. Proxy

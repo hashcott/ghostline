@@ -281,7 +281,7 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt vượt 
 | số máy chủ tối đa | Số máy chủ dùng song song (mặc định 5). Nhiều hơn thì ổn định hơn nhưng tốn băng thông hơn một chút |
 | cập nhật danh sách máy chủ | Tải danh sách máy chủ mới mỗi ngày (có kiểm tra chữ ký) |
 | báo có bản mới | Hiện thông báo khi có phiên bản mới. Ghostline **không bao giờ tự cập nhật khi chưa hỏi**: phải do bạn bấm (xem *Cập nhật* ở mục 2) |
-| nhận bản beta (thử nghiệm) | Báo cả bản thử nghiệm (ví dụ `v0.8.0-beta.1`): có tính năng mới sớm hơn nhưng chưa được thử kỹ. Mặc định tắt. Tắt đi thì thông báo bản beta biến mất; bạn ở lại bản beta đang dùng cho tới khi có bản chính thức mới hơn |
+| nhận bản beta (thử nghiệm) | Báo cả bản thử nghiệm (ví dụ `v0.8.0-beta.1`): có tính năng mới sớm hơn nhưng chưa được thử kỹ. Mặc định tắt, và luôn bật khi đang dùng bản beta để bản beta được báo bản beta tiếp theo. Tắt đi thì thông báo bản beta biến mất |
 | ⚠ KHÔI PHỤC DNS NGAY | Đưa DNS của hệ thống về trạng thái đã lưu. Dùng khi nghi ngờ DNS bị sai |
 
 ### 4.6. Proxy

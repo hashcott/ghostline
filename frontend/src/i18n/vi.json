@@ -297,6 +297,7 @@
     "updateServerList": "cập nhật danh sách máy chủ",
     "checkApp": "báo có bản mới",
     "beta": "nhận bản beta (thử nghiệm)",
+    "betaRunning": "luôn bật khi đang dùng bản beta",
     "restoreNow": "⚠ KHÔI PHỤC DNS NGAY",
     "restored": "đã khôi phục DNS",
     "stopService": "Tạm dừng dịch vụ {{name}}",

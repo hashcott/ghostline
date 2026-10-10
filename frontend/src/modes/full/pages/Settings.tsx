@@ -17,6 +17,7 @@ export function Settings() {
   const settings = useGhost((s) => s.settings);
   const snap = useGhost((s) => s.snapshot);
   const info = useGhost((s) => s.info);
+  const runningBeta = (info?.version ?? "").includes("-");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [adapters, setAdapters] = useState<Adapter[]>([]);
@@ -71,10 +72,13 @@ export function Settings() {
   const guids = settings.adapterGuids ?? [];
   const upd = useUpdate();
 
-  const toggleRow = (label: string, checked: boolean, patch: (v: boolean) => Parameters<typeof saveSettings>[0]) => (
+  const toggleRow = (label: string, checked: boolean, patch: (v: boolean) => Parameters<typeof saveSettings>[0], hint?: string) => (
     <div className={css.setting}>
-      <span>{label}</span>
-      <Toggle label={label} checked={checked} onChange={(v) => void save(patch(v))} />
+      <span>
+        {label}
+        {hint && <small> ({hint})</small>}
+      </span>
+      <Toggle label={label} checked={checked} disabled={!!hint} onChange={(v) => void save(patch(v))} />
     </div>
   );
 
@@ -171,7 +175,9 @@ export function Settings() {
         </div>
         {toggleRow(t("settings.updateServerList"), settings.updates.updateServerList, (v) => (s) => ({ ...s, updates: { ...s.updates, updateServerList: v } }))}
         {toggleRow(t("settings.checkApp"), settings.updates.checkApp, (v) => (s) => ({ ...s, updates: { ...s.updates, checkApp: v } }))}
-        {toggleRow(t("settings.beta"), !!settings.updates.beta, (v) => (s) => ({ ...s, updates: { ...s.updates, beta: v } }))}
+        {/* A beta build always gets betas (core betaChannel); the switch shows it. */}
+        {toggleRow(t("settings.beta"), runningBeta || !!settings.updates.beta, (v) => (s) => ({ ...s, updates: { ...s.updates, beta: v } }),
+          runningBeta ? t("settings.betaRunning") : undefined)}
         {error && <div className={css.bad}>{error}</div>}
         {note && !error && <div className={css.ok}>{note}</div>}
       </div>

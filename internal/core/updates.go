@@ -61,10 +61,15 @@ func releaseCheck(meta *store.Meta, now time.Time, current string, startup, beta
 	return updater.Release{Tag: meta.LatestTag, URL: meta.LatestURL}, true
 }
 
+// betaChannel reports whether pre-releases are offered: when the setting is
+// on, and always on a beta build, which would otherwise hear of nothing until
+// the next regular release.
+func betaChannel(current string, on bool) bool { return on || updater.IsPrerelease(current) }
+
 // newUpdateChecker wires the release check to GitHub and the UI.
 func newUpdateChecker(meta *metaFile, st *updateState, box *app.SettingsBox, bus *app.Bus, log *slog.Logger, onUpdate func(tag, url string)) *updateChecker {
 	client := &http.Client{Timeout: 30 * time.Second}
-	beta := func() bool { return box.Get().Updates.Beta }
+	beta := func() bool { return betaChannel(brand.Version, box.Get().Updates.Beta) }
 	return &updateChecker{
 		meta: meta, state: st, current: brand.Version, now: time.Now, beta: beta,
 		latest: func(ctx context.Context) (updater.Release, error) {
