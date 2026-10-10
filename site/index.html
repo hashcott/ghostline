@@ -10,49 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
 <style>
-  /* The app's own palette (frontend/src/styles/tokens.css): people should
-     recognise on this page the window they will see after installing. */
-  :root {
-    --bg: #05070a;
-    --surface: #0a1311;
-    --text: #e6fff6;
-    --dim: #9cc7b6;
-    --line: rgba(0, 255, 163, 0.18);
-    --green: #00ffa3;
-    --cyan: #00d0ff;
-    --sans: "Be Vietnam Pro", system-ui, sans-serif;
-    --mono: "JetBrains Mono", Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    /* The app's faint grid. */
-    background-image:
-      linear-gradient(rgba(0, 255, 163, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 255, 163, 0.045) 1px, transparent 1px);
-    background-size: 32px 32px;
-    color: var(--text);
-    font: 400 17px/1.6 var(--sans);
-  }
-  a { color: var(--cyan); text-underline-offset: 3px; }
-  a:hover { color: var(--text); }
-  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
-
-  header.bar { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
-  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font: 600 16px var(--mono); }
-  .brand img { width: 28px; height: 28px; }
-  .bar nav { display: flex; align-items: center; gap: 18px; font-size: 15px; }
-  .lang { display: inline-flex; border: 1px solid var(--line); }
-  .lang button {
-    background: none; border: 0; color: var(--dim); font: 600 13px var(--mono);
-    padding: 4px 10px; cursor: pointer;
-  }
-  .lang button[aria-pressed="true"] { color: var(--bg); background: var(--green); }
-
   .hero {
     display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px;
     align-items: center; padding: 48px 0 72px;
@@ -114,16 +73,11 @@
   .updates p { color: var(--dim); margin: 0 0 14px; }
   .updates p strong { color: var(--text); font-weight: 600; }
 
-  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--dim); font-size: 14px; }
-  footer p { margin: 0 0 8px; }
-  footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
-
   @media (max-width: 760px) {
     .hero { grid-template-columns: 1fr; gap: 40px; padding: 24px 0 56px; }
     .shot { max-width: 240px; }
     .steps { grid-template-columns: 1fr; gap: 28px; }
     .get { width: 100%; }
-    .bar nav .gh { display: none; }
     /* One download per block: name and note, then the file. */
     thead { display: none; }
     tr { display: block; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -138,18 +92,9 @@
   }
 </style>
 </head>
-<body>
+<body data-page="index">
 <div class="wrap">
-  <header class="bar">
-    <a class="brand" href="./"><img src="appicon.png" alt="">Ghostline</a>
-    <nav>
-      <a class="gh" href="https://github.com/hashcott/ghostline" data-t="source">Mã nguồn</a>
-      <span class="lang" role="group" aria-label="Language">
-        <button type="button" data-lang="vi" aria-pressed="true">VI</button>
-        <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      </span>
-    </nav>
-  </header>
+  <header class="bar" id="bar"></header>
 
   <main>
     <div class="hero">
@@ -195,16 +140,10 @@
     </section>
   </main>
 
-  <footer>
-    <p data-t="license">Ghostline là phần mềm mã nguồn mở theo giấy phép GPL-3.0.</p>
-    <nav>
-      <a href="https://github.com/hashcott/ghostline" data-t="source">Mã nguồn</a>
-      <a id="guide" href="https://github.com/hashcott/ghostline/blob/main/docs/huong-dan-su-dung.md" data-t="guide">Hướng dẫn sử dụng</a>
-      <a href="https://github.com/hashcott/ghostline/issues" data-t="issues">Báo lỗi</a>
-    </nav>
-  </footer>
+  <footer id="foot"></footer>
 </div>
 
+<script src="site.js"></script>
 <script>
 (() => {
   const REPO = "hashcott/ghostline";
@@ -214,7 +153,6 @@
     vi: {
       title: "Mở lại những trang bị chặn, chỉ với một nút bấm.",
       lede: "Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
-      source: "Mã nguồn",
       getWin: "Tải cho Windows", getLinux: "Xem các bản cho Linux", getOther: "Xem mọi bản tải",
       getPkg: { deb: "Tải cho Ubuntu, Debian", rpm: "Tải cho Fedora", tar: "Tải cho Arch Linux", appimage: "Tải cho Linux" },
       metaWin: "Windows 10 và 11, 64-bit.",
@@ -245,9 +183,6 @@
       updTitle: "Cập nhật không cần cài lại",
       upd1: "Khi có bản mới, Ghostline báo ngay trong app. Bấm <strong>cập nhật</strong>: app tự tải, kiểm tra chữ ký, cài rồi mở lại. Cài đặt của bạn giữ nguyên, đang kết nối thì tự kết nối lại.",
       upd2: "Muốn dùng thử tính năng mới sớm hơn? Bật <strong>nhận bản beta</strong> trong Cài đặt. Bản beta ra thường xuyên hơn và chưa được thử kỹ bằng bản chính thức.",
-      license: "Ghostline là phần mềm mã nguồn mở theo giấy phép GPL-3.0.",
-      guide: "Hướng dẫn sử dụng", issues: "Báo lỗi",
-      guideURL: `https://github.com/${REPO}/blob/main/docs/huong-dan-su-dung.md`,
       rows: {
         installer: ["Windows 10 và 11", "Bản cài đặt, khuyên dùng. Cập nhật được ngay trong app."],
         portable: ["Windows, bản portable", "Giải nén rồi chạy, không cần cài."],
@@ -262,7 +197,6 @@
     en: {
       title: "Open blocked sites again, with one button.",
       lede: "Ghostline encrypts DNS and gets past deep packet inspection (DPI) for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
-      source: "Source code",
       getWin: "Download for Windows", getLinux: "See the Linux downloads", getOther: "See all downloads",
       getPkg: { deb: "Download for Ubuntu, Debian", rpm: "Download for Fedora", tar: "Download for Arch Linux", appimage: "Download for Linux" },
       metaWin: "Windows 10 and 11, 64-bit.",
@@ -293,9 +227,6 @@
       updTitle: "Updates without reinstalling",
       upd1: "When a new version is out, Ghostline tells you in the app. Press <strong>update</strong>: it downloads the new version, checks its signature, installs it and opens again. Your settings are kept, and it reconnects if it was connected.",
       upd2: "Want new features sooner? Turn on <strong>receive beta versions</strong> in Settings. Betas come out more often and are less tested than regular releases.",
-      license: "Ghostline is open-source software under the GPL-3.0 license.",
-      guide: "User guide", issues: "Report a problem",
-      guideURL: `https://github.com/${REPO}/blob/main/docs/user-guide.md`,
       rows: {
         installer: ["Windows 10 and 11", "Installer, recommended. Updates from inside the app."],
         portable: ["Windows, portable", "Unzip and run, nothing to install."],
@@ -338,12 +269,7 @@
   const recRow = os === "win" ? "installer" : pkg;
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-  // The visitor's choice, else the browser's language.
-  let lang = (navigator.language || "").toLowerCase().startsWith("vi") ? "vi" : "en";
-  try {
-    const saved = localStorage.getItem("lang");
-    if (saved === "vi" || saved === "en") lang = saved;
-  } catch {}
+  let lang = Site.lang;
 
   let release = null; // { tag, assets: {name: {url, size}} }
   let beta = null;
@@ -354,16 +280,13 @@
 
   function render() {
     const t = T[lang];
-    document.documentElement.lang = lang;
     document.title = lang === "vi" ? "Tải Ghostline" : "Download Ghostline";
     document.querySelectorAll("[data-t]").forEach((el) => {
       const v = t[el.dataset.t];
       if (typeof v === "string") el.innerHTML = v;
     });
-    document.querySelectorAll(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
     $("shot").src = `simple-${lang}.png`;
     $("shot").alt = t.shotAlt;
-    $("guide").href = t.guideURL;
 
     // The main button: the installer on Windows, the table elsewhere.
     const get = $("get");
@@ -439,11 +362,6 @@
     if (release?.assets.SHA256SUMS) $("sums").href = release.assets.SHA256SUMS.url;
   }
 
-  document.querySelectorAll(".lang button").forEach((b) => b.addEventListener("click", () => {
-    lang = b.dataset.lang;
-    try { localStorage.setItem("lang", lang); } catch {}
-    render();
-  }));
 
   const semver = (tag) => (tag.replace(/^v/, "").split(/[-+]/)[0].split(".").map(Number));
   const newer = (a, b) => {
@@ -452,7 +370,7 @@
     return a.includes("-") ? false : b.includes("-");
   };
 
-  render();
+  Site.onLang((l) => { lang = l; render(); });
   // One call: the newest stable release for the buttons, and a newer
   // pre-release, if any, for the beta line.
   fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`)

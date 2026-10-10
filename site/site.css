@@ -1,0 +1,95 @@
+/* Shared by every page of the site. The app's own palette
+   (frontend/src/styles/tokens.css): people should recognise here the
+   window they will see after installing. */
+:root {
+  --bg: #05070a;
+  --surface: #0a1311;
+  --text: #e6fff6;
+  --dim: #9cc7b6;
+  --line: rgba(0, 255, 163, 0.18);
+  --green: #00ffa3;
+  --cyan: #00d0ff;
+  --amber: #ffc857;
+  --sans: "Be Vietnam Pro", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 16px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  /* The app's faint grid. */
+  background-image:
+    linear-gradient(rgba(0, 255, 163, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 163, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  font: 400 17px/1.6 var(--sans);
+}
+a { color: var(--cyan); text-underline-offset: 3px; }
+a:hover { color: var(--text); }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+/* Header: the brand, the pages, the language. */
+header.bar { display: flex; align-items: center; gap: 12px 28px; flex-wrap: wrap; padding: 20px 0; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font: 600 16px var(--mono); }
+.brand img { width: 28px; height: 28px; }
+.pages { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 15px; flex: 1; }
+.pages a { color: var(--dim); text-decoration: none; padding: 2px 0; border-bottom: 2px solid transparent; }
+.pages a:hover { color: var(--text); }
+.pages a[aria-current="page"] { color: var(--text); border-bottom-color: var(--green); }
+.lang { display: inline-flex; border: 1px solid var(--line); }
+.lang button {
+  background: none; border: 0; color: var(--dim); font: 600 13px var(--mono);
+  padding: 4px 10px; cursor: pointer;
+}
+.lang button[aria-pressed="true"] { color: var(--bg); background: var(--green); }
+
+footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--dim); font-size: 14px; margin-top: 56px; }
+footer p { margin: 0 0 8px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+
+/* Pages made from Markdown (guide, FAQ, disclaimer, changelog). */
+.page-head { padding: 32px 0 8px; }
+.page-head h1 {
+  font-weight: 800; font-size: clamp(30px, 4.4vw, 44px); line-height: 1.1;
+  letter-spacing: -0.02em; margin: 0 0 12px;
+}
+.page-head p { color: var(--dim); margin: 0; max-width: 40em; }
+.loading, .failed { color: var(--dim); padding: 24px 0; }
+.failed a { color: var(--cyan); }
+
+.prose { max-width: 46em; }
+.prose h2 { font-weight: 800; font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; margin: 56px 0 16px; padding-top: 24px; border-top: 1px solid var(--line); }
+.prose h3 { font-weight: 600; font-size: 20px; margin: 36px 0 10px; }
+.prose h4 { font-weight: 600; font-size: 17px; margin: 24px 0 8px; }
+.prose > :first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.prose p, .prose ul, .prose ol { margin: 0 0 14px; }
+.prose li { margin: 4px 0; }
+.prose li > ul, .prose li > ol { margin: 4px 0 0; }
+.prose strong { font-weight: 600; color: var(--text); }
+.prose p, .prose li, .prose td { color: #cfeee2; }
+.prose code { font-family: var(--mono); font-size: 0.88em; color: var(--text); background: var(--surface); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.prose pre { background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; overflow-x: auto; border-radius: 4px; }
+.prose pre code { background: none; padding: 0; overflow-wrap: normal; }
+.prose img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); margin: 8px 0 20px; }
+.prose hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+.prose blockquote { margin: 0 0 16px; padding: 10px 16px; border-left: 3px solid var(--line); color: var(--dim); }
+.prose blockquote > :last-child { margin-bottom: 0; }
+/* GitHub's > [!NOTE] / [!IMPORTANT] / [!WARNING] callouts. */
+.prose .callout { border-left-color: var(--cyan); background: rgba(0, 208, 255, 0.05); }
+.prose .callout.warn { border-left-color: var(--amber); background: rgba(255, 200, 87, 0.06); }
+.prose .callout-title { display: block; font: 600 13px var(--mono); color: var(--cyan); margin-bottom: 4px; }
+.prose .callout.warn .callout-title { color: var(--amber); }
+.prose .table-wrap { overflow-x: auto; margin: 0 0 18px; }
+.prose table { border-collapse: collapse; font-size: 15px; min-width: 100%; }
+.prose th, .prose td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.prose th { color: var(--dim); font-weight: 600; font-size: 14px; }
+
+@media (max-width: 760px) {
+  header.bar { padding: 16px 0 8px; }
+  .pages { order: 3; flex-basis: 100%; gap: 4px 16px; font-size: 14px; }
+  .lang { margin-left: auto; }
+  .prose h2 { font-size: 22px; margin-top: 40px; }
+}

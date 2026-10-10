@@ -568,3 +568,9 @@ That's fine. On Windows, Ghostline restores DNS before Windows shuts down; if th
 
 **Can I use it with Mobile Hotspot?** (Windows)
 Yes. Mobile Hotspot listens on port 53 of every address, but Windows still lets Ghostline take 127.0.0.1:53, so you can connect with the hotspot on.
+
+**Do I have to uninstall to update?**
+No. When a new version is out, Ghostline shows **update to vX**. With the Windows installer build, pressing it downloads the new version, checks its signature, installs it and opens Ghostline again with your settings. The portable build and Linux install the new version over the old one (see *Updating* in section 2).
+
+**What is a beta, and should I use one?**
+A beta has new features earlier but is less tested than a regular release. By default Ghostline only offers regular releases; to try betas, turn on **receive beta versions** in Settings. When a newer regular release is out, a beta is offered that one too.

@@ -7,6 +7,7 @@ Phần Windows chạy trên Windows 11 x64, terminal **admin**; phần Linux ở
 - **Bản chính thức:** tag `vX.Y.Z`. Mọi người dùng được báo; trang tải và nút tải trên README trỏ tới nó.
 - **Bản beta:** tag có hậu tố, ví dụ `vX.Y.Z-beta.1`, `vX.Y.Z-rc.1`. CI tạo release dạng **pre-release**: `releases/latest`, trang tải và kênh mặc định trong app bỏ qua nó; chỉ ai bật *nhận bản beta* mới được báo. Thay đổi hằng ngày phát hành dạng beta, gom lại thành bản chính thức khi đã ổn.
 - Trang tải (workflow `pages`) chỉ deploy sau khi workflow `release` build và phát hành xong thành công. Sửa trang giữa hai lần phát hành thì chạy tay: Actions → pages → Run workflow.
+- Trang **Thay đổi** của site đọc ghi chú phát hành trên GitHub: viết phần thay đổi dưới `### What's changed in X.Y.Z`, rồi `### Downloads`; mọi thứ từ `### Downloads` trở xuống (bảng file, tuyên bố trách nhiệm) không hiện trên trang. Trang **Hướng dẫn**, **Hỏi đáp** (mục 9 của hướng dẫn) và **Miễn trừ trách nhiệm** (mục Disclaimer và Privacy của README) lấy thẳng từ repo lúc deploy.
 - CI ký `SHA256SUMS` bằng secret `SERVERLIST_SIGNING_KEY` thành `SHA256SUMS.sig`. Thiếu secret thì job publish dừng; release thiếu `.sig` thì nút cập nhật trong app chuyển sang mở trang phát hành.
 
 ## Test tự động

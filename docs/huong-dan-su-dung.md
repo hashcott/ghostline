@@ -568,3 +568,9 @@ Không sao. Trên Windows, Ghostline trả DNS về trước khi Windows tắt; 
 
 **Dùng chung với Mobile Hotspot được không?** (Windows)
 Được. Mobile Hotspot nghe cổng 53 trên mọi địa chỉ, nhưng Windows vẫn cho Ghostline dùng 127.0.0.1:53, nên bạn kết nối được ngay cả khi đang bật hotspot.
+
+**Cập nhật lên bản mới có phải gỡ ra cài lại không?**
+Không. Khi có bản mới, Ghostline hiện nút **cập nhật lên vX**. Với bản cài đặt trên Windows, bấm nút là app tự tải, kiểm tra chữ ký, cài và mở lại, cài đặt giữ nguyên. Bản portable và Linux thì cài bản mới đè lên bản cũ (xem *Cập nhật* ở mục 2).
+
+**Bản beta là gì, có nên dùng không?**
+Bản beta có tính năng mới sớm hơn nhưng chưa được thử kỹ bằng bản chính thức. Mặc định Ghostline chỉ báo bản chính thức; muốn dùng thử thì bật **nhận bản beta (thử nghiệm)** trong Cài đặt. Khi có bản chính thức mới hơn, bản beta cũng được báo cập nhật lên đó.
