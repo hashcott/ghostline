@@ -38,9 +38,7 @@ func testInstaller(t *testing.T, env map[string]string, exe string, exists ...st
 
 func TestIssueFields_NameThePackage(t *testing.T) {
 	in, _ := testInstaller(t, map[string]string{"APPIMAGE": "/home/u/Ghostline.AppImage"}, "/tmp/.mount/usr/bin/ghostline")
-	in.osRelease = func() []byte { return []byte("ID=fedora
-PRETTY_NAME=\"Fedora Linux 41\"
-") }
+	in.osRelease = func() []byte { return []byte("ID=fedora\nPRETTY_NAME=\"Fedora Linux 41\"\n") }
 	f := in.issueFields()
 	require.Equal(t, "Linux", f.OS)
 	require.Equal(t, "Fedora Linux 41", f.OSVersion)
