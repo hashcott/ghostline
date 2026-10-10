@@ -175,7 +175,7 @@
       title: "Mã hoá DNS, giữ riêng tư, chỉ với một nút bấm.",
       lede: "Ghostline mã hoá DNS để nhà mạng không đọc hay giả mạo được truy vấn của bạn, và chống can thiệp kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
       getWin: "Tải cho Windows", getLinux: "Xem các bản cho Linux", getOther: "Xem mọi bản tải",
-      getPkg: { deb: "Tải cho Ubuntu, Debian", rpm: "Tải cho Fedora", tar: "Tải cho Arch Linux", appimage: "Tải cho Linux" },
+      getPkg: { deb: "Tải cho Ubuntu, Mint, Debian", rpm: "Tải cho Fedora", tar: "Tải cho Arch Linux", appimage: "Tải cho Linux" },
       metaWin: "Windows 10 và 11, 64-bit.",
       metaLinux: "Chọn gói hợp với bản Linux của bạn ở bảng bên dưới.",
       metaPkg: "Dùng bản Linux khác? Xem <a href=\"#all\">mọi bản tải</a>.",
@@ -223,7 +223,7 @@
       title: "Encrypted DNS and privacy, with one button.",
       lede: "Ghostline encrypts DNS so your network cannot read or spoof your queries, and gets past deep packet inspection (DPI) interference for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
       getWin: "Download for Windows", getLinux: "See the Linux downloads", getOther: "See all downloads",
-      getPkg: { deb: "Download for Ubuntu, Debian", rpm: "Download for Fedora", tar: "Download for Arch Linux", appimage: "Download for Linux" },
+      getPkg: { deb: "Download for Ubuntu, Mint, Debian", rpm: "Download for Fedora", tar: "Download for Arch Linux", appimage: "Download for Linux" },
       metaWin: "Windows 10 and 11, 64-bit.",
       metaLinux: "Pick the package for your Linux in the table below.",
       metaPkg: "Another Linux? See <a href=\"#all\">all downloads</a>.",
@@ -289,12 +289,14 @@
     : /CrOS/.test(ua) ? "other"
     : /Linux|X11/.test(ua) ? "linux" : "other";
   // Which Linux package to offer. Few browsers name the distribution (Firefox
-  // on Ubuntu and Fedora do); the AppImage runs on the rest.
+  // on Fedora does); Chrome, and Firefox on Ubuntu and Mint, say only "X11;
+  // Linux x86_64". Those are mostly Ubuntu, Mint and Debian, so they get the
+  // .deb, with all downloads a click away; not the AppImage, which also needs
+  // glibc 2.39 that Mint 21 and Ubuntu 22.04 do not have.
   const pkg = os !== "linux" ? null
-    : /Ubuntu|Debian|Mint|Pop!_OS|elementary|Zorin/i.test(ua) ? "deb"
     : /Fedora|Red Hat|CentOS|Rocky|Alma|SUSE/i.test(ua) ? "rpm"
     : /\bArch\b|Manjaro|CachyOS|EndeavourOS/i.test(ua) ? "tar"
-    : "appimage";
+    : "deb";
   const recRow = os === "win" ? "installer" : pkg;
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
