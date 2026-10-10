@@ -599,3 +599,12 @@ Cách xử lý:
 3. Muốn tự xem ai đang giữ cổng: trên Windows mở Command Prompt, chạy `netstat -ano | findstr ":53 "` rồi tìm PID ở cột cuối trong Task Manager (tab *Details*); trên Linux chạy `sudo ss -lunp 'sport = :53'`.
 
 Lỗi tương tự với cổng khác: **cổng proxy** (mặc định 8080) hoặc **cổng DoH** của DNS server (mặc định 443) đang bị chiếm thì đổi sang cổng khác ở trang Proxy hoặc DNS server, hoặc đóng chương trình đang giữ cổng đó.
+
+**Máy tôi chạy Windows 10 bản cũ, có dùng được không?**
+Ghostline chạy trên Windows 10 và 11 bản 64-bit. Windows 7, 8, 8.1 và Windows 32-bit không được hỗ trợ. Để xem máy bạn đang chạy bản nào, bấm **Win + R**, gõ `winver` rồi Enter: cửa sổ hiện ra ghi *Version* (ví dụ 1909, 22H2) và *OS Build*.
+
+- **Windows 10 bản 2004 trở lên và Windows 11:** dùng bình thường.
+- **Windows 10 bản 1909 trở về trước:** hãy dùng Ghostline 0.6.3 trở lên. Trên các bản này Windows có thể nhận cài đặt DNS mới mà vẫn hỏi máy chủ DNS cũ, khiến kết nối báo *truy vấn DNS không đi qua Ghostline*; từ 0.6.3 Ghostline nhận ra trường hợp này, đặt lại DNS theo cách của `netsh` rồi kiểm tra lại. Các bản này ít được thử hơn; nếu vẫn lỗi, hãy [báo lỗi](https://github.com/hashcott/ghostline/issues) kèm số *OS Build* và ảnh chụp thông báo.
+- **Windows 10 LTSC/LTSB** không có sẵn Microsoft Edge WebView2, phần Ghostline dùng để vẽ cửa sổ. Bản cài đặt tự cài WebView2 (cần mạng). Với bản portable, nếu Ghostline báo thiếu WebView2, hãy cài *WebView2 Runtime* từ [trang của Microsoft](https://go.microsoft.com/fwlink/p/?LinkId=2124703) rồi mở lại.
+
+Nếu được, hãy cập nhật Windows qua *Windows Update*: các bản cũ không còn nhận bản vá bảo mật.
