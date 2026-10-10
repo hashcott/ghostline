@@ -585,3 +585,17 @@ What to do:
 3. If Defender already quarantined a file, restore it from *Protection history*, or reinstall Ghostline after adding the exclusion.
 
 If Defender stops Ghostline while it is connected, the *Ghostline Network Guard* task puts your DNS back within about a minute, so you do not lose the internet.
+
+**"Port 53 is held by …" when I connect?**
+Ghostline needs port 53 on `127.0.0.1` to run DNS on your computer. This error means another program took that port first; the message names it and its PID. The usual ones:
+
+- **Windows:** services of WSL, Hyper-V or Docker Desktop (such as *Host Network Service* or *Internet Connection Sharing*); another DNS or ad-blocking tool (Acrylic DNS Proxy, dnscrypt-proxy, YogaDNS, AdGuard Home, Technitium…). Mobile Hotspot does not cause it.
+- **Linux:** dnsmasq, unbound, AdGuard Home, Pi-hole or another DNS server on the machine. systemd-resolved uses `127.0.0.53`, so it does not get in the way.
+
+What to do:
+
+1. If it is a program you installed, close it (or turn off its DNS part) and connect again.
+2. If it is a background service (a Windows service, or a systemd service on Linux), press **Stop service …** in Ghostline's **Settings**. Ghostline always asks first. On Windows, stopping it can break WSL, Hyper-V or Mobile Hotspot until you restart the computer.
+3. To see for yourself what holds the port: on Windows, run `netstat -ano | findstr ":53 "` in Command Prompt and look up the PID in the last column in Task Manager (*Details* tab); on Linux, run `sudo ss -lunp 'sport = :53'`.
+
+The same error on another port: if the **proxy port** (8080 by default) or the DNS server's **DoH port** (443 by default) is in use, pick another port on the Proxy or DNS server page, or close the program holding it.
