@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashcott/ghostline/internal/app"
+	"github.com/hashcott/ghostline/internal/issue"
 	"github.com/hashcott/ghostline/internal/sysinstall"
 	"github.com/stretchr/testify/require"
 )
@@ -33,6 +34,17 @@ func testInstaller(t *testing.T, env map[string]string, exe string, exists ...st
 		executable: func() (string, error) { return exe, nil },
 		run:        r.run,
 	}, r
+}
+
+func TestIssueFields_NameThePackage(t *testing.T) {
+	in, _ := testInstaller(t, map[string]string{"APPIMAGE": "/home/u/Ghostline.AppImage"}, "/tmp/.mount/usr/bin/ghostline")
+	in.osRelease = func() []byte { return []byte("ID=fedora
+PRETTY_NAME=\"Fedora Linux 41\"
+") }
+	f := in.issueFields()
+	require.Equal(t, "Linux", f.OS)
+	require.Equal(t, "Fedora Linux 41", f.OSVersion)
+	require.Equal(t, issue.PkgAppImage, f.Package)
 }
 
 func contains(xs []string, x string) bool {

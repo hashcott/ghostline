@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/hashcott/ghostline/internal/app"
+	"github.com/hashcott/ghostline/internal/brand"
+	"github.com/hashcott/ghostline/internal/issue"
 	"github.com/hashcott/ghostline/internal/sysinstall"
 )
 
@@ -34,6 +36,13 @@ func newInstaller() *installer {
 func (in *installer) info() app.InstallInfo {
 	d := sysinstall.Detect(in.getenv, in.exists, in.osRelease())
 	return app.InstallInfo{Kind: d.Kind, Unit: d.Unit, SteamOS: d.SteamOS, Packaged: d.Packaged}
+}
+
+// issueFields is this install as the bug form names it.
+func (in *installer) issueFields() issue.Fields {
+	osr := in.osRelease()
+	return issue.Fields{Version: brand.Version, OS: "Linux", OSVersion: issue.LinuxVersion(osr),
+		Package: issue.LinuxPackage(in.info().Kind, osr)}
 }
 
 // install runs this build's ghostlined --install-system as root.

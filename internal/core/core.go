@@ -19,6 +19,7 @@ import (
 	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/dnsserver"
 	"github.com/hashcott/ghostline/internal/engine"
+	"github.com/hashcott/ghostline/internal/issue"
 	"github.com/hashcott/ghostline/internal/model"
 	"github.com/hashcott/ghostline/internal/netid"
 	"github.com/hashcott/ghostline/internal/platform"
@@ -272,6 +273,7 @@ func New(o Options) (*Core, error) {
 		TestUpstream:    pw.testUpstream,
 		CheckUpdate:     checker.checkNow,
 		InstallUpdate:   installUpdate,
+		IssueURL:        func() string { return issue.URL(brand.RepoURL, issue.System(brand.Version, paths.Portable)) },
 		CheckServer: func(ctx context.Context, id string) error {
 			_, err := picker.CheckOne(ctx, id)
 			return err
