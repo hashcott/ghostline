@@ -13,7 +13,7 @@ func System(version string, portable bool) Fields {
 	if portable {
 		f.Package = PkgPortable
 	}
-	f.OS, f.OSVersion = WindowsOS(ThisWindows())
+	f.OSVersion = WindowsVersion(ThisWindows())
 	return f
 }
 

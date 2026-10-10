@@ -9,5 +9,5 @@ import "os"
 // service's.
 func System(version string, _ bool) Fields {
 	osr, _ := os.ReadFile("/etc/os-release")
-	return Fields{Version: version, OS: "Linux", OSVersion: LinuxVersion(osr)}
+	return Fields{Version: version, OSVersion: LinuxVersion(osr)}
 }
