@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn Ghostline</title>
+<meta name="description" content="Hướng dẫn sử dụng Ghostline: cài đặt, bắt đầu nhanh, từng màn hình, xử lý sự cố.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .guide { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
+  .toc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; font-size: 14px; padding: 4px 4px 16px 0; }
+  .toc summary { font: 600 13px var(--mono); color: var(--dim); cursor: pointer; padding: 4px 0 10px; list-style: none; }
+  .toc summary::-webkit-details-marker { display: none; }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0; }
+  .toc a { display: block; color: var(--dim); text-decoration: none; padding: 4px 0 4px 12px; border-left: 2px solid var(--line); }
+  .toc a:hover { color: var(--text); }
+  .toc a.sub { padding-left: 24px; font-size: 13px; }
+  .toc a.on { color: var(--text); border-left-color: var(--green); }
+  @media (max-width: 860px) {
+    .guide { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .toc { position: static; max-height: none; border: 1px solid var(--line); padding: 8px 12px; }
+    .toc summary { padding: 4px 0; }
+    .toc[open] summary { padding-bottom: 10px; }
+  }
+</style>
+</head>
+<body data-page="guide">
+<div class="wrap">
+  <header class="bar" id="bar"></header>
+  <main>
+    <div class="page-head">
+      <h1 id="title">Hướng dẫn sử dụng</h1>
+      <p id="lede"></p>
+    </div>
+    <div class="guide">
+      <details class="toc" id="toc" open><summary id="toc-label">Mục lục</summary><ol id="toc-list"></ol></details>
+      <article class="prose" id="doc"></article>
+    </div>
+  </main>
+  <footer id="foot"></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+  const FILES = { vi: "docs/huong-dan-su-dung.md", en: "docs/user-guide.md" };
+  const T = {
+    vi: { title: "Hướng dẫn sử dụng", page: "Hướng dẫn Ghostline", toc: "Mục lục" },
+    en: { title: "User guide", page: "Ghostline guide", toc: "Contents" },
+  };
+  const $ = (id) => document.getElementById(id);
+  const toc = $("toc");
+  // The table of contents stays open beside the text, folded on phones.
+  const narrow = matchMedia("(max-width: 860px)");
+  const fold = () => { toc.open = !narrow.matches; };
+  fold();
+  narrow.addEventListener("change", fold);
+
+  Site.onLang((lang) => {
+    const t = T[lang];
+    document.title = t.page;
+    $("title").textContent = t.title;
+    $("toc-label").textContent = t.toc;
+    $("toc-list").textContent = "";
+    const file = FILES[lang];
+    Site.fill($("doc"), async () => {
+      const md = await Site.fetchMd(file);
+      // The page has its own title, contents and language switch.
+      const body = md
+        .replace(/^# .*\n/, "")
+        .replace(/^\[(English|Tiếng Việt)\]\([^)]*\)\s*\n/m, "")
+        .replace(/^## (Mục lục|Contents|Table of contents)\n[\s\S]*?(?=^## )/m, "");
+      const cut = body.search(/^## /m);
+      $("lede").textContent = body.slice(0, cut).trim().replace(/[*_`]/g, "");
+      const el = Site.render(body.slice(cut), file);
+      buildToc(el);
+      return el;
+    }, `${Site.GH}/blob/main/${file}`).then(watch);
+  });
+
+  function buildToc(el) {
+    const list = $("toc-list");
+    list.textContent = "";
+    el.querySelectorAll("h2, h3").forEach((h) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = "#" + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === "H3") a.className = "sub";
+      a.addEventListener("click", () => { if (narrow.matches) toc.open = false; });
+      li.append(a);
+      list.append(li);
+    });
+  }
+
+  // Marks the section being read.
+  let observer;
+  function watch() {
+    observer?.disconnect();
+    const links = new Map([...document.querySelectorAll("#toc-list a")].map((a) => [a.hash.slice(1), a]));
+    observer = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((a) => a.classList.remove("on"));
+        links.get(encodeURIComponent(e.target.id))?.classList.add("on");
+        links.get(e.target.id)?.classList.add("on");
+      }
+    }, { rootMargin: "0px 0px -75% 0px" });
+    document.querySelectorAll("#doc h2, #doc h3").forEach((h) => observer.observe(h));
+  }
+})();
+</script>
+</body>
+</html>

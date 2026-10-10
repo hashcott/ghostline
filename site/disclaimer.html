@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miễn trừ trách nhiệm</title>
+<meta name="description" content="Tuyên bố miễn trừ trách nhiệm và điều kiện sử dụng Ghostline.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .prose ul li::marker { color: var(--amber); }
+</style>
+</head>
+<body data-page="disclaimer">
+<div class="wrap">
+  <header class="bar" id="bar"></header>
+  <main>
+    <div class="page-head">
+      <h1 id="title">Miễn trừ trách nhiệm</h1>
+    </div>
+    <article class="prose" id="doc"></article>
+  </main>
+  <footer id="foot"></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+  // The README's own sections, so the terms here are the repository's.
+  const SRC = {
+    vi: { file: "docs/README.vi.md", disclaimer: /^## Tuyên bố miễn trừ trách nhiệm/, privacy: /^## Quyền riêng tư/, title: "Miễn trừ trách nhiệm", privacyTitle: "Quyền riêng tư" },
+    en: { file: "docs/README.md", disclaimer: /^## Disclaimer/, privacy: /^## Privacy/, title: "Disclaimer", privacyTitle: "Privacy" },
+  };
+  const $ = (id) => document.getElementById(id);
+  Site.onLang((lang) => {
+    const s = SRC[lang];
+    document.title = s.title;
+    $("title").textContent = s.title;
+    // Served as docs/README*.md; links in it are the README's, at the root.
+    const repoFile = s.file.replace(/^docs\//, "");
+    Site.fill($("doc"), async () => {
+      const md = await Site.fetchMd(s.file);
+      const d = Site.section(md, s.disclaimer), p = Site.section(md, s.privacy);
+      if (!d) throw new Error("no disclaimer section");
+      return Site.render(`${d}\n\n## ${s.privacyTitle}\n\n${p}`, repoFile);
+    }, `${Site.GH}/blob/main/${repoFile}`);
+  });
+})();
+</script>
+</body>
+</html>

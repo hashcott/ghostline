@@ -1,6 +1,7 @@
 name: pages
 
-# The download page (site/) on GitHub Pages: https://hashcott.github.io/ghostline/
+# The download page and its guide, FAQ, changelog and disclaimer (site/) on
+# GitHub Pages: https://hashcott.github.io/ghostline/
 # It reads the releases from the GitHub API in the visitor's browser. It
 # deploys once a release has been built and published, so it never points
 # at a release whose files are not up yet; run it by hand to ship a page
@@ -35,6 +36,11 @@ jobs:
           mkdir -p _site
           cp site/* _site/
           cp docs/screenshots/simple-vi.png docs/screenshots/simple-en.png build/appicon.png _site/
+          # The guide, FAQ and disclaimer pages render these in the browser.
+          mkdir -p _site/docs/screenshots _site/docs/videos/clips
+          cp docs/huong-dan-su-dung.md docs/user-guide.md README.md README.vi.md _site/docs/
+          cp docs/screenshots/*.png _site/docs/screenshots/
+          cp docs/videos/clips/*.webp _site/docs/videos/clips/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

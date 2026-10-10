@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Những thay đổi của Ghostline</title>
+<meta name="description" content="Những thay đổi trong từng phiên bản Ghostline.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* A timeline: the version on the left, what changed on the right. */
+  .rel { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; padding: 32px 0; border-top: 1px solid var(--line); }
+  .rel-side { position: sticky; top: 16px; align-self: start; }
+  .rel-tag { display: block; font: 600 20px var(--mono); color: var(--green); text-decoration: none; }
+  .rel-tag:hover { color: var(--text); }
+  .rel-date { display: block; color: var(--dim); font-size: 14px; margin-top: 4px; }
+  .rel-badge {
+    display: inline-block; margin-top: 8px; padding: 0 6px; border: 1px solid var(--amber); border-radius: 3px;
+    font: 400 12px var(--mono); color: var(--amber);
+  }
+  .rel-badge.latest { border-color: var(--green); color: var(--green); }
+  .rel .prose h3:first-child { margin-top: 0; }
+  .rel .prose h3 { font-size: 18px; }
+  .rel .prose p:has(> strong:only-child) { margin: 20px 0 6px; }
+  .empty { color: var(--dim); }
+  .note-en { color: var(--dim); font-size: 14px; margin-top: 8px; }
+  .older { padding: 24px 0; border-top: 1px solid var(--line); color: var(--dim); }
+  @media (max-width: 760px) {
+    .rel { grid-template-columns: 1fr; gap: 12px; padding: 24px 0; }
+    .rel-side { position: static; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+    .rel-date, .rel-badge { margin-top: 0; }
+  }
+</style>
+</head>
+<body data-page="changelog">
+<div class="wrap">
+  <header class="bar" id="bar"></header>
+  <main>
+    <div class="page-head">
+      <h1 id="title">Những thay đổi</h1>
+      <p id="lede"></p>
+    </div>
+    <div id="list"></div>
+  </main>
+  <footer id="foot"></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+  const T = {
+    vi: {
+      title: "Những thay đổi", page: "Những thay đổi của Ghostline",
+      lede: "Mỗi phiên bản sửa gì và thêm gì, mới nhất ở trên.",
+      noteEn: "Ghi chú phát hành được viết bằng tiếng Anh.",
+      beta: "beta", latest: "mới nhất",
+      empty: "Bản này không có ghi chú riêng.", compare: "Xem các commit",
+      older: (url) => `Các phiên bản cũ hơn ở <a href="${url}">trang phát hành</a>.`,
+      date: (d) => d.toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" }),
+    },
+    en: {
+      title: "Changelog", page: "Ghostline changelog",
+      lede: "What each version fixed and added, newest first.",
+      noteEn: "",
+      beta: "beta", latest: "latest",
+      empty: "This version has no notes of its own.", compare: "See the commits",
+      older: (url) => `Older versions are on the <a href="${url}">releases page</a>.`,
+      date: (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+    },
+  };
+  const $ = (id) => document.getElementById(id);
+  let releases = null;
+
+  // What changed, without what every release repeats: the responsible-use
+  // notice (it has its own page here), the "What's changed in X" heading
+  // (the version is beside it), and from "Downloads" on, the file tables,
+  // the Vietnamese disclaimer and GitHub's "Full Changelog" line (the
+  // download page has the files).
+  function notes(body) {
+    return (body || "")
+      .replace(/\r\n/g, "\n")
+      .split(/^#{2,3} Downloads\s*$/m)[0]
+      .replace(/^\*\*Full Changelog\*\*:.*$/m, "")
+      .replace(/^> \[!IMPORTANT\]\n> \*\*Responsible use\.\*\*[\s\S]*?(?:\n(?!>)|(?![\s\S]))/m, "")
+      .replace(/^#{2,3} What's changed in .*\n/m, "")
+      .replace(/^## /gm, "### ")
+      .trim();
+  }
+
+  function build(lang) {
+    const t = T[lang];
+    const out = document.createElement("div");
+    const latest = releases.find((r) => !r.prerelease);
+    for (const r of releases) {
+      const sec = document.createElement("section");
+      sec.className = "rel";
+      sec.id = r.tag_name;
+      const side = document.createElement("div");
+      side.className = "rel-side";
+      const tag = document.createElement("a");
+      tag.className = "rel-tag";
+      tag.href = r.html_url;
+      tag.textContent = r.tag_name;
+      const date = document.createElement("span");
+      date.className = "rel-date";
+      date.textContent = t.date(new Date(r.published_at || r.created_at));
+      side.append(tag, date);
+      if (r.prerelease || r === latest) {
+        const b = document.createElement("span");
+        b.className = "rel-badge" + (r === latest ? " latest" : "");
+        b.textContent = r === latest ? t.latest : t.beta;
+        side.append(b);
+      }
+      const text = notes(r.body);
+      const body = text ? Site.render(text, "") : document.createElement("div");
+      body.className = "prose";
+      const compare = (r.body || "").match(/\*\*Full Changelog\*\*: (\S+)/);
+      if (!text) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = t.empty + " ";
+        if (compare) {
+          const a = document.createElement("a");
+          a.href = compare[1];
+          a.textContent = t.compare;
+          p.append(a);
+        }
+        body.append(p);
+      }
+      sec.append(side, body);
+      out.append(sec);
+    }
+    const older = document.createElement("p");
+    older.className = "older";
+    older.innerHTML = t.older(`${Site.GH}/releases`);
+    out.append(older);
+    return out;
+  }
+
+  Site.onLang((lang) => {
+    const t = T[lang];
+    document.title = t.page;
+    $("title").textContent = t.title;
+    $("lede").textContent = t.lede + (t.noteEn ? " " + t.noteEn : "");
+    Site.fill($("list"), async () => {
+      if (!releases) {
+        const r = await fetch(`https://api.github.com/repos/${Site.REPO}/releases?per_page=30`);
+        if (!r.ok) throw new Error(`releases: HTTP ${r.status}`);
+        releases = (await r.json()).filter((x) => !x.draft);
+      }
+      return build(lang);
+    }, `${Site.GH}/releases`);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hỏi đáp về Ghostline</title>
+<meta name="description" content="Câu hỏi thường gặp về Ghostline: có phải VPN không, có chậm mạng không, có thu thập dữ liệu không.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .qa { border-bottom: 1px solid var(--line); }
+  .qa:first-child { border-top: 1px solid var(--line); }
+  .qa summary {
+    cursor: pointer; list-style: none; padding: 18px 40px 18px 0; position: relative;
+    font-weight: 600; font-size: 18px; color: var(--text);
+  }
+  .qa summary::-webkit-details-marker { display: none; }
+  .qa summary::after {
+    content: "+"; position: absolute; right: 4px; top: 14px;
+    font: 400 24px var(--mono); color: var(--green);
+  }
+  .qa[open] summary::after { content: "−"; }
+  .qa summary:hover { color: var(--green); }
+  .qa .a { padding: 0 0 18px; }
+  .qa .a > :last-child { margin-bottom: 0; }
+  .more { margin-top: 32px; color: var(--dim); }
+</style>
+</head>
+<body data-page="faq">
+<div class="wrap">
+  <header class="bar" id="bar"></header>
+  <main>
+    <div class="page-head">
+      <h1 id="title">Hỏi đáp</h1>
+      <p id="lede"></p>
+    </div>
+    <div class="prose" id="doc"></div>
+    <p class="more" id="more"></p>
+  </main>
+  <footer id="foot"></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+  // The FAQ is the guide's last section, so it is written once.
+  const FILES = { vi: "docs/huong-dan-su-dung.md", en: "docs/user-guide.md" };
+  const T = {
+    vi: {
+      title: "Hỏi đáp", page: "Hỏi đáp về Ghostline", lede: "Những câu người dùng hay hỏi nhất. Bấm vào câu hỏi để xem trả lời.",
+      more: 'Không thấy câu bạn cần? Xem phần <a href="guide.html#7-xử-lý-sự-cố">xử lý sự cố</a> trong hướng dẫn hoặc <a href="https://github.com/hashcott/ghostline/issues">hỏi trên GitHub</a>.',
+    },
+    en: {
+      title: "FAQ", page: "Ghostline FAQ", lede: "The questions people ask most. Press a question to see the answer.",
+      more: 'Not here? See <a href="guide.html#7-troubleshooting">troubleshooting</a> in the guide or <a href="https://github.com/hashcott/ghostline/issues">ask on GitHub</a>.',
+    },
+  };
+  const $ = (id) => document.getElementById(id);
+
+  Site.onLang((lang) => {
+    const t = T[lang];
+    document.title = t.page;
+    $("title").textContent = t.title;
+    $("lede").textContent = t.lede;
+    $("more").innerHTML = t.more;
+    const file = FILES[lang];
+    Site.fill($("doc"), async () => {
+      const md = Site.section(await Site.fetchMd(file), /^## \d+\. (Câu hỏi thường gặp|FAQ)/);
+      if (!md) throw new Error("no FAQ section");
+      return questions(Site.render(md, file));
+    }, `${Site.GH}/blob/main/${file}`);
+  });
+
+  // Each "**Question?** (scope)\nAnswer" paragraph, and whatever follows it
+  // up to the next question, becomes a fold.
+  function questions(el) {
+    const out = document.createElement("div");
+    let cur = null;
+    for (const node of [...el.childNodes]) {
+      const q = node.nodeName === "P" && node.firstElementChild?.tagName === "STRONG" && node.firstChild === node.firstElementChild;
+      if (q) {
+        cur = document.createElement("details");
+        cur.className = "qa";
+        const [head, ...rest] = node.innerHTML.split("\n");
+        const sum = document.createElement("summary");
+        sum.innerHTML = head.replace(/<\/?strong>/g, "");
+        cur.id = Site.slug(sum.textContent);
+        const a = document.createElement("div");
+        a.className = "a";
+        if (rest.length) {
+          const p = document.createElement("p");
+          p.innerHTML = rest.join("\n");
+          a.append(p);
+        }
+        cur.append(sum, a);
+        out.append(cur);
+      } else if (cur) {
+        cur.querySelector(".a").append(node);
+      } else {
+        out.append(node);
+      }
+    }
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const open = hash && out.querySelector(`[id="${CSS.escape(hash)}"]`);
+    if (open) open.open = true;
+    return out;
+  }
+})();
+</script>
+</body>
+</html>
