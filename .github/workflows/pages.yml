@@ -1,17 +1,15 @@
 name: pages
 
 # The download page (site/) on GitHub Pages: https://hashcott.github.io/ghostline/
-# It reads the releases from the GitHub API in the visitor's browser, so a
-# new release needs no redeploy. Requires Settings → Pages → Source:
-# "GitHub Actions".
+# It reads the releases from the GitHub API in the visitor's browser. It
+# deploys once a release has been built and published, so it never points
+# at a release whose files are not up yet; run it by hand to ship a page
+# change between releases. Requires Settings → Pages → Source: "GitHub
+# Actions".
 on:
-  push:
-    branches: [main]
-    paths:
-      - "site/**"
-      - "docs/screenshots/simple-*.png"
-      - "build/appicon.png"
-      - ".github/workflows/pages.yml"
+  workflow_run:
+    workflows: [release]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +23,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
