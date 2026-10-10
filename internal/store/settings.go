@@ -249,6 +249,8 @@ type FragmentSettings struct {
 type UpdateSettings struct {
 	CheckApp         bool `json:"checkApp"`
 	UpdateServerList bool `json:"updateServerList"`
+	// Beta also announces pre-releases (tags like v0.8.0-beta.1).
+	Beta bool `json:"beta"`
 }
 
 type WindowSize struct {

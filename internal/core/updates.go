@@ -46,27 +46,34 @@ const releaseInterval = 6 * time.Hour
 // (meta written by v0.1.0/0.1.1 had a recent lastUpdateCheck but no tag, so
 // waiting for the interval hid new releases for up to a day). The result is
 // remembered in meta so the notice survives restarts and failed checks. ok
-// is false when the running version is already current.
-func releaseCheck(meta *store.Meta, now time.Time, current string, startup bool, latest func() (updater.Release, error)) (updater.Release, bool) {
+// is false when the running version is already current, or when the
+// remembered release is a pre-release and beta is off.
+func releaseCheck(meta *store.Meta, now time.Time, current string, startup, beta bool, latest func() (updater.Release, error)) (updater.Release, bool) {
 	if startup || meta.LatestTag == "" || now.Sub(meta.LastUpdateCheck) >= releaseInterval {
 		if r, err := latest(); err == nil {
 			meta.LastUpdateCheck = now
 			meta.LatestTag, meta.LatestURL = r.Tag, r.URL
 		}
 	}
-	if meta.LatestTag == "" || !updater.Newer(current, meta.LatestTag) {
+	if meta.LatestTag == "" || !updater.Newer(current, meta.LatestTag) || (!beta && updater.IsPrerelease(meta.LatestTag)) {
 		return updater.Release{}, false
 	}
 	return updater.Release{Tag: meta.LatestTag, URL: meta.LatestURL}, true
 }
 
+// betaChannel reports whether pre-releases are offered: when the setting is
+// on, and always on a beta build, which would otherwise hear of nothing until
+// the next regular release.
+func betaChannel(current string, on bool) bool { return on || updater.IsPrerelease(current) }
+
 // newUpdateChecker wires the release check to GitHub and the UI.
-func newUpdateChecker(meta *metaFile, st *updateState, bus *app.Bus, log *slog.Logger, onUpdate func(tag, url string)) *updateChecker {
+func newUpdateChecker(meta *metaFile, st *updateState, box *app.SettingsBox, bus *app.Bus, log *slog.Logger, onUpdate func(tag, url string)) *updateChecker {
 	client := &http.Client{Timeout: 30 * time.Second}
+	beta := func() bool { return betaChannel(brand.Version, box.Get().Updates.Beta) }
 	return &updateChecker{
-		meta: meta, state: st, current: brand.Version, now: time.Now,
+		meta: meta, state: st, current: brand.Version, now: time.Now, beta: beta,
 		latest: func(ctx context.Context) (updater.Release, error) {
-			r, err := updater.Latest(ctx, client, brand.ReleasesAPI)
+			r, err := updater.Latest(ctx, client, brand.ReleasesAPI, beta())
 			if err != nil {
 				log.Info("update check", "code", app.CodeUpdateCheckFailed, "err", err)
 			}

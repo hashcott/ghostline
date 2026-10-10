@@ -1,0 +1,44 @@
+name: pages
+
+# The download page (site/) on GitHub Pages: https://hashcott.github.io/ghostline/
+# It reads the releases from the GitHub API in the visitor's browser, so a
+# new release needs no redeploy. Requires Settings → Pages → Source:
+# "GitHub Actions".
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/screenshots/simple-*.png"
+      - "build/appicon.png"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assemble
+        run: |
+          mkdir -p _site
+          cp site/* _site/
+          cp docs/screenshots/simple-vi.png docs/screenshots/simple-en.png build/appicon.png _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

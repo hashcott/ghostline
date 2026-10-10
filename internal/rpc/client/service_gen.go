@@ -77,6 +77,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).GetSnapshot, 707042289)
 	application.RegisterBindingMethodID((*Service).ISPResolvers, 2476748652)
 	application.RegisterBindingMethodID((*Service).InstallService, 2643183349)
+	application.RegisterBindingMethodID((*Service).InstallUpdate, 1641376359)
 	application.RegisterBindingMethodID((*Service).LANDNSClients, 1438181071)
 	application.RegisterBindingMethodID((*Service).ListAdapters, 3784046047)
 	application.RegisterBindingMethodID((*Service).ListCerts, 3139331874)
@@ -429,6 +430,10 @@ func (s *Service) ISPResolvers() []string {
 	err := s.call(context.Background(), "ISPResolvers", &r)
 	s.logErr("ISPResolvers", err)
 	return r
+}
+
+func (s *Service) InstallUpdate() error {
+	return s.call(context.Background(), "InstallUpdate", nil)
 }
 
 func (s *Service) LANDNSClients() int {

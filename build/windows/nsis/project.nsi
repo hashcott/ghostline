@@ -50,6 +50,7 @@ VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 ManifestDPIAware true
 
 !include "MUI.nsh"
+!include "LogicLib.nsh"
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
@@ -80,14 +81,43 @@ OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the i
 !endif
 ShowInstDetails show # This will always show the installation details.
 
+; "/S /UPDATE": started by Ghostline's "install update" (spec: one-click
+; update). The installer waits for Ghostline to quit by itself, so it can
+; disconnect cleanly, and opens the new version at the end.
+Var UpdateMode
+
 Function .onInit
    !insertmacro wails.checkArchitecture
+   StrCpy $UpdateMode "0"
+   ${GetParameters} $R0
+   ClearErrors
+   ${GetOptions} $R0 "/UPDATE" $R1
+   ${IfNot} ${Errors}
+       StrCpy $UpdateMode "1"
+   ${EndIf}
 FunctionEnd
 
 Section
     !insertmacro wails.setShellContext
 
     !insertmacro wails.webview2runtime
+
+    ${If} $UpdateMode == "1"
+        ; Up to 20 s for Ghostline (and its watchdog) to exit after the
+        ; clean disconnect; whatever is left is killed below.
+        StrCpy $R2 0
+        ${Do}
+            nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq ${PRODUCT_EXECUTABLE}" /NH | find /I "${PRODUCT_EXECUTABLE}"'
+            Pop $R3
+            Pop $R4
+            ${If} $R3 != "0"
+            ${OrIf} $R2 >= 40
+                ${Break}
+            ${EndIf}
+            Sleep 500
+            IntOp $R2 $R2 + 1
+        ${Loop}
+    ${EndIf}
 
     ; Stop a running Ghostline so its files can be replaced. A killed
     ; instance leaves state.json dirty; the next start restores DNS.
@@ -108,6 +138,12 @@ Section
     !insertmacro wails.associateCustomProtocols
     
     !insertmacro wails.writeUninstaller
+
+    ; Back to the user after an update; the app connects again if it was
+    ; connected before (meta.json reconnectAfterUpdate).
+    ${If} $UpdateMode == "1"
+        Exec '"$INSTDIR\${PRODUCT_EXECUTABLE}"'
+    ${EndIf}
 SectionEnd
 
 Section "uninstall" 

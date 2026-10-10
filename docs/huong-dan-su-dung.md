@@ -39,7 +39,7 @@ Ghostline chạy một DNS nhỏ ngay trên máy bạn (`127.0.0.1`), trỏ DNS 
 
 ## 2. Cài đặt
 
-Tải về từ trang [Releases](https://github.com/hashcott/ghostline/releases).
+Tải về từ [trang tải](https://hashcott.github.io/ghostline/) (tự chọn đúng file cho máy của bạn) hoặc trang [Releases](https://github.com/hashcott/ghostline/releases).
 
 ### Windows
 
@@ -63,6 +63,8 @@ So mã hiện ra với dòng tương ứng trong file `SHA256SUMS` trên trang R
 **Quyền admin.** Ghostline cần quyền quản trị để đổi DNS và chạy GoodbyeDPI, nên Windows sẽ hỏi UAC mỗi lần mở. Chọn **Yes**. Nếu bật *Khởi động cùng Windows*, app được mở qua Task Scheduler và không hỏi UAC nữa.
 
 **Phần mềm diệt virus.** zapret2 và GoodbyeDPI dùng driver **WinDivert**, hay bị antivirus báo nhầm. Ghostline kiểm tra mã băm của engine trước mỗi lần chạy. Nếu zapret2 bị chặn, Ghostline tạm dùng GoodbyeDPI và trang Vượt DPI hiện đường dẫn thư mục `bin\zapret2` để bạn thêm vào danh sách loại trừ (exclusions) của Windows Defender.
+
+**Cập nhật.** Không bao giờ cần gỡ ra trước. Khi có bản mới, Ghostline hiện nút **cập nhật lên vX** ở màn hình chính, trong Cài đặt và trên khay. Với bản cài đặt, bấm nút rồi xác nhận: Ghostline tải installer, kiểm tra với file `SHA256SUMS` có chữ ký của bản phát hành, tự đóng, cài bản mới rồi mở lại, và kết nối lại nếu trước đó đang kết nối. Nếu tải hoặc kiểm tra không được, nút chuyển thành mở trang phát hành. Bản portable luôn mở trang phát hành: giải nén bản mới đè lên thư mục cũ, thư mục `data\` được giữ. Cài đặt, rules và lựa chọn máy chủ của bạn còn nguyên sau mỗi lần cập nhật.
 
 ### Linux
 
@@ -278,7 +280,8 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt vượt 
 | bootstrap | DNS thường dùng để tìm địa chỉ của các máy chủ DoH lúc khởi động (mặc định `1.1.1.1:53`, `8.8.8.8:53`). Đây là lưu lượng DNS không mã hoá duy nhất, và chỉ dùng để tra tên máy chủ DoH |
 | số máy chủ tối đa | Số máy chủ dùng song song (mặc định 5). Nhiều hơn thì ổn định hơn nhưng tốn băng thông hơn một chút |
 | cập nhật danh sách máy chủ | Tải danh sách máy chủ mới mỗi ngày (có kiểm tra chữ ký) |
-| báo có bản mới | Hiện thông báo khi có phiên bản mới. Ghostline **không bao giờ tự cập nhật** |
+| báo có bản mới | Hiện thông báo khi có phiên bản mới. Ghostline **không bao giờ tự cập nhật khi chưa hỏi**: phải do bạn bấm (xem *Cập nhật* ở mục 2) |
+| nhận bản beta (thử nghiệm) | Báo cả bản thử nghiệm (ví dụ `v0.8.0-beta.1`): có tính năng mới sớm hơn nhưng chưa được thử kỹ. Mặc định tắt, và luôn bật khi đang dùng bản beta để bản beta được báo bản beta tiếp theo. Tắt đi thì thông báo bản beta biến mất |
 | ⚠ KHÔI PHỤC DNS NGAY | Đưa DNS của hệ thống về trạng thái đã lưu. Dùng khi nghi ngờ DNS bị sai |
 
 ### 4.6. Proxy

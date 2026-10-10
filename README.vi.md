@@ -63,7 +63,7 @@ Ghostline chạy một DNS server cục bộ trên `127.0.0.1` / `::1`, trỏ DN
 - **Danh sách máy chủ có chữ ký:** cập nhật mỗi ngày, xác minh bằng ed25519; danh sách DNSCrypt được kiểm tra bằng minisign.
 - **Giao diện Đơn giản và Đầy đủ**, icon khay, giao diện tiếng Việt và tiếng Anh, phong cách neon-terminal.
 - **Bản cài đặt, portable hoặc gói Linux:** trên Windows có bản cài đặt và bản portable (lưu mọi dữ liệu trong thư mục `data\` cạnh file exe); trên Linux có `.deb`, `.rpm`, AppImage, `tar.gz` và PKGBUILD.
-- **Chỉ thông báo khi có bản mới:** không bao giờ tự cập nhật ngầm.
+- **Cập nhật một nút, không bao giờ ngầm:** Ghostline báo khi có bản mới; với bản cài đặt, bấm **cập nhật** là app tự tải, kiểm tra chữ ký, cài và mở lại với nguyên cài đặt cũ. Mặc định chỉ nhận bản chính thức; bật *nhận bản beta* để dùng thử tính năng mới sớm hơn.
 
 ## Video hướng dẫn
 
@@ -91,7 +91,7 @@ Video hơn 3 phút có lồng tiếng: kết nối bằng một nút bấm, mứ
 
 ## Cài đặt
 
-**[⬇ Tải bản mới nhất](https://github.com/hashcott/ghostline/releases/latest)** — hoặc chọn một file bên dưới. Các phiên bản cũ nằm ở trang [Releases](https://github.com/hashcott/ghostline/releases).
+**[⬇ Trang tải về](https://hashcott.github.io/ghostline/)** tự chọn đúng file cho máy của bạn. Hoặc chọn một file bên dưới; các phiên bản cũ và bản beta nằm ở trang [Releases](https://github.com/hashcott/ghostline/releases).
 
 | File | Là gì | Tải về |
 | --- | --- | --- |
@@ -108,6 +108,8 @@ Get-FileHash .\Ghostline-0.1.0-portable.zip -Algorithm SHA256
 ```
 
 **Yêu cầu:** Windows 10/11 x64 và quyền quản trị (admin), vì đổi DNS của card mạng và nạp driver WinDivert đều cần quyền này. Khi khởi động cùng Windows, Ghostline chạy qua Task Scheduler nên không hiện hộp thoại UAC.
+
+**Cập nhật:** khi có bản mới, app hiện nút **cập nhật lên vX** (trong Cài đặt, màn hình chính và khay). Bản cài đặt tự tải, kiểm tra với file `SHA256SUMS` có chữ ký, tự đóng, cài rồi mở lại, và kết nối lại nếu trước đó đang kết nối. Không cần gỡ ra cài lại, cài đặt trong `%APPDATA%\Ghostline` được giữ nguyên. Bản portable thì mở trang phát hành: giải nén bản mới đè lên thư mục cũ (thư mục `data\` được giữ). Tự chạy installer mới đè lên bản đang cài cũng giữ nguyên mọi thứ.
 
 > [!NOTE]
 > Bản phát hành chưa được ký số, nên SmartScreen sẽ hiện "Windows protected your PC". Sau khi đã kiểm tra SHA-256, chọn **More info → Run anyway**.

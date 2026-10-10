@@ -296,6 +296,8 @@
     "maxUpstreams": "max servers",
     "updateServerList": "update server list",
     "checkApp": "notify about new versions",
+    "beta": "receive beta versions (earlier, less tested)",
+    "betaRunning": "always on while running a beta",
     "restoreNow": "⚠ RESTORE DNS NOW",
     "restored": "DNS restored",
     "stopService": "Stop service {{name}}",
@@ -308,6 +310,10 @@
     "checkUpdate": "check for updates",
     "checking": "checking…",
     "upToDate": "up to date ({{version}})",
+    "installUpdate": "update to {{tag}}",
+    "installing": "downloading {{tag}}…",
+    "installConfirm": "Ghostline will download {{tag}}, close, install it and open again. Your settings are kept, and it connects again if it is connected now. Continue?",
+    "installFailed": "could not install, open the {{tag}} page ↗",
     "certs": {
       "title": "certificates",
       "none": "no Ghostline certificate in Windows",
@@ -443,6 +449,10 @@
     "UPDATE_CHECK_FAILED": {
       "message": "could not check for updates",
       "action": ""
+    },
+    "UPDATE_INSTALL_FAILED": {
+      "message": "could not install the update",
+      "action": "Download it from the release page instead"
     },
     "AUTOTUNE_NO_PRESET": {
       "message": "no working DPI bypass configuration found",

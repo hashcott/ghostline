@@ -43,7 +43,8 @@ type updateChecker struct {
 	current string
 	latest  func(ctx context.Context) (updater.Release, error)
 	now     func() time.Time
-	onNewer func(tag, url string) // UI notice (event, tray); once per tag
+	beta    func() bool           // pre-releases count; nil = stable only
+	onNewer func(tag, url string) // UI notice (event, tray); once per tag, "" withdraws it
 
 	sf singleflight.Group
 }
@@ -53,6 +54,29 @@ func (c *updateChecker) announce(r updater.Release) {
 	if c.state.set(r.Tag, r.URL) && c.onNewer != nil {
 		c.onNewer(r.Tag, r.URL)
 	}
+}
+
+// withdraw removes a notice that no longer applies (the channel went from
+// beta to stable, or the announced release is now installed).
+func (c *updateChecker) withdraw() {
+	if c.state.set("", "") && c.onNewer != nil {
+		c.onNewer("", "")
+	}
+}
+
+func (c *updateChecker) betaOn() bool { return c.beta != nil && c.beta() }
+
+// takeReconnect reports, once, whether the app started an installer while
+// connected (see selfUpdater.install).
+func (c *updateChecker) takeReconnect() bool {
+	var on bool
+	if !c.meta.get().ReconnectAfterUpdate {
+		return false
+	}
+	c.meta.update(func(m *store.Meta) {
+		on, m.ReconnectAfterUpdate = m.ReconnectAfterUpdate, false
+	})
+	return on
 }
 
 // checkNow asks GitHub immediately (manual "check for updates").
@@ -75,6 +99,8 @@ func (c *updateChecker) checkNow(ctx context.Context) (app.UpdateCheck, error) {
 	out := app.UpdateCheck{Current: c.current, Latest: r.Tag, URL: r.URL, Newer: updater.Newer(c.current, r.Tag)}
 	if out.Newer {
 		c.announce(r)
+	} else {
+		c.withdraw()
 	}
 	return out, nil
 }
@@ -85,7 +111,7 @@ func (c *updateChecker) scheduled(ctx context.Context, startup bool) {
 	var r updater.Release
 	var ok bool
 	c.meta.update(func(m *store.Meta) {
-		r, ok = releaseCheck(m, c.now(), c.current, startup, func() (updater.Release, error) {
+		r, ok = releaseCheck(m, c.now(), c.current, startup, c.betaOn(), func() (updater.Release, error) {
 			v, err, _ := c.sf.Do("release", func() (any, error) { return c.latest(ctx) })
 			if err != nil {
 				return updater.Release{}, err
@@ -95,5 +121,7 @@ func (c *updateChecker) scheduled(ctx context.Context, startup bool) {
 	})
 	if ok {
 		c.announce(r)
+	} else {
+		c.withdraw()
 	}
 }

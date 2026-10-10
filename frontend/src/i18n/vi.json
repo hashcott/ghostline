@@ -296,6 +296,8 @@
     "maxUpstreams": "số máy chủ tối đa",
     "updateServerList": "cập nhật danh sách máy chủ",
     "checkApp": "báo có bản mới",
+    "beta": "nhận bản beta (thử nghiệm)",
+    "betaRunning": "luôn bật khi đang dùng bản beta",
     "restoreNow": "⚠ KHÔI PHỤC DNS NGAY",
     "restored": "đã khôi phục DNS",
     "stopService": "Tạm dừng dịch vụ {{name}}",
@@ -308,6 +310,10 @@
     "checkUpdate": "kiểm tra cập nhật",
     "checking": "đang kiểm tra…",
     "upToDate": "đã là bản mới nhất ({{version}})",
+    "installUpdate": "cập nhật lên {{tag}}",
+    "installing": "đang tải {{tag}}…",
+    "installConfirm": "Ghostline sẽ tải {{tag}}, tự đóng, cài bản mới rồi mở lại. Cài đặt được giữ nguyên, đang kết nối thì sẽ tự kết nối lại. Tiếp tục?",
+    "installFailed": "không cài được, mở trang {{tag}} ↗",
     "certs": {
       "title": "chứng chỉ",
       "none": "không có chứng chỉ Ghostline nào trong Windows",
@@ -443,6 +449,10 @@
     "UPDATE_CHECK_FAILED": {
       "message": "không kiểm tra được bản mới",
       "action": ""
+    },
+    "UPDATE_INSTALL_FAILED": {
+      "message": "không cài được bản mới",
+      "action": "Hãy tải từ trang phát hành"
     },
     "AUTOTUNE_NO_PRESET": {
       "message": "không tìm được cấu hình vượt DPI phù hợp",

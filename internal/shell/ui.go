@@ -68,7 +68,11 @@ type ui struct {
 	lastState   app.Status
 	lastFakeSNI bool
 	updTag      string // newer release, "" if none
-	updURL      string
+	// selfUpdate: the window's update button installs the release (Windows
+	// installer builds), so the tray item opens the window instead of the
+	// release page.
+	selfUpdate bool
+	updURL     string
 }
 
 // createWindow opens the main window. Closing it to the tray destroys it
@@ -157,6 +161,10 @@ func (u *ui) createTray() {
 		u.mu.Lock()
 		url := u.updURL
 		u.mu.Unlock()
+		if u.selfUpdate {
+			u.show() // the update button asks before it installs
+			return
+		}
 		if url != "" {
 			if err := u.app.Browser.OpenURL(url); err != nil {
 				u.log.Warn("tray: opening the release page failed", "err", err)
@@ -226,7 +234,13 @@ func (u *ui) relabel(status app.Status) {
 	fakeSNI := u.lastFakeSNI
 	u.mu.Unlock()
 	if tag != "" {
-		u.updItem.SetLabel(tt.updateLabel(tag)).SetHidden(false)
+		label := tt.updateLabel(tag)
+		if u.selfUpdate {
+			label = tt.installLabel(tag)
+		}
+		u.updItem.SetLabel(label).SetHidden(false)
+	} else {
+		u.updItem.SetHidden(true) // withdrawn (channel switched to stable)
 	}
 	u.tray.SetTooltip(tt.tooltip(status, tag, fakeSNI))
 	if status == app.StatusProtected || status == app.StatusDegraded {

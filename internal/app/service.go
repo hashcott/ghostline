@@ -74,8 +74,11 @@ type AppInfo struct {
 	Portable  bool   `json:"portable"`
 	UpdateTag string `json:"updateTag"`
 	UpdateURL string `json:"updateUrl"`
-	Author    string `json:"author"`
-	RepoURL   string `json:"repoUrl"`
+	// SelfUpdate: the app can download and install UpdateTag itself
+	// (Windows installer builds); otherwise UpdateURL is the way.
+	SelfUpdate bool   `json:"selfUpdate"`
+	Author     string `json:"author"`
+	RepoURL    string `json:"repoUrl"`
 }
 
 // ServerRow is one line of the Servers page.
@@ -124,6 +127,9 @@ type ServiceDeps struct {
 	TestUpstream    func(ctx context.Context, id string) error
 	// CheckUpdate asks GitHub for the latest release now (manual check).
 	CheckUpdate func(ctx context.Context) (UpdateCheck, error)
+	// InstallUpdate downloads, verifies and starts the newer release's
+	// installer, which closes and reopens Ghostline; nil when unsupported.
+	InstallUpdate func(ctx context.Context) error
 	// CheckServer re-tests one server and updates the cached scan.
 	CheckServer func(ctx context.Context, id string) error
 
@@ -778,6 +784,21 @@ func (s *Service) CheckUpdateNow() (UpdateCheck, error) {
 		return UpdateCheck{}, fmt.Errorf("%s: %w", CodeUpdateCheckFailed, err)
 	}
 	return r, nil
+}
+
+// InstallUpdate installs the announced newer release: download, check
+// against the signed checksums, start the installer. Ghostline quits and
+// the installer opens it again.
+func (s *Service) InstallUpdate() error {
+	if s.x.InstallUpdate == nil {
+		return errors.New(CodeUpdateInstallFailed)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	if err := s.x.InstallUpdate(ctx); err != nil {
+		return fmt.Errorf("%s: %w", CodeUpdateInstallFailed, err)
+	}
+	return nil
 }
 
 // AppInfo returns version and update information.

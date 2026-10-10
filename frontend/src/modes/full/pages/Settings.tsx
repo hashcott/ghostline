@@ -10,12 +10,14 @@ import { Toggle } from "../../../components/neon/Toggle";
 import { Chip } from "../../../components/neon/Chip";
 import css from "../full.module.css";
 import { Backup } from "./settings/Backup";
+import { UpdateAction } from "../../../components/UpdateAction";
 
 export function Settings() {
   const { t } = useTranslation();
   const settings = useGhost((s) => s.settings);
   const snap = useGhost((s) => s.snapshot);
   const info = useGhost((s) => s.info);
+  const runningBeta = (info?.version ?? "").includes("-");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [adapters, setAdapters] = useState<Adapter[]>([]);
@@ -69,13 +71,14 @@ export function Settings() {
   const manual = settings.adapters === "manual";
   const guids = settings.adapterGuids ?? [];
   const upd = useUpdate();
-  const tag = upd?.tag;
-  const url = upd?.url;
 
-  const toggleRow = (label: string, checked: boolean, patch: (v: boolean) => Parameters<typeof saveSettings>[0]) => (
+  const toggleRow = (label: string, checked: boolean, patch: (v: boolean) => Parameters<typeof saveSettings>[0], hint?: string) => (
     <div className={css.setting}>
-      <span>{label}</span>
-      <Toggle label={label} checked={checked} onChange={(v) => void save(patch(v))} />
+      <span>
+        {label}
+        {hint && <small> ({hint})</small>}
+      </span>
+      <Toggle label={label} checked={checked} disabled={!!hint} onChange={(v) => void save(patch(v))} />
     </div>
   );
 
@@ -85,10 +88,8 @@ export function Settings() {
         <span>{t("settings.title")}</span>
         <span className={css.count}>
           {t("settings.version", { version: info?.version ?? "" })}
-          {tag && url ? (
-            <button className={css.ok} style={{ marginLeft: 8 }} onClick={() => void Browser.OpenURL(url)}>
-              {t("settings.update", { tag })}
-            </button>
+          {upd ? (
+            <UpdateAction className={css.ok} style={{ marginLeft: 8 }} />
           ) : (
             check && <span className={check.error ? css.bad : css.dim} style={{ marginLeft: 8 }}>{check.text}</span>
           )}
@@ -174,6 +175,9 @@ export function Settings() {
         </div>
         {toggleRow(t("settings.updateServerList"), settings.updates.updateServerList, (v) => (s) => ({ ...s, updates: { ...s.updates, updateServerList: v } }))}
         {toggleRow(t("settings.checkApp"), settings.updates.checkApp, (v) => (s) => ({ ...s, updates: { ...s.updates, checkApp: v } }))}
+        {/* A beta build always gets betas (core betaChannel); the switch shows it. */}
+        {toggleRow(t("settings.beta"), runningBeta || !!settings.updates.beta, (v) => (s) => ({ ...s, updates: { ...s.updates, beta: v } }),
+          runningBeta ? t("settings.betaRunning") : undefined)}
         {error && <div className={css.bad}>{error}</div>}
         {note && !error && <div className={css.ok}>{note}</div>}
       </div>

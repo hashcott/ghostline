@@ -104,3 +104,31 @@ func TestScheduled_UsesSameStateAndMeta(t *testing.T) {
 	e.c.scheduled(context.Background(), true)
 	require.Equal(t, []string{"v0.2.2"}, e.notified)
 }
+
+func TestCheckNow_WithdrawsNoticeNoLongerNewer(t *testing.T) {
+	e := newChecker(t, "0.2.1", func(context.Context) (updater.Release, error) {
+		return updater.Release{Tag: "v0.2.1", URL: "u"}, nil
+	})
+	e.st.set("v0.3.0-beta.1", "b") // announced on the beta channel
+	_, err := e.c.checkNow(context.Background())
+	require.NoError(t, err)
+	tag, _ := e.st.get()
+	require.Empty(t, tag)
+	require.Equal(t, []string{""}, e.notified, "the UI is told the notice is gone")
+	// Nothing to withdraw any more.
+	_, _ = e.c.checkNow(context.Background())
+	require.Equal(t, []string{""}, e.notified)
+}
+
+func TestScheduled_WithdrawsBetaAfterSwitchToStable(t *testing.T) {
+	e := newChecker(t, "0.2.1", func(context.Context) (updater.Release, error) { return updater.Release{}, errors.New("offline") })
+	require.NoError(t, store.SaveMeta(e.meta.path, store.Meta{LatestTag: "v0.3.0-beta.1", LatestURL: "b", LastUpdateCheck: now}))
+	e.st.set("v0.3.0-beta.1", "b")
+	e.c.scheduled(context.Background(), false)
+	tag, _ := e.st.get()
+	require.Empty(t, tag)
+	e.c.beta = func() bool { return true }
+	e.c.scheduled(context.Background(), false)
+	tag, _ = e.st.get()
+	require.Equal(t, "v0.3.0-beta.1", tag)
+}
