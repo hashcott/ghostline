@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/AdguardTeam/dnsproxy/upstream"
+	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/dnsserver"
 	"github.com/hashcott/ghostline/internal/dpi"
 	"github.com/hashcott/ghostline/internal/engine"
@@ -130,6 +131,8 @@ type ServiceDeps struct {
 	// InstallUpdate downloads, verifies and starts the newer release's
 	// installer, which closes and reopens Ghostline; nil when unsupported.
 	InstallUpdate func(ctx context.Context) error
+	// IssueURL is GitHub's bug form with this computer's details filled in.
+	IssueURL func() string
 	// CheckServer re-tests one server and updates the cached scan.
 	CheckServer func(ctx context.Context, id string) error
 
@@ -799,6 +802,15 @@ func (s *Service) InstallUpdate() error {
 		return fmt.Errorf("%s: %w", CodeUpdateInstallFailed, err)
 	}
 	return nil
+}
+
+// ReportIssueURL is the link to GitHub's bug report form, with the
+// version, the OS and the package filled in where known.
+func (s *Service) ReportIssueURL() string {
+	if s.x.IssueURL == nil {
+		return brand.RepoURL + "/issues/new/choose"
+	}
+	return s.x.IssueURL()
 }
 
 // AppInfo returns version and update information.

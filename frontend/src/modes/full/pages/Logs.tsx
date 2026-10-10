@@ -5,6 +5,7 @@ import { useGhost } from "../../../app/store";
 import { tCode } from "../../../i18n";
 import { Chip } from "../../../components/neon/Chip";
 import { Toggle } from "../../../components/neon/Toggle";
+import { openIssueForm } from "../../../app/report";
 import css from "../full.module.css";
 
 const SOURCES = ["all", "engine", "dpi", "proxy", "rules", "system"] as const;
@@ -27,6 +28,7 @@ export function Logs() {
   const [source, setSource] = useState<(typeof SOURCES)[number]>("all");
   const [paused, setPaused] = useState<LogEvent[] | null>(null);
   const showQueries = useGhost((s) => s.queryLog);
+  const [reported, setReported] = useState(false);
 
   const shown = useMemo(() => {
     const base = paused ?? logs;
@@ -44,6 +46,17 @@ export function Logs() {
     URL.revokeObjectURL(url);
   };
 
+  // The bug form has a log field: the log goes to the clipboard first.
+  const report = async () => {
+    try {
+      await navigator.clipboard?.writeText(asText());
+    } catch {
+      // No clipboard: the form still opens; copy stays one press away.
+    }
+    setReported(true);
+    await openIssueForm();
+  };
+
   const toggleQueries = (on: boolean) => {
     useGhost.getState().setQueryLog(on);
     void Service.SetQueryLog(on);
@@ -58,6 +71,7 @@ export function Logs() {
           <Chip onClick={() => setPaused(paused ? null : logs)}>{paused ? t("logs.resume") : t("logs.pause")}</Chip>
           <Chip onClick={() => void navigator.clipboard?.writeText(asText())}>{t("logs.copy")}</Chip>
           <Chip onClick={save}>{t("logs.save")}</Chip>
+          <Chip onClick={() => void report()}>{t("logs.report")}</Chip>
         </span>
       </div>
       <div className={css.chips}>
@@ -70,6 +84,7 @@ export function Logs() {
         <Toggle showLabel label={t("logs.queries")} checked={showQueries} onChange={toggleQueries} />
       </div>
       <div className={css.dim}>ⓘ {t("logs.queriesNote")}</div>
+      {reported && <div className={css.ok}>{t("logs.reportNote")}</div>}
       <div className={`${css.panel} ${css.log}`}>
         {shown.map((l, i) => (
           <div key={i}>

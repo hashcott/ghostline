@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
+	"github.com/hashcott/ghostline/internal/issue"
 	"github.com/hashcott/ghostline/internal/updater"
 )
 
@@ -23,6 +24,12 @@ func (s *Service) ServiceInstall() app.InstallInfo {
 		in.Outdated = updater.Newer(in.ServiceVersion, in.AppVersion)
 	}
 	return in
+}
+
+// ReportIssueURL is GitHub's bug form filled in by the window, which
+// knows which package it came from; the service does not.
+func (s *Service) ReportIssueURL() string {
+	return issue.URL(brand.RepoURL, s.inst.issueFields())
 }
 
 // InstallService installs (or updates) the background service through

@@ -263,6 +263,7 @@ Ghi lại các sự kiện: kết nối, đổi máy chủ, bật/tắt vượt 
 - **Lọc:** tất cả, engine, dpi, hệ thống.
 - **tạm dừng / tiếp tục:** dừng cuộn để đọc.
 - **copy / lưu file:** sao chép hoặc lưu thành `ghostline-log.txt` để gửi khi báo lỗi.
+- **copy và báo lỗi:** sao chép nhật ký rồi mở mẫu báo lỗi trên GitHub, đã điền sẵn phiên bản Ghostline, hệ điều hành và gói cài; bạn chỉ cần dán nhật ký vào ô *Nhật ký* và kể chuyện gì đã xảy ra. Nút **báo lỗi** ở cuối trang Cài đặt mở cùng mẫu đó.
 - **hiện truy vấn:** xem từng truy vấn DNS theo thời gian thực. Chỉ giữ trong RAM, tối đa 500 dòng, **không bao giờ ghi xuống đĩa**.
 
 ### 4.5. Cài đặt

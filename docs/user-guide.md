@@ -263,6 +263,7 @@ Records events: connecting, switching servers, DPI bypass on/off, errors.
 - **Filters:** all, engine, dpi, system.
 - **pause / resume:** stop scrolling so you can read.
 - **copy / save file:** copy the log or save it as `ghostline-log.txt` to attach to a bug report.
+- **copy and report:** copies the log and opens the bug report form on GitHub with the Ghostline version, the OS and the package already filled in; paste the log into the *Log* field and say what happened. **Report a problem** at the bottom of Settings opens the same form.
 - **show queries:** watch DNS queries live. Kept in RAM only, at most 500 lines, **never written to disk**.
 
 ### 4.5. Settings

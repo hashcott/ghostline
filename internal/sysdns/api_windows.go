@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashcott/ghostline/internal/winutil"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 // dnsInterfaceSettings mirrors DNS_INTERFACE_SETTINGS (netioapi.h), 64 bytes.
@@ -42,6 +43,18 @@ var (
 	dnsapi                       = windows.NewLazySystemDLL("dnsapi.dll")
 	procDnsFlushResolverCache    = dnsapi.NewProc("DnsFlushResolverCache")
 )
+
+// errNoDNSSettingsAPI: this Windows has no SetInterfaceDnsSettings
+// (documented from Windows 10 2004, build 19041). The Manager then sets DNS
+// through netsh.
+var errNoDNSSettingsAPI = errors.New("sysdns: SetInterfaceDnsSettings is not available on this Windows")
+
+// haveDNSSettingsAPI reports whether iphlpapi.dll has the DNS settings
+// calls. Calling a missing LazyProc panics, so every use checks first.
+var haveDNSSettingsAPI = func() bool {
+	return procGetInterfaceDnsSettings.Find() == nil && procSetInterfaceDnsSettings.Find() == nil &&
+		procFreeInterfaceDnsSettings.Find() == nil
+}
 
 type winAPI struct{}
 
@@ -94,6 +107,9 @@ func (winAPI) GetDNS(guid string, v6 bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !haveDNSSettingsAPI() {
+		return registryDNS(guid, v6)
+	}
 	s := dnsInterfaceSettings{Version: dnsSettingsVersion1}
 	if v6 {
 		s.Flags = dnsSettingIPv6
@@ -118,6 +134,9 @@ func (winAPI) SetDNS(guid string, v6 bool, servers []string) error {
 	if err != nil {
 		return err
 	}
+	if !haveDNSSettingsAPI() {
+		return errNoDNSSettingsAPI
+	}
 	s := dnsInterfaceSettings{Version: dnsSettingsVersion1, Flags: dnsSettingNameServer, NameServer: ns}
 	if v6 {
 		s.Flags |= dnsSettingIPv6
@@ -127,6 +146,33 @@ func (winAPI) SetDNS(guid string, v6 bool, servers []string) error {
 		return fmt.Errorf("sysdns: SetInterfaceDnsSettings: %w", windows.Errno(r))
 	}
 	return nil
+}
+
+// registryDNS reads an adapter's static DNS servers where Windows keeps
+// them (and where netsh writes them), for Windows without
+// GetInterfaceDnsSettings. No NameServer value means DHCP.
+func registryDNS(guid string, v6 bool) ([]string, error) {
+	svc := "Tcpip"
+	if v6 {
+		svc = "Tcpip6"
+	}
+	path := `SYSTEM\CurrentControlSet\Services\` + svc + `\Parameters\Interfaces\` + guid
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.QUERY_VALUE)
+	if errors.Is(err, registry.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("sysdns: open %s: %w", path, err)
+	}
+	defer k.Close()
+	v, _, err := k.GetStringValue("NameServer")
+	if errors.Is(err, registry.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("sysdns: read %s NameServer: %w", path, err)
+	}
+	return splitNameServers(v), nil
 }
 
 func (winAPI) NetshSetDNS(ifIndex uint32, v6 bool, servers []string) error {

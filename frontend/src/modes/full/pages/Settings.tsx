@@ -11,6 +11,7 @@ import { Chip } from "../../../components/neon/Chip";
 import css from "../full.module.css";
 import { Backup } from "./settings/Backup";
 import { UpdateAction } from "../../../components/UpdateAction";
+import { openIssueForm } from "../../../app/report";
 
 export function Settings() {
   const { t } = useTranslation();
@@ -221,7 +222,10 @@ export function Settings() {
         <div className={css.panel}>
           <div className={css.setting}>
             <span>{t("settings.about", { version: info.version, author: info.author })}</span>
-            <button className={css.ok} onClick={() => void Browser.OpenURL(info.repoUrl)}>{t("settings.github")}</button>
+            <span>
+              <button className={css.ok} onClick={() => void openIssueForm()}>{t("settings.report")}</button>{" "}
+              <button className={css.ok} onClick={() => void Browser.OpenURL(info.repoUrl)}>{t("settings.github")}</button>
+            </span>
           </div>
         </div>
       )}

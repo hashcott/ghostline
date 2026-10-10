@@ -96,6 +96,7 @@ func init() {
 	application.RegisterBindingMethodID((*Service).RemoveAllCerts, 2784068929)
 	application.RegisterBindingMethodID((*Service).RemoveCustomServer, 4273099491)
 	application.RegisterBindingMethodID((*Service).RemoveLANCA, 1863071482)
+	application.RegisterBindingMethodID((*Service).ReportIssueURL, 600894549)
 	application.RegisterBindingMethodID((*Service).ResetLANCA, 2275867613)
 	application.RegisterBindingMethodID((*Service).RestoreDNSNow, 2705699194)
 	application.RegisterBindingMethodID((*Service).RestoreSystemProxy, 432049994)
