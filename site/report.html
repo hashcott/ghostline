@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Báo lỗi Ghostline</title>
+<meta name="description" content="Báo lỗi, đề xuất tính năng hoặc đặt câu hỏi về Ghostline trên GitHub.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* Three steps, in the order they are done. */
+  .flow { list-style: none; margin: 24px 0 0; padding: 0; counter-reset: step; max-width: 46em; }
+  .flow > li { counter-increment: step; position: relative; padding: 0 0 40px 52px; }
+  .flow > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; display: grid; place-items: center;
+    border: 1px solid var(--green); border-radius: 50%; font: 600 15px/1 var(--mono); color: var(--green);
+  }
+  /* The line joining the steps. */
+  .flow > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 16px; top: 40px; bottom: 8px; border-left: 1px solid var(--line);
+  }
+  .flow h2 { font-weight: 800; font-size: 22px; line-height: 1.3; margin: 2px 0 10px; }
+  .flow p { color: var(--dim); margin: 0 0 12px; }
+  .flow ul { margin: 0; padding-left: 20px; color: #cfeee2; }
+  .flow li li { margin: 6px 0; }
+  .flow strong { color: var(--text); font-weight: 600; }
+  .flow code { font-family: var(--mono); font-size: 0.88em; color: var(--text); background: var(--surface); padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+
+  /* The choice: one row per kind of report, the bug report first. */
+  .kinds { display: grid; gap: 10px; margin-top: 4px; }
+  .kind {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px;
+    padding: 16px 18px; border: 1px solid var(--line); border-radius: 4px;
+    color: var(--text); text-decoration: none; background: rgba(10, 19, 17, 0.6);
+  }
+  .kind:hover { border-color: var(--green); color: var(--text); }
+  .kind strong { font-size: 18px; }
+  .kind span { grid-column: 1; color: var(--dim); font-size: 15px; }
+  .kind em { grid-column: 2; grid-row: 1 / span 2; font: 600 13px var(--mono); font-style: normal; color: var(--green); white-space: nowrap; }
+  .kind.main { border-color: var(--green); box-shadow: 0 0 24px rgba(0, 255, 163, 0.12); }
+
+  .aside { max-width: 46em; margin-top: 8px; padding: 18px 20px; border-left: 3px solid var(--amber); background: rgba(255, 200, 87, 0.06); }
+  .aside h2 { font-size: 17px; margin: 0 0 6px; color: var(--amber); }
+  .aside p { margin: 0; color: var(--text); font-size: 15px; }
+  @media (max-width: 760px) {
+    .flow > li { padding-left: 44px; }
+    .kind { grid-template-columns: 1fr; }
+    .kind em { grid-column: 1; grid-row: auto; }
+  }
+</style>
+</head>
+<body data-page="report">
+<div class="wrap">
+  <header class="bar" id="bar"></header>
+  <main>
+    <div class="page-head">
+      <h1 id="title">Báo lỗi và góp ý</h1>
+      <p id="lede"></p>
+    </div>
+    <ol class="flow">
+      <li>
+        <h2 id="s1h"></h2>
+        <p id="s1p"></p>
+        <div class="links" id="s1links"></div>
+      </li>
+      <li>
+        <h2 id="s2h"></h2>
+        <p id="s2p"></p>
+        <ul id="s2list"></ul>
+      </li>
+      <li>
+        <h2 id="s3h"></h2>
+        <p id="s3p"></p>
+        <div class="kinds" id="kinds"></div>
+      </li>
+    </ol>
+    <aside class="aside">
+      <h2 id="sech"></h2>
+      <p id="secp"></p>
+    </aside>
+  </main>
+  <footer id="foot"></footer>
+</div>
+<script src="site.js"></script>
+<script>
+(() => {
+  const NEW = `${Site.GH}/issues/new?template=`;
+  const SEARCH = `${Site.GH}/issues?q=is%3Aissue`;
+  const SECURITY = `${Site.GH}/security/advisories/new`;
+  const ua = navigator.userAgent;
+  const linux = /Linux|X11/.test(ua) && !/Android/.test(ua);
+
+  const T = {
+    vi: {
+      page: "Báo lỗi Ghostline", title: "Báo lỗi và góp ý",
+      lede: "Báo lỗi, đề xuất và câu hỏi đều gửi lên GitHub dưới dạng issue. Tác giả đọc và trả lời ở đó, công khai, để người gặp cùng vấn đề cũng tìm thấy.",
+      s1h: "Xem đã có cách sửa chưa",
+      s1p: "Nhiều lỗi đã có cách xử lý. Đọc qua trước có thể giúp bạn xong ngay, khỏi phải chờ.",
+      s1links: [["faq.html", "Hỏi đáp"], ["guide.html#7-xử-lý-sự-cố", "Xử lý sự cố"], [SEARCH, "Các issue đã có"]],
+      s2h: "Chuẩn bị thông tin",
+      s2p: "Với báo lỗi, những thứ này giúp tìm ra nguyên nhân nhanh nhất:",
+      s2list: [
+        "<strong>Phiên bản Ghostline:</strong> ghi ở đầu trang Cài đặt.",
+        linux
+          ? "<strong>Bản Linux:</strong> tên và phiên bản, ví dụ Ubuntu 24.04."
+          : "<strong>Phiên bản Windows:</strong> bấm <code>Win + R</code>, gõ <code>winver</code>, ghi lại dòng Version và OS Build.",
+        "<strong>Thông báo lỗi:</strong> chép nguyên văn, hoặc chụp màn hình.",
+        "<strong>Nhật ký:</strong> trong Ghostline vào <em>công cụ › nhật ký</em>, bấm <em>copy</em>. Đọc lại và xoá những gì bạn không muốn công khai.",
+      ],
+      s3h: "Chọn loại và gửi",
+      s3p: "GitHub mở một mẫu có sẵn các ô cần điền. Bạn cần một tài khoản GitHub (miễn phí). Viết bằng tiếng Việt hay tiếng Anh đều được.",
+      kinds: [
+        ["bug.yml", "Báo lỗi", "Ghostline không chạy như mong đợi, báo lỗi, hoặc làm mất mạng.", "mở mẫu báo lỗi"],
+        ["feature.yml", "Đề xuất tính năng", "Một việc bạn muốn Ghostline làm được.", "mở mẫu đề xuất"],
+        ["question.yml", "Đặt câu hỏi", "Không chắc cách dùng một tính năng.", "mở mẫu câu hỏi"],
+      ],
+      sech: "Lỗ hổng bảo mật",
+      secp: `Đừng gửi lỗ hổng bảo mật thành issue công khai. Hãy dùng <a href="${SECURITY}">báo cáo riêng</a>: chỉ tác giả đọc được.`,
+    },
+    en: {
+      page: "Report a problem with Ghostline", title: "Report a problem or an idea",
+      lede: "Bug reports, ideas and questions all go to GitHub as issues. The author reads and answers them there, in public, so people with the same problem find the answer too.",
+      s1h: "See if there is a fix already",
+      s1p: "Many problems already have a fix. A quick look may solve yours right away, with no waiting.",
+      s1links: [["faq.html", "FAQ"], ["guide.html#7-troubleshooting", "Troubleshooting"], [SEARCH, "Existing issues"]],
+      s2h: "Get the details ready",
+      s2p: "For a bug, these find the cause fastest:",
+      s2list: [
+        "<strong>Ghostline version:</strong> shown at the top of Settings.",
+        linux
+          ? "<strong>Your Linux:</strong> distribution and version, for example Ubuntu 24.04."
+          : "<strong>Windows version:</strong> press <code>Win + R</code>, type <code>winver</code>, note the Version and OS Build.",
+        "<strong>The error message:</strong> copy it word for word, or take a screenshot.",
+        "<strong>The log:</strong> in Ghostline open <em>tools › logs</em> and press <em>copy</em>. Read it and remove anything you don't want public.",
+      ],
+      s3h: "Pick the kind and send it",
+      s3p: "GitHub opens a form with the fields to fill in. You need a GitHub account (free). Vietnamese or English, either is fine.",
+      kinds: [
+        ["bug.yml", "Report a bug", "Ghostline does not work as expected, shows an error, or breaks your internet.", "open the bug form"],
+        ["feature.yml", "Suggest a feature", "Something you want Ghostline to do.", "open the idea form"],
+        ["question.yml", "Ask a question", "Not sure how to use a feature.", "open the question form"],
+      ],
+      sech: "Security issues",
+      secp: `Do not file a security issue in public. Use a <a href="${SECURITY}">private report</a>: only the author can read it.`,
+    },
+  };
+  const $ = (id) => document.getElementById(id);
+
+  Site.onLang((lang) => {
+    const t = T[lang];
+    document.title = t.page;
+    for (const k of ["title", "lede", "s1h", "s1p", "s2h", "s2p", "s3h", "s3p", "sech"]) $(k).textContent = t[k];
+    $("secp").innerHTML = t.secp;
+    $("s1links").innerHTML = t.s1links.map(([href, text]) => `<a href="${href}">${text}</a>`).join("");
+    $("s2list").innerHTML = t.s2list.map((x) => `<li>${x}</li>`).join("");
+    $("kinds").innerHTML = t.kinds.map(([tpl, name, what, cta], i) =>
+      `<a class="kind${i === 0 ? " main" : ""}" href="${NEW}${tpl}"><strong>${name}</strong><span>${what}</span><em>${cta} ↗</em></a>`).join("");
+  });
+})();
+</script>
+</body>
+</html>

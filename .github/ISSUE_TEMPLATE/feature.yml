@@ -1,0 +1,34 @@
+name: Đề xuất tính năng / Feature request
+description: Một ý tưởng làm Ghostline tốt hơn. / An idea to make Ghostline better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Viết bằng tiếng Việt hay tiếng Anh đều được. / Vietnamese or English, either is fine.
+        Xem [Những thay đổi / Changelog](https://hashcott.github.io/ghostline/changelog.html) trước: có thể tính năng đã có. / Check the changelog first: it may already be there.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Bạn đang gặp khó khăn gì? / What problem do you have?
+      description: Kể việc bạn muốn làm mà Ghostline hiện chưa giúp được. / The thing you want to do that Ghostline does not help with yet.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Bạn muốn Ghostline làm gì? / What should Ghostline do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Bạn đang xoay xở thế nào? / How do you manage today?
+      description: Cách hay phần mềm khác bạn đang dùng thay thế, nếu có. / Workarounds or other tools you use, if any.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Kiểm tra / Checks
+      options:
+        - label: Tôi đã tìm trong các issue có sẵn. / I searched existing issues.
+          required: true
