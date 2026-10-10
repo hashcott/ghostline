@@ -20,7 +20,11 @@ const (
 	// The zapret2 strategy list is signed with the server-list key.
 	StrategyListURL    = "https://raw.githubusercontent.com/hashcott/ghostline/main/lists/strategies.json"
 	StrategyListSigURL = StrategyListURL + ".sig"
-	ReleasesAPI        = "https://api.github.com/repos/hashcott/ghostline/releases/latest"
+	// ReleasesAPI lists releases (stable and pre-releases); /tags/<tag>
+	// reads one.
+	ReleasesAPI = "https://api.github.com/repos/hashcott/ghostline/releases"
+	// InstallerAsset is the Windows installer's file name in every release.
+	InstallerAsset = "ghostline-amd64-installer.exe"
 
 	DNSCryptMinisignKey = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"
 )

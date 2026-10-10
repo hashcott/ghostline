@@ -96,12 +96,18 @@ func Run(o Options) error {
 			}
 			return os.WriteFile(path, data, 0o644)
 		},
+		RunInstaller: installerRunner(o.Executable, p.Paths.Portable, func() {
+			if wapp != nil {
+				wapp.Quit()
+			}
+		}),
 	})
 	if err != nil {
 		fatalBox(err)
 		return err
 	}
 	ui.b = c.Svc
+	ui.selfUpdate = c.Svc.AppInfo().SelfUpdate
 	ui.saveFullWindow = func(w, h int) { // straight to settings.json, as before validation existed
 		s := c.Settings.Get()
 		s.FullWindow.Width, s.FullWindow.Height = w, h
@@ -146,10 +152,13 @@ func Run(o Options) error {
 	wait := c.Start(ctx)
 	defer func() { cancel(); wait() }()
 
-	if o.Mode.Kind == cli.KindAutostart && c.Settings.Get().AutoConnect {
+	// Opened by the installer of an update started while connected, or
+	// started with Windows with auto-connect on.
+	afterUpdate := c.ReconnectAfterUpdate()
+	if afterUpdate || (o.Mode.Kind == cli.KindAutostart && c.Settings.Get().AutoConnect) {
 		go func() {
 			if err := c.Orch.Connect(context.Background()); err != nil {
-				log.Warn("shell: auto-connect at system start failed", "err", err)
+				log.Warn("shell: auto-connect failed", "afterUpdate", afterUpdate, "err", err)
 			}
 		}()
 	}

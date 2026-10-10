@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,26 +18,85 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Release is the latest published version.
+// Release is a published version. Assets maps file names to download URLs
+// (only when read from the API, not remembered in meta).
 type Release struct {
-	Tag string `json:"tag"`
-	URL string `json:"url"`
+	Tag        string            `json:"tag"`
+	URL        string            `json:"url"`
+	Prerelease bool              `json:"prerelease,omitempty"`
+	Assets     map[string]string `json:"assets,omitempty"`
 }
 
-// Latest reads tag_name and html_url from the GitHub releases API.
-func Latest(ctx context.Context, c *http.Client, apiURL string) (Release, error) {
-	b, err := get(ctx, c, apiURL, 1<<20)
+// ErrNoRelease means the list has no release for the chosen channel.
+var ErrNoRelease = errors.New("updater: no release")
+
+type apiRelease struct {
+	Tag        string `json:"tag_name"`
+	URL        string `json:"html_url"`
+	Draft      bool   `json:"draft"`
+	Prerelease bool   `json:"prerelease"`
+	Assets     []struct {
+		Name string `json:"name"`
+		URL  string `json:"browser_download_url"`
+	} `json:"assets"`
+}
+
+func (a apiRelease) release() Release {
+	r := Release{Tag: a.Tag, URL: a.URL, Prerelease: a.Prerelease}
+	for _, as := range a.Assets {
+		if r.Assets == nil {
+			r.Assets = map[string]string{}
+		}
+		r.Assets[as.Name] = as.URL
+	}
+	return r
+}
+
+// Latest reads the GitHub releases list (apiURL ends in /releases) and
+// returns the highest version: stable releases only, or pre-releases too
+// when beta is set. Drafts and tags that are not semver are skipped.
+func Latest(ctx context.Context, c *http.Client, apiURL string, beta bool) (Release, error) {
+	b, err := get(ctx, c, apiURL, 4<<20)
 	if err != nil {
 		return Release{}, err
 	}
-	var v struct {
-		Tag string `json:"tag_name"`
-		URL string `json:"html_url"`
-	}
-	if err := json.Unmarshal(b, &v); err != nil {
+	var list []apiRelease
+	if err := json.Unmarshal(b, &list); err != nil {
 		return Release{}, err
 	}
-	return Release{Tag: v.Tag, URL: v.URL}, nil
+	var best *apiRelease
+	for i := range list {
+		a := &list[i]
+		if a.Draft || !semver.IsValid(canon(a.Tag)) || (!beta && (a.Prerelease || IsPrerelease(a.Tag))) {
+			continue
+		}
+		if best == nil || semver.Compare(canon(a.Tag), canon(best.Tag)) > 0 {
+			best = a
+		}
+	}
+	if best == nil {
+		return Release{}, ErrNoRelease
+	}
+	return best.release(), nil
+}
+
+// ByTag reads one release from apiURL/tags/<tag>.
+func ByTag(ctx context.Context, c *http.Client, apiURL, tag string) (Release, error) {
+	b, err := get(ctx, c, strings.TrimSuffix(apiURL, "/")+"/tags/"+url.PathEscape(tag), 4<<20)
+	if err != nil {
+		return Release{}, err
+	}
+	var a apiRelease
+	if err := json.Unmarshal(b, &a); err != nil {
+		return Release{}, err
+	}
+	return a.release(), nil
+}
+
+// IsPrerelease reports whether tag is a semver pre-release (v1.2.0-beta.1).
+func IsPrerelease(tag string) bool {
+	t := canon(tag)
+	return semver.IsValid(t) && semver.Prerelease(t) != ""
 }
 
 func canon(v string) string {

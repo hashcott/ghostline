@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next";
 import { Service } from "../../app/api";
 import { confirmDisconnect } from "../../app/disconnect";
 import { useGhost } from "../../app/store";
-import { Browser } from "@wailsio/runtime";
-import { isConnected, powerState, serverSummary, useUptime, useUpdate } from "../../app/format";
+import { isConnected, powerState, serverSummary, useUptime } from "../../app/format";
 import { tCode } from "../../i18n";
 import { useStrategyName } from "../../app/strategies";
 import { PowerButton } from "../../components/neon/PowerButton";
 import { TerminalPanel } from "../../components/neon/TerminalPanel";
 import { Banner } from "../../components/neon/Banner";
+import { UpdateAction } from "../../components/UpdateAction";
 import { ConnectError } from "../../components/ConnectError";
 import { Warnings } from "../../components/Warnings";
 import { ProtectionLevels } from "./ProtectionLevels";
@@ -59,7 +59,6 @@ export function SimpleView({
   const strategyName = useStrategyName(snap.dpi?.engine || settings?.dpi?.engine || "goodbyedpi", snap.dpi?.preset);
   const dismissBanner = useGhost((s) => s.dismissBanner);
   const uptime = useUptime(snap.since);
-  const update = useUpdate();
   const status = String(snap.status);
   // The first LAN (non-loopback) DNS server address, without its port.
   const lanDNS = (snap.dnsServer?.running ? snap.dnsServer.addrs ?? [] : [])
@@ -203,11 +202,7 @@ export function SimpleView({
             </Banner>
           )}
           {below}
-          {update && (
-            <button className={css.update} onClick={() => void Browser.OpenURL(update.url)}>
-              {t("settings.update", { tag: update.tag })}
-            </button>
-          )}
+          <UpdateAction className={css.update} />
         </div>
       </div>
     </section>

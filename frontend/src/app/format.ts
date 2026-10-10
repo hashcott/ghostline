@@ -68,7 +68,9 @@ export function serverDetail(s: ServerLike): string {
 export function useUpdate(): { tag: string; url: string } | null {
   const update = useGhost((s) => s.update);
   const info = useGhost((s) => s.info);
-  const tag = update?.tag || info?.updateTag;
-  const url = update?.url || info?.updateUrl;
+  // An event (even an empty one: the notice was withdrawn) wins over the
+  // AppInfo read at start.
+  const tag = update ? update.tag : info?.updateTag;
+  const url = update ? update.url : info?.updateUrl;
   return tag && url ? { tag, url } : null;
 }

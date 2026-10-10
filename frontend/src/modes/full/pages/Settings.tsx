@@ -10,6 +10,7 @@ import { Toggle } from "../../../components/neon/Toggle";
 import { Chip } from "../../../components/neon/Chip";
 import css from "../full.module.css";
 import { Backup } from "./settings/Backup";
+import { UpdateAction } from "../../../components/UpdateAction";
 
 export function Settings() {
   const { t } = useTranslation();
@@ -69,8 +70,6 @@ export function Settings() {
   const manual = settings.adapters === "manual";
   const guids = settings.adapterGuids ?? [];
   const upd = useUpdate();
-  const tag = upd?.tag;
-  const url = upd?.url;
 
   const toggleRow = (label: string, checked: boolean, patch: (v: boolean) => Parameters<typeof saveSettings>[0]) => (
     <div className={css.setting}>
@@ -85,10 +84,8 @@ export function Settings() {
         <span>{t("settings.title")}</span>
         <span className={css.count}>
           {t("settings.version", { version: info?.version ?? "" })}
-          {tag && url ? (
-            <button className={css.ok} style={{ marginLeft: 8 }} onClick={() => void Browser.OpenURL(url)}>
-              {t("settings.update", { tag })}
-            </button>
+          {upd ? (
+            <UpdateAction className={css.ok} style={{ marginLeft: 8 }} />
           ) : (
             check && <span className={check.error ? css.bad : css.dim} style={{ marginLeft: 8 }}>{check.text}</span>
           )}
@@ -174,6 +171,7 @@ export function Settings() {
         </div>
         {toggleRow(t("settings.updateServerList"), settings.updates.updateServerList, (v) => (s) => ({ ...s, updates: { ...s.updates, updateServerList: v } }))}
         {toggleRow(t("settings.checkApp"), settings.updates.checkApp, (v) => (s) => ({ ...s, updates: { ...s.updates, checkApp: v } }))}
+        {toggleRow(t("settings.beta"), !!settings.updates.beta, (v) => (s) => ({ ...s, updates: { ...s.updates, beta: v } }))}
         {error && <div className={css.bad}>{error}</div>}
         {note && !error && <div className={css.ok}>{note}</div>}
       </div>

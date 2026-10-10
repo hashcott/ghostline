@@ -7,6 +7,7 @@ import { initI18n } from "../../../i18n";
 const svc = vi.hoisted(() => ({
   ListCerts: vi.fn(() => Promise.resolve([])),
   CheckUpdateNow: vi.fn(),
+  InstallUpdate: vi.fn(),
   ListAdapters: vi.fn(() => Promise.resolve([])),
   DNSInfo: vi.fn(() => Promise.resolve({ backend: "windows", chain: "Windows", interfaces: [], adapterPick: true, adapters: [] })),
   SaveSettings: vi.fn(() => Promise.resolve()),
@@ -57,4 +58,56 @@ test("about: shows the author and opens the GitHub repository", async () => {
   expect(screen.getByText("Ghostline 0.4.0 · tác giả Harry Nguyen")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "GitHub ↗" }));
   expect(browser.OpenURL).toHaveBeenCalledWith("https://github.com/hashcott/ghostline");
+});
+
+test("one-click update: confirms, installs, and shows the download", async () => {
+  useGhost.getState().setInfo({ version: "0.2.1", portable: false, updateTag: "v0.2.2", updateUrl: "https://r/v0.2.2", selfUpdate: true } as any);
+  svc.InstallUpdate.mockReturnValueOnce(new Promise(() => {})); // the app closes before it resolves
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+  render(<Settings />);
+  fireEvent.click(screen.getByRole("button", { name: "cập nhật lên v0.2.2" }));
+  expect(confirm).toHaveBeenCalled();
+  expect(svc.InstallUpdate).toHaveBeenCalled();
+  expect(await screen.findByRole("button", { name: "đang tải v0.2.2…" })).toBeDisabled();
+});
+
+test("one-click update: cancelled confirm does nothing", () => {
+  useGhost.getState().setInfo({ version: "0.2.1", portable: false, updateTag: "v0.2.2", updateUrl: "u", selfUpdate: true } as any);
+  vi.spyOn(window, "confirm").mockReturnValue(false);
+  render(<Settings />);
+  fireEvent.click(screen.getByRole("button", { name: "cập nhật lên v0.2.2" }));
+  expect(svc.InstallUpdate).not.toHaveBeenCalled();
+});
+
+test("one-click update: a failure falls back to the release page", async () => {
+  useGhost.getState().setInfo({ version: "0.2.1", portable: false, updateTag: "v0.2.2", updateUrl: "https://r/v0.2.2", selfUpdate: true } as any);
+  svc.InstallUpdate.mockRejectedValueOnce(new Error("UPDATE_INSTALL_FAILED: checksum"));
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  render(<Settings />);
+  fireEvent.click(screen.getByRole("button", { name: "cập nhật lên v0.2.2" }));
+  const page = await screen.findByRole("button", { name: "không cài được, mở trang v0.2.2 ↗" });
+  expect(page).toHaveAttribute("title", "không cài được bản mới (checksum)");
+  fireEvent.click(page);
+  expect(browser.OpenURL).toHaveBeenCalledWith("https://r/v0.2.2");
+});
+
+test("portable builds keep the release page link", () => {
+  useGhost.getState().setInfo({ version: "0.2.1", portable: true, updateTag: "v0.2.2", updateUrl: "https://r/v0.2.2", selfUpdate: false } as any);
+  render(<Settings />);
+  fireEvent.click(screen.getByRole("button", { name: "có bản mới v0.2.2 ↗" }));
+  expect(browser.OpenURL).toHaveBeenCalledWith("https://r/v0.2.2");
+});
+
+test("a withdrawn notice (channel switched to stable) hides the update", () => {
+  useGhost.getState().setInfo({ version: "0.2.1", portable: false, updateTag: "v0.3.0-beta.1", updateUrl: "b" } as any);
+  useGhost.getState().setUpdate({ tag: "", url: "" });
+  render(<Settings />);
+  expect(screen.queryByRole("button", { name: /v0.3.0-beta.1/ })).toBeNull();
+});
+
+test("beta toggle saves updates.beta", async () => {
+  render(<Settings />);
+  fireEvent.click(screen.getByRole("switch", { name: "nhận bản beta (thử nghiệm)" }));
+  await vi.waitFor(() => expect(svc.SaveSettings).toHaveBeenCalled());
+  expect((svc.SaveSettings.mock.calls[0] as any[])[0].updates.beta).toBe(true);
 });

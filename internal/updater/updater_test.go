@@ -35,19 +35,58 @@ func TestDue(t *testing.T) {
 
 func TestLatest(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"tag_name":"v0.2.0","html_url":"https://x/r"}`))
+		_, _ = w.Write([]byte(`[
+			{"tag_name":"v0.3.0-beta.1","html_url":"https://x/b","prerelease":true},
+			{"tag_name":"v0.4.0","html_url":"https://x/d","draft":true},
+			{"tag_name":"v0.2.0","html_url":"https://x/r","assets":[{"name":"SHA256SUMS","browser_download_url":"https://x/s"}]},
+			{"tag_name":"v0.10.0-rc.1","html_url":"https://x/old","prerelease":true},
+			{"tag_name":"garbage","html_url":"https://x/g"},
+			{"tag_name":"v0.1.9","html_url":"https://x/o"}
+		]`))
 	}))
 	defer srv.Close()
-	r, err := updater.Latest(context.Background(), srv.Client(), srv.URL)
+	r, err := updater.Latest(context.Background(), srv.Client(), srv.URL, false)
 	require.NoError(t, err)
-	require.Equal(t, updater.Release{Tag: "v0.2.0", URL: "https://x/r"}, r)
+	require.Equal(t, updater.Release{Tag: "v0.2.0", URL: "https://x/r", Assets: map[string]string{"SHA256SUMS": "https://x/s"}}, r)
+
+	r, err = updater.Latest(context.Background(), srv.Client(), srv.URL, true)
+	require.NoError(t, err)
+	require.Equal(t, "v0.10.0-rc.1", r.Tag) // semver order, not list order
+	require.True(t, r.Prerelease)
+}
+
+func TestLatest_NoStable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[{"tag_name":"v0.3.0-beta.1","html_url":"https://x/b","prerelease":true}]`))
+	}))
+	defer srv.Close()
+	_, err := updater.Latest(context.Background(), srv.Client(), srv.URL, false)
+	require.ErrorIs(t, err, updater.ErrNoRelease)
 }
 
 func TestLatest_HTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(403) }))
 	defer srv.Close()
-	_, err := updater.Latest(context.Background(), srv.Client(), srv.URL)
+	_, err := updater.Latest(context.Background(), srv.Client(), srv.URL, false)
 	require.Error(t, err)
+}
+
+func TestByTag(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/tags/v0.3.0-beta.1", r.URL.Path)
+		_, _ = w.Write([]byte(`{"tag_name":"v0.3.0-beta.1","html_url":"https://x/b","prerelease":true,"assets":[{"name":"a.exe","browser_download_url":"https://x/a"}]}`))
+	}))
+	defer srv.Close()
+	r, err := updater.ByTag(context.Background(), srv.Client(), srv.URL, "v0.3.0-beta.1")
+	require.NoError(t, err)
+	require.Equal(t, updater.Release{Tag: "v0.3.0-beta.1", URL: "https://x/b", Prerelease: true, Assets: map[string]string{"a.exe": "https://x/a"}}, r)
+}
+
+func TestIsPrerelease(t *testing.T) {
+	require.True(t, updater.IsPrerelease("v0.3.0-beta.1"))
+	require.True(t, updater.IsPrerelease("0.3.0-rc.1"))
+	require.False(t, updater.IsPrerelease("v0.3.0"))
+	require.False(t, updater.IsPrerelease("garbage"))
 }
 
 func serveFiles(t *testing.T, files map[string][]byte, fail map[string]bool) *httptest.Server {

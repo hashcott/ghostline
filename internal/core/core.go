@@ -55,6 +55,9 @@ type Options struct {
 	OnUpdate          func(tag, url string)
 	OpenFile          func(ctx context.Context, title string) (name string, data []byte, err error)
 	SaveFile          func(ctx context.Context, name string, data []byte) error
+	// RunInstaller starts a downloaded, verified installer and quits the
+	// app; nil where the app cannot update itself (portable, Linux).
+	RunInstaller func(path string) error
 }
 
 // Core is a built Ghostline.
@@ -200,7 +203,15 @@ func New(o Options) (*Core, error) {
 	if onUpdate == nil {
 		onUpdate = func(string, string) {}
 	}
-	checker := newUpdateChecker(&metaFile{path: paths.Meta}, update, bus, log, onUpdate)
+	checker := newUpdateChecker(&metaFile{path: paths.Meta}, update, box, bus, log, onUpdate)
+	var installUpdate func(ctx context.Context) error
+	if o.RunInstaller != nil {
+		connected := func() bool {
+			st := orch.Snapshot().Status
+			return st == app.StatusProtected || st == app.StatusDegraded || st == app.StatusConnecting
+		}
+		installUpdate = newSelfUpdater(checker, paths, p.SecureDir, connected, o.RunInstaller).install
+	}
 	setMode := o.SetMode
 	if setMode == nil {
 		setMode = func(string) {}
@@ -217,7 +228,7 @@ func New(o Options) (*Core, error) {
 		RestoreNow:   func() error { return restoreNow(states, p.DNS) },
 		Info: func() app.AppInfo {
 			tag, url := update.get()
-			return app.AppInfo{Version: brand.Version, Portable: paths.Portable, UpdateTag: tag, UpdateURL: url, Author: brand.Author, RepoURL: brand.RepoURL}
+			return app.AppInfo{Version: brand.Version, Portable: paths.Portable, UpdateTag: tag, UpdateURL: url, SelfUpdate: installUpdate != nil, Author: brand.Author, RepoURL: brand.RepoURL}
 		},
 		OnSettingsChanged: func(old, n store.Settings) {
 			if old.StartWithWindows != n.StartWithWindows {
@@ -225,6 +236,15 @@ func New(o Options) (*Core, error) {
 				if err != nil {
 					log.Error("autostart task", "err", err)
 				}
+			}
+			if old.Updates.Beta != n.Updates.Beta {
+				// Switching channel: find the newest release of the new one
+				// now (or withdraw a beta notice) instead of in 6 hours.
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					_, _ = checker.checkNow(ctx)
+				}()
 			}
 			if !slices.Equal(old.Bootstrap, n.Bootstrap) {
 				picker.Checker = scanner.DNSChecker{Build: build.Build, Domains: func() []string { return store.TestDomains(box.Get().TestDomain) }, Timeout: 3 * time.Second}
@@ -251,6 +271,7 @@ func New(o Options) (*Core, error) {
 		Protect:         func(v string) (string, error) { return secrets.EncodeString(p.UserSecrets, v) },
 		TestUpstream:    pw.testUpstream,
 		CheckUpdate:     checker.checkNow,
+		InstallUpdate:   installUpdate,
 		CheckServer: func(ctx context.Context, id string) error {
 			_, err := picker.CheckOne(ctx, id)
 			return err
@@ -383,3 +404,7 @@ func logResetErr(err error) error {
 	}
 	return err
 }
+
+// ReconnectAfterUpdate reports, once, that the previous run started an
+// installer while connected: the updated app should connect again.
+func (c *Core) ReconnectAfterUpdate() bool { return c.checker.takeReconnect() }

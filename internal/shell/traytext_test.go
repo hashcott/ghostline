@@ -26,6 +26,8 @@ func TestTrayText_FollowsLanguage(t *testing.T) { // review I10
 func TestTrayText_UpdateLabel(t *testing.T) {
 	require.Equal(t, "Có bản mới v0.1.1 ↗", trayText("vi").updateLabel("v0.1.1"))
 	require.Equal(t, "New version v0.1.1 ↗", trayText("en").updateLabel("v0.1.1"))
+	require.Equal(t, "Cập nhật lên v0.1.1…", trayText("vi").installLabel("v0.1.1"))
+	require.Equal(t, "Update to v0.1.1…", trayText("en").installLabel("v0.1.1"))
 }
 
 func TestTrayText_ProxyItem(t *testing.T) {

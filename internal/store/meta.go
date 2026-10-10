@@ -19,6 +19,9 @@ type Meta struct {
 	// restarts between the daily checks.
 	LatestTag string `json:"latestTag,omitempty"`
 	LatestURL string `json:"latestUrl,omitempty"`
+	// ReconnectAfterUpdate is set just before the app starts an installer
+	// while connected; the updated app connects again at its first start.
+	ReconnectAfterUpdate bool `json:"reconnectAfterUpdate,omitempty"`
 }
 
 // LoadMeta reads meta.json; a missing or unreadable file is a zero Meta.
