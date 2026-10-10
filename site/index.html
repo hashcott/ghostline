@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tải Ghostline</title>
+<meta name="description" content="Tải Ghostline: mã hoá DNS và vượt DPI cho Windows và Linux, chỉ với một nút bấm. Miễn phí, mã nguồn mở.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="appicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* The app's own palette (frontend/src/styles/tokens.css): people should
+     recognise on this page the window they will see after installing. */
+  :root {
+    --bg: #05070a;
+    --surface: #0a1311;
+    --text: #e6fff6;
+    --dim: #9cc7b6;
+    --line: rgba(0, 255, 163, 0.18);
+    --green: #00ffa3;
+    --cyan: #00d0ff;
+    --sans: "Be Vietnam Pro", system-ui, sans-serif;
+    --mono: "JetBrains Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    /* The app's faint grid. */
+    background-image:
+      linear-gradient(rgba(0, 255, 163, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 163, 0.045) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font: 400 17px/1.6 var(--sans);
+  }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  a:hover { color: var(--text); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+  header.bar { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font: 600 16px var(--mono); }
+  .brand img { width: 28px; height: 28px; }
+  .bar nav { display: flex; align-items: center; gap: 18px; font-size: 15px; }
+  .lang { display: inline-flex; border: 1px solid var(--line); }
+  .lang button {
+    background: none; border: 0; color: var(--dim); font: 600 13px var(--mono);
+    padding: 4px 10px; cursor: pointer;
+  }
+  .lang button[aria-pressed="true"] { color: var(--bg); background: var(--green); }
+
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px;
+    align-items: center; padding: 48px 0 72px;
+  }
+  h1 {
+    font-weight: 800; font-size: clamp(34px, 5.4vw, 58px); line-height: 1.08;
+    letter-spacing: -0.02em; margin: 0 0 20px; max-width: 14ch;
+  }
+  .lede { color: var(--dim); max-width: 34em; margin: 0 0 32px; }
+  .get {
+    display: inline-flex; flex-direction: column; gap: 2px;
+    background: var(--green); color: var(--bg); text-decoration: none;
+    padding: 16px 28px; border-radius: 4px;
+    box-shadow: 0 0 28px rgba(0, 255, 163, 0.35);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .get:hover { color: var(--bg); box-shadow: 0 0 44px rgba(0, 255, 163, 0.55); transform: translateY(-1px); }
+  .get strong { font-size: 20px; font-weight: 800; }
+  .get span { font: 400 13px var(--mono); opacity: 0.8; }
+  .meta { margin: 14px 0 0; font-size: 14px; color: var(--dim); }
+  .meta code, td code { font-family: var(--mono); font-size: 0.92em; color: var(--text); }
+  .beta { margin: 6px 0 0; font-size: 14px; color: var(--dim); }
+  .shot { justify-self: center; width: 100%; max-width: 300px; }
+  .shot img {
+    display: block; width: 100%; height: auto; border: 1px solid var(--line);
+    box-shadow: 0 0 60px rgba(0, 255, 163, 0.12);
+  }
+
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  h2 { font-weight: 800; font-size: 28px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 28px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; counter-reset: step; }
+  .steps li { counter-increment: step; }
+  .steps li::before {
+    content: counter(step); display: block; font: 600 15px var(--mono); color: var(--green);
+    width: 32px; height: 32px; line-height: 30px; text-align: center;
+    border: 1px solid var(--green); border-radius: 50%; margin-bottom: 14px;
+  }
+  .steps h3 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+  .steps p { margin: 0; color: var(--dim); font-size: 16px; }
+  .steps em { font-style: normal; color: var(--text); white-space: nowrap; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 14px 16px 14px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--dim); font-size: 14px; }
+  td:first-child { font-weight: 600; }
+  td .note { display: block; font-weight: 400; color: var(--dim); font-size: 14px; }
+  td.size { color: var(--dim); white-space: nowrap; font: 400 14px var(--mono); }
+  .after { margin: 20px 0 0; font-size: 15px; color: var(--dim); }
+
+  .updates { max-width: 40em; }
+  .updates p { color: var(--dim); margin: 0 0 14px; }
+  .updates p strong { color: var(--text); font-weight: 600; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--dim); font-size: 14px; }
+  footer p { margin: 0 0 8px; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; gap: 40px; padding: 24px 0 56px; }
+    .shot { max-width: 240px; }
+    .steps { grid-template-columns: 1fr; gap: 28px; }
+    .get { width: 100%; }
+    .bar nav .gh { display: none; }
+    /* One download per block: name and note, then the file. */
+    thead { display: none; }
+    tr { display: block; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    td { display: block; padding: 0; border: 0; }
+    td + td { margin-top: 6px; }
+    td code { word-break: break-all; }
+    td.size { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .get { transition: none; }
+    .get:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="./"><img src="appicon.png" alt="">Ghostline</a>
+    <nav>
+      <a class="gh" href="https://github.com/hashcott/ghostline" data-t="source">Mã nguồn</a>
+      <span class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="vi" aria-pressed="true">VI</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </span>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1 data-t="title">Mở lại những trang bị chặn, chỉ với một nút bấm.</h1>
+        <p class="lede" data-t="lede">Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.</p>
+        <a class="get" id="get" href="https://github.com/hashcott/ghostline/releases/latest/download/ghostline-amd64-installer.exe">
+          <strong id="get-label">Tải cho Windows</strong>
+          <span id="get-file">ghostline-amd64-installer.exe</span>
+        </a>
+        <p class="meta" id="meta" data-t="metaWin">Windows 10 và 11, 64-bit.</p>
+        <p class="beta" id="beta" hidden></p>
+      </div>
+      <div class="shot"><img id="shot" src="simple-vi.png" width="475" height="725" alt="Cửa sổ Ghostline: nút nguồn và dòng chữ Đã bảo vệ"></div>
+    </div>
+
+    <section aria-labelledby="h-steps">
+      <h2 id="h-steps" data-t="stepsTitle">Cài trong ba bước</h2>
+      <ol class="steps">
+        <li><h3 data-t="s1h">Mở file vừa tải</h3><p data-t="s1p">Windows hỏi quyền quản trị: chọn <em>Yes</em>. Ghostline cần quyền này để đổi DNS của máy.</p></li>
+        <li><h3 data-t="s2h">Nếu Windows chặn</h3><p data-t="s2p">Bản phát hành chưa được ký số nên có thể hiện <em>Windows protected your PC</em>. Chọn <em>More info</em> rồi <em>Run anyway</em>.</p></li>
+        <li><h3 data-t="s3h">Bấm nút nguồn</h3><p data-t="s3p">Ghostline tự tìm máy chủ nhanh nhất. Thấy <em>[ ĐÃ BẢO VỆ ]</em> là xong.</p></li>
+      </ol>
+    </section>
+
+    <section id="all" aria-labelledby="h-all">
+      <h2 id="h-all" data-t="allTitle">Mọi bản tải</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-t="colFor">Dành cho</th><th data-t="colFile">File</th><th class="size" data-t="colSize">Dung lượng</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="after"><span data-t="sums">Muốn chắc file không bị sửa? So mã SHA-256 với</span> <a id="sums" href="https://github.com/hashcott/ghostline/releases/latest/download/SHA256SUMS">SHA256SUMS</a>. <span data-t="older">Các phiên bản cũ ở</span> <a href="https://github.com/hashcott/ghostline/releases" data-t="releases">trang phát hành</a>.</p>
+    </section>
+
+    <section aria-labelledby="h-upd">
+      <h2 id="h-upd" data-t="updTitle">Cập nhật không cần cài lại</h2>
+      <div class="updates">
+        <p data-t="upd1">Khi có bản mới, Ghostline báo ngay trong app. Bấm <strong>cập nhật</strong>: app tự tải, kiểm tra chữ ký, cài rồi mở lại. Cài đặt của bạn giữ nguyên, đang kết nối thì tự kết nối lại.</p>
+        <p data-t="upd2">Muốn dùng thử tính năng mới sớm hơn? Bật <strong>nhận bản beta</strong> trong Cài đặt. Bản beta ra thường xuyên hơn và chưa được thử kỹ bằng bản chính thức.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p data-t="license">Ghostline là phần mềm mã nguồn mở theo giấy phép GPL-3.0.</p>
+    <nav>
+      <a href="https://github.com/hashcott/ghostline" data-t="source">Mã nguồn</a>
+      <a id="guide" href="https://github.com/hashcott/ghostline/blob/main/docs/huong-dan-su-dung.md" data-t="guide">Hướng dẫn sử dụng</a>
+      <a href="https://github.com/hashcott/ghostline/issues" data-t="issues">Báo lỗi</a>
+    </nav>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const REPO = "hashcott/ghostline";
+  const LATEST = `https://github.com/${REPO}/releases/latest`;
+
+  const T = {
+    vi: {
+      title: "Mở lại những trang bị chặn, chỉ với một nút bấm.",
+      lede: "Ghostline mã hoá DNS và vượt chặn kiểu soi gói tin (DPI) cho cả máy tính. Miễn phí, mã nguồn mở, và luôn trả lại cài đặt mạng gốc khi bạn tắt.",
+      source: "Mã nguồn",
+      getWin: "Tải cho Windows", getLinux: "Xem các bản cho Linux", getOther: "Xem mọi bản tải",
+      metaWin: "Windows 10 và 11, 64-bit.",
+      metaLinux: "Chọn gói hợp với bản Linux của bạn ở bảng bên dưới.",
+      metaOther: "Ghostline chạy trên Windows và Linux. Hãy mở trang này trên máy tính để tải.",
+      version: (v, s) => `Phiên bản ${v}${s ? `, ${s}` : ""}.`,
+      beta: (v) => `Có bản beta ${v} để dùng thử.`,
+      shotAlt: "Cửa sổ Ghostline: nút nguồn và dòng chữ Đã bảo vệ",
+      stepsTitle: "Cài trong ba bước",
+      s1h: "Mở file vừa tải", s1p: "Windows hỏi quyền quản trị: chọn <em>Yes</em>. Ghostline cần quyền này để đổi DNS của máy.",
+      s2h: "Nếu Windows chặn", s2p: "Bản phát hành chưa được ký số nên có thể hiện <em>Windows protected your PC</em>. Chọn <em>More info</em> rồi <em>Run anyway</em>.",
+      s3h: "Bấm nút nguồn", s3p: "Ghostline tự tìm máy chủ nhanh nhất. Thấy <em>[ ĐÃ BẢO VỆ ]</em> là xong.",
+      allTitle: "Mọi bản tải", colFor: "Dành cho", colFile: "File", colSize: "Dung lượng",
+      sums: "Muốn chắc file không bị sửa? So mã SHA-256 với", older: "Các phiên bản cũ ở", releases: "trang phát hành",
+      updTitle: "Cập nhật không cần cài lại",
+      upd1: "Khi có bản mới, Ghostline báo ngay trong app. Bấm <strong>cập nhật</strong>: app tự tải, kiểm tra chữ ký, cài rồi mở lại. Cài đặt của bạn giữ nguyên, đang kết nối thì tự kết nối lại.",
+      upd2: "Muốn dùng thử tính năng mới sớm hơn? Bật <strong>nhận bản beta</strong> trong Cài đặt. Bản beta ra thường xuyên hơn và chưa được thử kỹ bằng bản chính thức.",
+      license: "Ghostline là phần mềm mã nguồn mở theo giấy phép GPL-3.0.",
+      guide: "Hướng dẫn sử dụng", issues: "Báo lỗi",
+      guideURL: `https://github.com/${REPO}/blob/main/docs/huong-dan-su-dung.md`,
+      rows: {
+        installer: ["Windows 10 và 11", "Bản cài đặt, khuyên dùng. Cập nhật được ngay trong app."],
+        portable: ["Windows, bản portable", "Giải nén rồi chạy, không cần cài."],
+        deb: ["Ubuntu, Debian, Linux Mint", "Gói .deb"],
+        rpm: ["Fedora, openSUSE", "Gói .rpm"],
+        appimage: ["Linux khác", "AppImage: tải về, cho phép chạy, mở."],
+        tar: ["Tự cài tay", "Gói tar.gz cho người quen dòng lệnh."],
+        aur: ["Arch Linux", "Build từ PKGBUILD trong bản phát hành."],
+      },
+      readme: "xem hướng dẫn",
+    },
+    en: {
+      title: "Open blocked sites again, with one button.",
+      lede: "Ghostline encrypts DNS and gets past deep packet inspection (DPI) for the whole computer. Free, open source, and it always puts your original network settings back when you turn it off.",
+      source: "Source code",
+      getWin: "Download for Windows", getLinux: "See the Linux downloads", getOther: "See all downloads",
+      metaWin: "Windows 10 and 11, 64-bit.",
+      metaLinux: "Pick the package for your Linux in the table below.",
+      metaOther: "Ghostline runs on Windows and Linux. Open this page on a computer to download it.",
+      version: (v, s) => `Version ${v}${s ? `, ${s}` : ""}.`,
+      beta: (v) => `Beta ${v} is available to try.`,
+      shotAlt: "The Ghostline window: the power button and the word Protected",
+      stepsTitle: "Install in three steps",
+      s1h: "Open the downloaded file", s1p: "Windows asks for administrator rights: choose <em>Yes</em>. Ghostline needs them to change the computer's DNS.",
+      s2h: "If Windows blocks it", s2p: "Releases are not code-signed yet, so <em>Windows protected your PC</em> may appear. Choose <em>More info</em>, then <em>Run anyway</em>.",
+      s3h: "Press the power button", s3p: "Ghostline finds the fastest server by itself. When you see <em>[ PROTECTED ]</em>, you're done.",
+      allTitle: "All downloads", colFor: "For", colFile: "File", colSize: "Size",
+      sums: "Want to be sure a file was not altered? Compare its SHA-256 with", older: "Older versions are on the", releases: "releases page",
+      updTitle: "Updates without reinstalling",
+      upd1: "When a new version is out, Ghostline tells you in the app. Press <strong>update</strong>: it downloads the new version, checks its signature, installs it and opens again. Your settings are kept, and it reconnects if it was connected.",
+      upd2: "Want new features sooner? Turn on <strong>receive beta versions</strong> in Settings. Betas come out more often and are less tested than regular releases.",
+      license: "Ghostline is open-source software under the GPL-3.0 license.",
+      guide: "User guide", issues: "Report a problem",
+      guideURL: `https://github.com/${REPO}/blob/main/docs/user-guide.md`,
+      rows: {
+        installer: ["Windows 10 and 11", "Installer, recommended. Updates from inside the app."],
+        portable: ["Windows, portable", "Unzip and run, nothing to install."],
+        deb: ["Ubuntu, Debian, Linux Mint", ".deb package"],
+        rpm: ["Fedora, openSUSE", ".rpm package"],
+        appimage: ["Other Linux", "AppImage: download, allow it to run, open it."],
+        tar: ["Manual install", "tar.gz for people at home on the command line."],
+        aur: ["Arch Linux", "Build from the PKGBUILD in the release."],
+      },
+      readme: "see the guide",
+    },
+  };
+
+  // Which file each row offers; matched against the release's assets.
+  const ROWS = [
+    ["installer", (n) => n === "ghostline-amd64-installer.exe"],
+    ["portable", (n) => n.endsWith("-portable.zip")],
+    ["deb", (n) => n.endsWith(".deb")],
+    ["rpm", (n) => n.endsWith(".rpm")],
+    ["appimage", (n) => n.endsWith(".AppImage")],
+    ["tar", (n) => n.endsWith(".tar.gz")],
+    ["aur", (n) => n === "PKGBUILD"],
+  ];
+
+  const ua = navigator.userAgent;
+  const os = /Windows/.test(ua) ? "win"
+    : /Android|iPhone|iPad|Mac OS X/.test(ua) ? "other"
+    : /Linux|X11/.test(ua) ? "linux" : "other";
+
+  // The visitor's choice, else the browser's language.
+  let lang = (navigator.language || "").toLowerCase().startsWith("vi") ? "vi" : "en";
+  try {
+    const saved = localStorage.getItem("lang");
+    if (saved === "vi" || saved === "en") lang = saved;
+  } catch {}
+
+  let release = null; // { tag, assets: {name: {url, size}} }
+  let beta = null;
+
+  const $ = (id) => document.getElementById(id);
+  // Sizes worth showing: a PKGBUILD's few kilobytes are not.
+  const mb = (bytes) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(bytes < 10485760 ? 1 : 0)} MB` : "";
+
+  function render() {
+    const t = T[lang];
+    document.documentElement.lang = lang;
+    document.title = lang === "vi" ? "Tải Ghostline" : "Download Ghostline";
+    document.querySelectorAll("[data-t]").forEach((el) => {
+      const v = t[el.dataset.t];
+      if (typeof v === "string") el.innerHTML = v;
+    });
+    document.querySelectorAll(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+    $("shot").src = `simple-${lang}.png`;
+    $("shot").alt = t.shotAlt;
+    $("guide").href = t.guideURL;
+
+    // The main button: the installer on Windows, the table elsewhere.
+    const get = $("get");
+    const inst = release?.assets["ghostline-amd64-installer.exe"];
+    if (os === "win") {
+      get.href = inst?.url || `${LATEST}/download/ghostline-amd64-installer.exe`;
+      $("get-label").textContent = t.getWin;
+      $("get-file").textContent = "ghostline-amd64-installer.exe";
+      $("meta").textContent = t.metaWin + (release ? " " + t.version(release.tag.replace(/^v/, ""), mb(inst?.size)) : "");
+    } else {
+      get.href = "#all";
+      $("get-label").textContent = os === "linux" ? t.getLinux : t.getOther;
+      $("get-file").textContent = release ? release.tag : "";
+      $("get-file").hidden = !release;
+      $("meta").textContent = os === "linux" ? t.metaLinux : t.metaOther;
+    }
+
+    const b = $("beta");
+    if (beta) {
+      b.hidden = false;
+      b.innerHTML = `<a href="${beta.url}">${t.beta(beta.tag)}</a>`;
+    } else b.hidden = true;
+
+    // All downloads.
+    const rows = $("rows");
+    rows.textContent = "";
+    for (const [key, match] of ROWS) {
+      const [who, note] = t.rows[key];
+      const name = release && Object.keys(release.assets).find(match);
+      const tr = document.createElement("tr");
+      const a = name ? release.assets[name] : null;
+      const td1 = document.createElement("td");
+      td1.innerHTML = `${who}<span class="note">${note}</span>`;
+      const td2 = document.createElement("td");
+      const link = document.createElement("a");
+      if (a) {
+        link.href = a.url;
+        link.innerHTML = `<code></code>`;
+        link.firstChild.textContent = name;
+      } else if (key === "installer") {
+        link.href = `${LATEST}/download/ghostline-amd64-installer.exe`;
+        link.innerHTML = "<code>ghostline-amd64-installer.exe</code>";
+      } else {
+        link.href = LATEST;
+        link.textContent = t.releases;
+      }
+      td2.append(link);
+      const td3 = document.createElement("td");
+      td3.className = "size";
+      td3.textContent = a ? mb(a.size) : "";
+      tr.append(td1, td2, td3);
+      rows.append(tr);
+    }
+    if (release?.assets.SHA256SUMS) $("sums").href = release.assets.SHA256SUMS.url;
+  }
+
+  document.querySelectorAll(".lang button").forEach((b) => b.addEventListener("click", () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem("lang", lang); } catch {}
+    render();
+  }));
+
+  const semver = (tag) => (tag.replace(/^v/, "").split(/[-+]/)[0].split(".").map(Number));
+  const newer = (a, b) => {
+    const x = semver(a), y = semver(b);
+    for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+    return a.includes("-") ? false : b.includes("-");
+  };
+
+  render();
+  // One call: the newest stable release for the buttons, and a newer
+  // pre-release, if any, for the beta line.
+  fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`)
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((list) => {
+      const pick = (pre) => list.filter((r) => !r.draft && r.prerelease === pre).sort((a, b) => (newer(a.tag_name, b.tag_name) ? -1 : 1))[0];
+      const stable = pick(false), pre = pick(true);
+      if (stable) {
+        release = { tag: stable.tag_name, assets: {} };
+        for (const a of stable.assets) release.assets[a.name] = { url: a.browser_download_url, size: a.size };
+      }
+      if (pre && (!stable || newer(pre.tag_name, stable.tag_name))) beta = { tag: pre.tag_name, url: pre.html_url };
+      render();
+    })
+    .catch(() => {}); // the static links above still work
+})();
+</script>
+</body>
+</html>
