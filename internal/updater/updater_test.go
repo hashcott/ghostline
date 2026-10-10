@@ -55,6 +55,20 @@ func TestLatest(t *testing.T) {
 	require.True(t, r.Prerelease)
 }
 
+func TestLatest_BetaChannelGetsNewerStable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[
+			{"tag_name":"v0.7.0","html_url":"https://x/s"},
+			{"tag_name":"v0.7.0-beta.3","html_url":"https://x/b","prerelease":true}
+		]`))
+	}))
+	defer srv.Close()
+	r, err := updater.Latest(context.Background(), srv.Client(), srv.URL, true)
+	require.NoError(t, err)
+	require.Equal(t, "v0.7.0", r.Tag, "a stable release ranks above its own betas")
+	require.True(t, updater.Newer("0.7.0-beta.3", r.Tag), "a beta build is offered the stable release")
+}
+
 func TestLatest_NoStable(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`[{"tag_name":"v0.3.0-beta.1","html_url":"https://x/b","prerelease":true}]`))
