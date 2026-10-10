@@ -585,3 +585,17 @@ Nên làm:
 3. Nếu Defender đã cách ly file, khôi phục nó trong *Protection history*, hoặc cài lại Ghostline sau khi thêm loại trừ.
 
 Nếu Defender dừng Ghostline khi đang kết nối, tác vụ *Ghostline Network Guard* trả DNS về trong khoảng một phút, nên bạn không bị mất mạng.
+
+**Báo "cổng 53 đang bị … chiếm" khi bấm kết nối?**
+Ghostline cần cổng 53 trên `127.0.0.1` để chạy DNS ngay trên máy bạn. Lỗi này nghĩa là một chương trình khác đã giữ cổng đó trước; thông báo ghi tên và PID của chương trình. Thường gặp nhất:
+
+- **Windows:** dịch vụ của WSL, Hyper-V hoặc Docker Desktop (như *Host Network Service* hay *Internet Connection Sharing*); phần mềm DNS hoặc chặn quảng cáo khác (Acrylic DNS Proxy, dnscrypt-proxy, YogaDNS, AdGuard Home, Technitium…). Mobile Hotspot không gây lỗi này.
+- **Linux:** dnsmasq, unbound, AdGuard Home, Pi-hole hoặc một máy chủ DNS khác chạy trên máy. systemd-resolved dùng `127.0.0.53` nên không xung đột.
+
+Cách xử lý:
+
+1. Nếu là một phần mềm bạn cài thêm, tắt nó (hoặc tắt phần DNS của nó) rồi bấm kết nối lại.
+2. Nếu là một dịch vụ chạy nền (dịch vụ Windows, hoặc dịch vụ systemd trên Linux), vào **Cài đặt** của Ghostline, bấm **Tạm dừng dịch vụ …**. Ghostline luôn hỏi trước khi dừng. Trên Windows, dừng dịch vụ có thể làm WSL, Hyper-V hay Mobile Hotspot ngừng chạy cho tới khi bạn khởi động lại máy.
+3. Muốn tự xem ai đang giữ cổng: trên Windows mở Command Prompt, chạy `netstat -ano | findstr ":53 "` rồi tìm PID ở cột cuối trong Task Manager (tab *Details*); trên Linux chạy `sudo ss -lunp 'sport = :53'`.
+
+Lỗi tương tự với cổng khác: **cổng proxy** (mặc định 8080) hoặc **cổng DoH** của DNS server (mặc định 443) đang bị chiếm thì đổi sang cổng khác ở trang Proxy hoặc DNS server, hoặc đóng chương trình đang giữ cổng đó.
