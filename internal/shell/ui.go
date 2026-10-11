@@ -57,6 +57,7 @@ type ui struct {
 	// win is the open window, nil while Ghostline sits in the tray. Only
 	// touched on the main thread (or before the app runs).
 	win         *application.WebviewWindow
+	showing     reentryGuard // main thread only, like win
 	tray        *application.SystemTray
 	connItem    *application.MenuItem
 	dpiItem     *application.MenuItem
@@ -112,17 +113,35 @@ func (u *ui) createWindow() {
 }
 
 // show brings the window up, creating it if it was closed to the tray.
+// Creating it pumps messages while WebView2 starts, so the second click of
+// a tray double-click lands here again before u.win is set; showing drops
+// it rather than opening a second window.
 func (u *ui) show() {
 	application.InvokeSync(func() {
-		if u.win == nil {
-			u.createWindow()
-			u.win.Show()
-			centre(u.win)
-		} else {
-			u.win.Show()
-		}
-		u.win.Focus()
+		u.showing.run(func() {
+			if u.win == nil {
+				u.createWindow()
+				u.win.Show()
+				centre(u.win)
+			} else {
+				u.win.Show()
+			}
+			u.win.Focus()
+		})
 	})
+}
+
+// reentryGuard drops a call made while an earlier one is still running on
+// the same thread.
+type reentryGuard struct{ busy bool }
+
+func (g *reentryGuard) run(fn func()) {
+	if g.busy {
+		return
+	}
+	g.busy = true
+	defer func() { g.busy = false }()
+	fn()
 }
 
 // setMode resizes the window while keeping its centre in place.
