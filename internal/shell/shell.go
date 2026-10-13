@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/backup"
 	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/cli"
@@ -157,7 +158,12 @@ func Run(o Options) error {
 	afterUpdate := c.ReconnectAfterUpdate()
 	if afterUpdate || (o.Mode.Kind == cli.KindAutostart && c.Settings.Get().AutoConnect) {
 		go func() {
-			if err := c.Orch.Connect(context.Background()); err != nil {
+			connect := c.Orch.Connect
+			if !afterUpdate {
+				// At logon the network is often not up yet.
+				connect = func(ctx context.Context) error { return c.Orch.AutoConnect(ctx, app.AutoConnectDelays) }
+			}
+			if err := connect(context.Background()); err != nil {
 				log.Warn("shell: auto-connect failed", "afterUpdate", afterUpdate, "err", err)
 			}
 		}()

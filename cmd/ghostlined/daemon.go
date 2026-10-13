@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashcott/ghostline/internal/app"
 	"github.com/hashcott/ghostline/internal/brand"
 	"github.com/hashcott/ghostline/internal/core"
 	"github.com/hashcott/ghostline/internal/platform"
@@ -100,7 +101,7 @@ func runDaemon(ctx context.Context, a Args) error {
 	defer func() { stopRun(); wait() }() // every loop is done before we return
 	go func() { _ = srv.Serve(l) }()
 	if s := c.Settings.Get(); s.StartWithWindows && s.AutoConnect {
-		go func() { _ = c.Orch.Connect(context.Background()) }()
+		go func() { _ = c.Orch.AutoConnect(context.Background(), app.AutoConnectDelays) }()
 	}
 
 	<-ctx.Done()
