@@ -76,3 +76,73 @@ func TestGuardScriptIsASCII(t *testing.T) {
 		require.Less(t, b, byte(0x80), "non-ASCII byte at %d", i)
 	}
 }
+
+func TestTaskMatches(t *testing.T) {
+	want := startup.AutostartTask(`C:\Program Files\Ghostline\ghostline.exe`)
+	ours := startup.TaskXML(want)
+	require.True(t, startup.TaskMatches(ours, want))
+	// schtasks /Query /XML prints the stored definition; case and quotes
+	// around the path do not matter to Windows.
+	quoted := strings.Replace(ours, `<Command>C:\Program Files`, `<Command>"c:\program files`, 1)
+	quoted = strings.Replace(quoted, `ghostline.exe</Command>`, `ghostline.exe"</Command>`, 1)
+	require.True(t, startup.TaskMatches(quoted, want))
+
+	cases := map[string]string{
+		"other exe":        strings.Replace(ours, `Ghostline\ghostline.exe`, `Old\ghostline.exe`, 1),
+		"no --autostart":   strings.Replace(ours, "<Arguments>--autostart</Arguments>", "<Arguments></Arguments>", 1),
+		"task disabled":    strings.Replace(ours, "<AllowStartOnDemand>true</AllowStartOnDemand>\n    <Enabled>true</Enabled>", "<AllowStartOnDemand>true</AllowStartOnDemand>\n    <Enabled>false</Enabled>", 1),
+		"trigger disabled": strings.Replace(ours, "<LogonTrigger>\n      <Enabled>true</Enabled>", "<LogonTrigger>\n      <Enabled>false</Enabled>", 1),
+		"not elevated":     strings.Replace(ours, "HighestAvailable", "LeastPrivilege", 1),
+		"no logon trigger": strings.Replace(ours, "LogonTrigger", "BootTrigger", 2),
+		"not xml":          "ERROR: The system cannot find the file specified.",
+	}
+	for name, x := range cases {
+		require.NotEqual(t, ours, x, name)
+		require.False(t, startup.TaskMatches(x, want), name)
+	}
+}
+
+// What schtasks /Query /XML prints for a task TaskXML registered: Windows
+// drops default elements (Enabled true) and reorders the rest.
+const storedAutostart = `<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Ghostline</Description>
+    <URI>\Ghostline</URI>
+  </RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-21-3468109081-2647591708-3057436553-1001</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>true</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+  </Settings>
+  <Triggers>
+    <LogonTrigger>
+      <UserId>SUPERPC\ducha</UserId>
+    </LogonTrigger>
+  </Triggers>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Program Files\Ghostline\Ghostline\ghostline.exe</Command>
+      <Arguments>--autostart</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+`
+
+func TestTaskMatches_StoredDefinition(t *testing.T) {
+	require.True(t, startup.TaskMatches(storedAutostart, startup.AutostartTask(`C:\Program Files\Ghostline\Ghostline\ghostline.exe`)))
+	require.False(t, startup.TaskMatches(storedAutostart, startup.AutostartTask(`C:\Program Files\Ghostline\ghostline.exe`)))
+}

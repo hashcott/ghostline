@@ -363,6 +363,13 @@ func (c *Core) Start(ctx context.Context) (wait func()) {
 	tick(func(ticks <-chan time.Time) { app.RunStats(c.Svc, ctx, ticks) })
 	tick(func(ticks <-chan time.Time) { runProxyStats(ctx, c.pw, ticks) })
 	tick(func(ticks <-chan time.Time) { runDNSServerStats(ctx, c.eng, c.Orch, c.Bus, ticks) })
+	loop(func() {
+		// The setting is what the user chose; the task can be gone (an
+		// uninstall keeps the settings) or point at an old path. Put it right.
+		if err := c.p.Startup.SetAutostart(c.Settings.Get().StartWithWindows); err != nil {
+			c.log.Warn("autostart task", "err", err)
+		}
+	})
 	loop(func() { runLists(ctx, c.Svc) })
 	loop(func() { runUpdates(ctx, c.paths, c.Settings, c.cat, c.strats, c.checker, c.log) })
 	return func() {

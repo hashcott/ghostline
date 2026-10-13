@@ -3,7 +3,9 @@ package startup
 import (
 	"bytes"
 	"encoding/xml"
+	"io"
 	"os/user"
+	"strings"
 	"unicode/utf16"
 
 	"github.com/hashcott/ghostline/internal/brand"
@@ -63,6 +65,42 @@ func TaskXML(t Task) string {
   </Actions>
 </Task>
 `
+}
+
+// TaskMatches reports whether x, a definition as schtasks /Query /XML
+// prints it, still starts t at logon: same program and arguments, enabled,
+// elevated. Anything else (a missing task's error text included) does not.
+func TaskMatches(x string, t Task) bool {
+	var def struct {
+		Triggers struct {
+			Logon []struct {
+				Enabled string `xml:"Enabled"`
+			} `xml:"LogonTrigger"`
+		} `xml:"Triggers"`
+		RunLevel string `xml:"Principals>Principal>RunLevel"`
+		Enabled  string `xml:"Settings>Enabled"`
+		Exec     []struct {
+			Command   string `xml:"Command"`
+			Arguments string `xml:"Arguments"`
+		} `xml:"Actions>Exec"`
+	}
+	dec := xml.NewDecoder(strings.NewReader(x))
+	// The header says UTF-16, but the text reached us already decoded.
+	dec.CharsetReader = func(_ string, r io.Reader) (io.Reader, error) { return r, nil }
+	if err := dec.Decode(&def); err != nil {
+		return false
+	}
+	off := func(v string) bool { return strings.EqualFold(strings.TrimSpace(v), "false") }
+	logon := false
+	for _, l := range def.Triggers.Logon {
+		logon = logon || !off(l.Enabled)
+	}
+	if !logon || off(def.Enabled) || def.RunLevel != "HighestAvailable" || len(def.Exec) != 1 {
+		return false
+	}
+	unquote := func(v string) string { return strings.Trim(strings.TrimSpace(v), `"`) }
+	return strings.EqualFold(unquote(def.Exec[0].Command), t.Exe) &&
+		strings.TrimSpace(def.Exec[0].Arguments) == t.Args
 }
 
 // EncodeUTF16LE encodes s as UTF-16LE with a BOM, the encoding schtasks /XML expects.

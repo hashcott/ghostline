@@ -85,6 +85,16 @@ func Exists(name string) bool {
 	return err == nil
 }
 
+// QueryXML returns the task's definition as schtasks prints it; a missing
+// task is an error.
+func QueryXML(name string) (string, error) {
+	out, err := winutil.HiddenCmd("schtasks", []string{"/Query", "/TN", name, "/XML"}, "").Output()
+	if err != nil {
+		return "", fmt.Errorf("startup: schtasks /Query %q: %w", name, err)
+	}
+	return string(out), nil
+}
+
 type taskScheduler struct{ exe, guardDir, state string }
 
 // NewTaskScheduler registers exe's logon tasks with Task Scheduler.
@@ -94,11 +104,18 @@ func NewTaskScheduler(exe, guardDir, state string) Manager {
 	return taskScheduler{exe: exe, guardDir: guardDir, state: state}
 }
 
+// SetAutostart registers the autostart task when on, unless it is already
+// there exactly as Ghostline would write it, and removes it when off.
 func (t taskScheduler) SetAutostart(on bool) error {
-	if on {
-		return Create(AutostartTask(t.exe))
+	if !on {
+		return Delete(brand.TaskAutostart)
 	}
-	return Delete(brand.TaskAutostart)
+	task := AutostartTask(t.exe)
+	if x, err := QueryXML(task.Name); err == nil && TaskMatches(x, task) {
+		return nil
+	}
+	slog.Info("startup: registering the autostart task", "exe", t.exe)
+	return Create(task)
 }
 
 // CreateRecovery registers the --restore task and the network guard. The
