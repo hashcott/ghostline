@@ -331,6 +331,7 @@ type fPicker struct {
 	r     *rec
 	block chan struct{}
 	err   error
+	errN  int // > 0: err is returned only this many times
 	n     int
 }
 
@@ -346,7 +347,13 @@ func (p *fPicker) Pick(ctx context.Context, _ func(done, total int)) ([]model.Se
 		}
 	}
 	if p.err != nil {
-		return nil, p.err
+		err := p.err
+		if p.errN > 0 {
+			if p.errN--; p.errN == 0 {
+				p.err = nil
+			}
+		}
+		return nil, err
 	}
 	n := p.n
 	if n == 0 {
