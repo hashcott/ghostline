@@ -61,6 +61,17 @@ export function ConnectError({ onOpenServers }: Props) {
 }
 
 /**
+ * ServiceError shows only DaemonError, where the views (and so ConnectError)
+ * are not up yet: the terms are recorded by the service, so on first start
+ * it has to be installed before they can be accepted.
+ */
+export function ServiceError() {
+  const snap = useGhost((s) => s.snapshot);
+  const code = String(snap.status) === "error" ? snap.error?.code : undefined;
+  return code && DAEMON_CODES.includes(code) ? <DaemonError code={code} /> : null;
+}
+
+/**
  * DaemonError: the Linux GUI cannot reach or use its background service.
  * Where this copy can, it offers to start, install or update the service
  * (pkexec, run by the GUI itself); on Windows ServiceInstall has no kind.
