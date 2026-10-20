@@ -516,7 +516,7 @@ This section is for lawful sites whose encrypted connections your network breaks
 | **… seems to be intercepting this computer's DNS** | An ad blocker, antivirus or VPN takes the DNS queries before they reach Ghostline (AdGuard, Avast, AVG, YogaDNS, Portmaster…). The message names the program and says which setting to turn off; turn off its DNS filtering (or quit it), then retry |
 | **Port 53 is held by …** | Another program is running DNS on 127.0.0.1 (usually WSL, Hyper-V or another DNS tool; Mobile Hotspot no longer gets in the way). Close it, or use the **Stop service …** button Ghostline offers. Ghostline always asks before stopping any service |
 | **No working servers found** | Your network is down, or your ISP blocks encrypted DNS too. Check your connection, then try turning on **DNS fragment** |
-| **DNS queries are not going through Ghostline** | A VPN or another tool owns DNS. If the error lists **adapters with their own DNS**, those are Windows adapters still asking DNS another way (a VPN, PPPoE, a USB 4G stick…): turn them off, or pick only the right ones in **Settings → adapters → manual**, then connect again |
+| **DNS queries are not going through Ghostline** | A VPN or another tool owns DNS. If the error lists **adapters with their own DNS**, those are Windows adapters still asking DNS another way (a VPN, PPPoE, a USB 4G stick…): turn them off, or pick only the right ones in **Settings → adapters → manual**, then connect again. With Tailscale, see *Connecting fails while Tailscale is on?* in section 9 |
 | **Could not set DNS on …** | That adapter doesn't allow DNS changes (often a virtual adapter from a VPN or VM). Go to **Settings → adapters → manual** and leave it out |
 | **Could not restore the original DNS on …** | Click **⚠ RESTORE DNS NOW**. The message stays until the restore succeeds |
 | **GoodbyeDPI failed to start** | Try another preset. The details in brackets say more |
@@ -600,6 +600,17 @@ What to do:
 3. To see for yourself what holds the port: on Windows, run `netstat -ano | findstr ":53 "` in Command Prompt and look up the PID in the last column in Task Manager (*Details* tab); on Linux, run `sudo ss -lunp 'sport = :53'`.
 
 The same error on another port: if the **proxy port** (8080 by default) or the DNS server's **DoH port** (443 by default) is in use, pick another port on the Proxy or DNS server page, or close the program holding it.
+
+**Connecting fails while Tailscale is on?**
+Ghostline runs alongside Tailscale (and other mesh VPNs such as NetBird) as long as Tailscale does not take over all of the computer's DNS. It does that when **Override local DNS** is on in the Tailscale admin console, when you use an **exit node**, or on Linux when Tailscale rewrites `/etc/resolv.conf`. Ghostline's last check then sees DNS going to Tailscale (`100.100.100.100`) instead of Ghostline, undoes the connection and shows *DNS queries are not going through Ghostline* ([#8](https://github.com/hashcott/ghostline/issues/8)).
+
+What to do (one of these is enough):
+
+1. In the Tailscale admin console, open **DNS** and turn off **Override local DNS**. MagicDNS names (`my-pc.tailnet.ts.net`) keep working. This fixed #8.
+2. Stop using an exit node while Ghostline is connected.
+3. Only on this computer: run `tailscale set --accept-dns=false`. Tailscale stops touching DNS here, but MagicDNS names no longer resolve on this machine; use the `100.x` addresses instead.
+
+Then press Connect again. Tailscale itself keeps running either way.
 
 **My PC runs an old Windows 10. Will Ghostline work?**
 Ghostline runs on 64-bit Windows 10 and 11. Windows 7, 8, 8.1 and 32-bit Windows are not supported. To see which version you have, press **Win + R**, type `winver` and press Enter: the window shows the *Version* (for example 1909 or 22H2) and the *OS Build*.
