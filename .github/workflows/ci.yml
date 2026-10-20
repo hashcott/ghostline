@@ -46,7 +46,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          # Pinned: a new release adds checks and must not fail a tag build.
+          version: v2.15.0
       - name: Go tests
         run: go test ./...
       - name: Go race tests (rules, proxy, app)
@@ -87,7 +88,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          # Pinned: a new release adds checks and must not fail a tag build.
+          version: v2.15.0
       - name: Go tests
         run: go test ./...
       - name: Root integration (system DNS, nftables queue + nfqws2 fail-open, kill -9 recovery)

@@ -89,7 +89,8 @@ func TestJob_KillsChildOnClose(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 	select {
-	case <-done:
+	case err := <-done:
+		t.Logf("child ended: %v", err)
 	case <-time.After(5 * time.Second):
 		_ = cmd.Process.Kill()
 		t.Fatal("child still running after job close")

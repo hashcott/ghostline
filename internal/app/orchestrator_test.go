@@ -119,7 +119,7 @@ func TestConnect_CancelDuringPickRollsBackToDisconnected(t *testing.T) {
 	go func() { done <- h.o.Connect(context.Background()) }()
 	require.Eventually(t, func() bool { return indexOf(h.r.list(), "pick") >= 0 }, time.Second, 5*time.Millisecond)
 	h.o.Cancel()
-	<-done
+	require.Error(t, <-done)
 	require.Equal(t, StatusDisconnected, h.o.Snapshot().Status)
 	require.Nil(t, h.o.Snapshot().Error)
 }
