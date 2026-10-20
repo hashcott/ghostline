@@ -516,7 +516,7 @@ Mục này dành cho các trang hợp pháp mà nhà mạng can thiệp làm h�
 | **Có vẻ … đang chặn DNS của máy nên Ghostline không nhận được truy vấn** | Một phần mềm chặn quảng cáo, diệt virus hoặc VPN lấy truy vấn DNS trước khi tới Ghostline (AdGuard, Avast, AVG, YogaDNS, Portmaster…). Thông báo nêu tên chương trình và cách tắt; hãy tắt lọc DNS trong chương trình đó (hoặc thoát nó) rồi thử lại |
 | **Cổng 53 đang bị … chiếm** | Một chương trình khác đang chạy DNS trên 127.0.0.1 (thường là WSL, Hyper-V hoặc một phần mềm DNS khác; Mobile Hotspot không còn gây lỗi này). Tắt chương trình đó, hoặc dùng nút **Tạm dừng dịch vụ …** mà Ghostline đưa ra. Ghostline luôn hỏi trước khi dừng dịch vụ nào |
 | **Không tìm được máy chủ hoạt động** | Mạng đang mất kết nối, hoặc nhà mạng chặn cả DNS mã hoá. Kiểm tra mạng, rồi thử bật **Fragment DNS** |
-| **Truy vấn DNS không đi qua Ghostline** | Có VPN hoặc phần mềm khác đang chiếm DNS. Nếu dưới lỗi có dòng **card mạng có DNS riêng**, đó là card mạng Windows vẫn hỏi DNS qua đường khác (VPN, PPPoE, USB 4G...): tắt nó hoặc chọn nó trong Cài đặt → card mạng, rồi kết nối lại |
+| **Truy vấn DNS không đi qua Ghostline** | Có VPN hoặc phần mềm khác đang chiếm DNS. Nếu dưới lỗi có dòng **card mạng có DNS riêng**, đó là card mạng Windows vẫn hỏi DNS qua đường khác (VPN, PPPoE, USB 4G...): tắt nó hoặc chọn nó trong Cài đặt → card mạng, rồi kết nối lại. Dùng Tailscale thì xem *Bật Tailscale thì Ghostline không kết nối được?* ở mục 9 |
 | **Không đặt được DNS cho …** | Card mạng đó không cho đổi DNS (thường là card ảo của VPN/máy ảo). Vào **Cài đặt → card mạng → chọn tay** và bỏ card đó ra |
 | **Không trả được DNS về như cũ cho …** | Bấm **⚠ KHÔI PHỤC DNS NGAY**. Thông báo này sẽ còn hiện cho tới khi khôi phục thành công |
 | **GoodbyeDPI không chạy được** | Thử preset khác. Xem thêm chi tiết trong ngoặc của thông báo |
@@ -600,6 +600,17 @@ Cách xử lý:
 3. Muốn tự xem ai đang giữ cổng: trên Windows mở Command Prompt, chạy `netstat -ano | findstr ":53 "` rồi tìm PID ở cột cuối trong Task Manager (tab *Details*); trên Linux chạy `sudo ss -lunp 'sport = :53'`.
 
 Lỗi tương tự với cổng khác: **cổng proxy** (mặc định 8080) hoặc **cổng DoH** của DNS server (mặc định 443) đang bị chiếm thì đổi sang cổng khác ở trang Proxy hoặc DNS server, hoặc đóng chương trình đang giữ cổng đó.
+
+**Bật Tailscale thì Ghostline không kết nối được?**
+Ghostline chạy cùng Tailscale (và các VPN dạng mesh khác như NetBird) được, miễn là Tailscale không giữ toàn bộ DNS của máy. Tailscale làm vậy khi bật **Override local DNS** trong trang quản trị Tailscale, khi bạn dùng **exit node**, hoặc trên Linux khi Tailscale ghi đè `/etc/resolv.conf`. Lúc đó bước kiểm tra cuối của Ghostline thấy truy vấn DNS đi tới Tailscale (`100.100.100.100`) chứ không qua Ghostline, nên huỷ kết nối và báo *truy vấn DNS không đi qua Ghostline* ([#8](https://github.com/hashcott/ghostline/issues/8)).
+
+Cách xử lý (chỉ cần một trong các cách):
+
+1. Vào trang quản trị Tailscale, mở **DNS** và tắt **Override local DNS**. Tên MagicDNS (`may-cua-toi.tailnet.ts.net`) vẫn dùng được. Đây là cách đã sửa được #8.
+2. Không dùng exit node trong lúc Ghostline đang kết nối.
+3. Chỉ trên máy này: chạy `tailscale set --accept-dns=false`. Tailscale thôi đụng tới DNS của máy, nhưng tên MagicDNS sẽ không phân giải được trên máy này nữa; hãy dùng địa chỉ `100.x`.
+
+Rồi bấm Kết nối lại. Tailscale vẫn chạy bình thường.
 
 **Máy tôi chạy Windows 10 bản cũ, có dùng được không?**
 Ghostline chạy trên Windows 10 và 11 bản 64-bit. Windows 7, 8, 8.1 và Windows 32-bit không được hỗ trợ. Để xem máy bạn đang chạy bản nào, bấm **Win + R**, gõ `winver` rồi Enter: cửa sổ hiện ra ghi *Version* (ví dụ 1909, 22H2) và *OS Build*.
