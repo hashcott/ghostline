@@ -251,7 +251,8 @@ func TestRecheckCF_BusyCapAndCancel(t *testing.T) {
 	require.Eventually(t, func() bool { return h.svc.GetCFView().Running }, 2*time.Second, 5*time.Millisecond)
 	h.svc.CancelCFScan()
 	select {
-	case <-done:
+	case err := <-done:
+		require.NoError(t, err)
 	case <-time.After(2 * time.Second):
 		t.Fatal("recheck did not stop on cancel")
 	}

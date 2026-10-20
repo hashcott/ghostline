@@ -193,9 +193,9 @@ func TestApplyImport_HoldsRulesLockAcrossWrite(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- b.svc.ApplyImport(p.Token, backup.Choices{Sections: []string{"rules"}}) }()
 	select {
-	case <-done:
+	case err := <-done:
 		b.svc.rmu.Unlock()
-		t.Fatal("import wrote rules while a rules save held the lock")
+		t.Fatalf("import wrote rules while a rules save held the lock (err: %v)", err)
 	case <-time.After(150 * time.Millisecond):
 	}
 	b.svc.rmu.Unlock()
