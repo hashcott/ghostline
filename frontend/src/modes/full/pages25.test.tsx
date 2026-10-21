@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 
 test("custom args validation error from SaveSettings is shown inline", async () => {
-  svc.SaveSettings.mockResolvedValueOnce(undefined as any).mockRejectedValueOnce(new Error('dpi: flag not allowed: "--dns-addr"'));
+  svc.SaveSettings.mockRejectedValueOnce(new Error('dpi: flag not allowed: "--dns-addr"'));
   render(<Dpi />);
   fireEvent.change(screen.getByRole("combobox", { name: "preset" }), { target: { value: "custom" } });
   fireEvent.change(screen.getByRole("textbox", { name: "tham số tự nhập" }), { target: { value: "--dns-addr 1.1.1.1" } });

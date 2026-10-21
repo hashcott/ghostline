@@ -127,6 +127,30 @@ test("zapret2 custom args are kept apart from GoodbyeDPI's", async () => {
   expect(saved().dpi.customArgs).toBe("");
 });
 
+test("picking custom saves nothing until args are typed", async () => {
+  render(<Dpi />);
+  const sel = screen.getByRole("combobox", { name: "preset" }) as HTMLSelectElement;
+  fireEvent.change(sel, { target: { value: "custom" } });
+  const box = screen.getByRole("textbox", { name: "tham số tự nhập" });
+  expect(sel.value).toBe("custom");
+  fireEvent.blur(box);
+  expect(svc.SaveSettings).not.toHaveBeenCalled();
+  fireEvent.change(box, { target: { value: "--lua-desync=multisplit:pos=2" } });
+  fireEvent.blur(box);
+  await waitFor(() => expect(svc.SaveSettings).toHaveBeenCalledTimes(1));
+  expect(saved().dpi.zapret2).toEqual({ strategy: "custom", customArgs: "--lua-desync=multisplit:pos=2", autoHostlist: false });
+});
+
+test("emptied custom args are not saved", async () => {
+  withDPI({ zapret2: { strategy: "custom", customArgs: "--lua-desync=fake", autoHostlist: false } });
+  render(<Dpi />);
+  const box = screen.getByRole("textbox", { name: "tham số tự nhập" }) as HTMLInputElement;
+  fireEvent.change(box, { target: { value: "  " } });
+  fireEvent.blur(box);
+  expect(svc.SaveSettings).not.toHaveBeenCalled();
+  expect(box.value).toBe("--lua-desync=fake");
+});
+
 test("preview names the running engine's program", async () => {
   render(<Dpi />);
   await waitFor(() => expect(svc.PreviewDPIArgs).toHaveBeenCalledWith("zapret2", "z-split", "", "all", false));

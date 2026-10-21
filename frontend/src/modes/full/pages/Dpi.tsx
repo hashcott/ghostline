@@ -43,6 +43,11 @@ export function Dpi() {
   const customArgs = (isZ ? z.customArgs : dpi?.customArgs) ?? "";
   const autoOn = isZ && dpi?.scope === "blacklist" && z.autoHostlist;
   const [custom, setCustom] = useState(customArgs);
+  // Custom with no args yet is only picked here, not saved: saving restarts
+  // a running engine, which would then have nothing to run. It is saved
+  // with its first args.
+  const [pickedCustom, setPickedCustom] = useState(false);
+  const shownStrategy = pickedCustom ? "custom" : strategy;
   const [loaded, setLoaded] = useState<{ engine: string; list: Strategy[] }>({ engine: "", list: [] });
   const [autoSites, setAutoSites] = useState<string[]>([]);
   const [engineDir, setEngineDir] = useState("");
@@ -72,6 +77,7 @@ export function Dpi() {
       .then((l) => setLoaded({ engine, list: (l ?? []) as Strategy[] }))
       .catch(() => setLoaded({ engine, list: [] }));
   }, [engine]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => setPickedCustom(false), [engine, strategy]);
   useEffect(() => {
     if (!autoOn) return;
     Service.GetDPIAutoHostlist()
@@ -109,9 +115,20 @@ export function Dpi() {
     if (s) useGhost.getState().setSettings({ ...s, dpi: { ...s.dpi, enabled: on } });
   };
   const setZ = (patch: Partial<Zapret2>) => save((s) => ({ ...s, dpi: { ...s.dpi, zapret2: { ...z, ...patch } } }));
-  const setStrategy = (v: string) => (isZ ? void setZ({ strategy: v }) : void save((s) => ({ ...s, dpi: { ...s.dpi, preset: v } })));
-  const saveCustom = () =>
-    isZ ? void setZ({ customArgs: custom }) : void save((s) => ({ ...s, dpi: { ...s.dpi, customArgs: custom } }));
+  const setStrategy = (v: string) => {
+    setPickedCustom(v === "custom" && !customArgs.trim());
+    if (v === "custom" && !customArgs.trim()) return;
+    isZ ? void setZ({ strategy: v }) : void save((s) => ({ ...s, dpi: { ...s.dpi, preset: v } }));
+  };
+  const saveCustom = () => {
+    if (!custom.trim()) {
+      setCustom(customArgs);
+      return;
+    }
+    isZ
+      ? void setZ({ strategy: "custom", customArgs: custom })
+      : void save((s) => ({ ...s, dpi: { ...s.dpi, preset: "custom", customArgs: custom } }));
+  };
   const pickEngine = (e: string) => {
     setError(null);
     // Choosing by hand means the user knows both engines: the hint is done.
@@ -230,7 +247,7 @@ export function Dpi() {
         <div className={css.setting}>
           <span>{t("dpi.preset")}</span>
           <span className={css.row}>
-            <select aria-label="preset" value={strategy} onChange={(e) => setStrategy(e.target.value)}>
+            <select aria-label="preset" value={shownStrategy} onChange={(e) => setStrategy(e.target.value)}>
               {options.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
@@ -244,7 +261,7 @@ export function Dpi() {
             )}
           </span>
         </div>
-        {strategy === "custom" && (
+        {shownStrategy === "custom" && (
           <div className={css.setting}>
             <span>{t("dpi.customArgs")}</span>
             <input
