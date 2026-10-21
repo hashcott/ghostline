@@ -123,18 +123,37 @@ func (o *Orchestrator) connected() bool {
 // take effect, with the configured engine (so a fallback retries zapret2).
 // It does nothing when no engine is running.
 func (o *Orchestrator) RestartDPI(ctx context.Context) error {
+	return o.restartDPI(ctx, o.d.Settings(), nil)
+}
+
+// ChangeDPI restarts a running engine under the new settings n. If n fails
+// to start, the engine is started again under prev, so an option the engine
+// refuses never leaves DPI off; the caller puts prev back in the settings.
+func (o *Orchestrator) ChangeDPI(ctx context.Context, n, prev store.Settings) error {
+	return o.restartDPI(ctx, n, &prev)
+}
+
+func (o *Orchestrator) restartDPI(ctx context.Context, s store.Settings, prev *store.Settings) error {
 	o.opMu.Lock()
 	defer o.opMu.Unlock()
 	if !o.d.DPI.Running() {
 		return nil
 	}
 	o.stopDPI()
-	if err := o.startDPI(ctx, o.d.Settings()); err != nil {
-		slog.Warn("dpi: restart failed", "err", err)
-		o.update(func(sn *Snapshot) { sn.DPI.Running, sn.DPI.Engine, sn.DPI.Fallback = false, "", false })
-		return err
+	err := o.startDPI(ctx, s)
+	if err == nil {
+		return nil
 	}
-	return nil
+	slog.Warn("dpi: restart failed", "err", err)
+	if prev != nil {
+		perr := o.startDPI(ctx, *prev)
+		if perr == nil {
+			return err
+		}
+		slog.Warn("dpi: restart with the previous options failed", "err", perr)
+	}
+	o.update(func(sn *Snapshot) { sn.DPI.Running, sn.DPI.Engine, sn.DPI.Fallback = false, "", false })
+	return err
 }
 
 // RewriteZapret2File runs write while a running zapret2 is stopped (it keeps

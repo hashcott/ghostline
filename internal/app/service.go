@@ -299,7 +299,14 @@ func (s *Service) saveSettings(n store.Settings, owned bool) error {
 		s.x.OnSettingsChanged(old, n)
 	}
 	if dpiChanged(old.DPI, n.DPI) {
-		if err := s.o.RestartDPI(context.Background()); err != nil {
+		if err := s.o.ChangeDPI(context.Background(), n, old); err != nil {
+			// The UI puts its old copy back on an error: so does the store,
+			// or the next start would fail on the refused option again.
+			if rerr := s.x.Settings.Save(old); rerr != nil {
+				slog.Warn("settings: restoring after a failed DPI restart failed", "err", rerr)
+			} else if s.x.OnSettingsChanged != nil {
+				s.x.OnSettingsChanged(n, old)
+			}
 			return err
 		}
 	}
