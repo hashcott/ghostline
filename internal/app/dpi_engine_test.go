@@ -406,3 +406,32 @@ func TestDisconnect_StopsAnEngineThatDied(t *testing.T) {
 	require.NoError(t, h.o.Disconnect(context.Background()))
 	require.Contains(t, h.r.list()[n:], "dpi.stop")
 }
+
+// A DPI option the engine refuses (custom with no args) must neither stay
+// saved nor leave DPI off: the UI puts the old settings back on an error.
+func TestSaveSettings_FailedDPIRestartKeepsOldOptions(t *testing.T) {
+	s := zapretSvc(t)
+	st := s.box.Get()
+	st.Language = "en"
+	st.DPI.Zapret2.Strategy, st.DPI.Zapret2.CustomArgs = "custom", ""
+	require.ErrorContains(t, s.svc.SaveSettings(st), "custom args are empty")
+	got := s.box.Get()
+	require.Equal(t, "z-split", got.DPI.Zapret2.Strategy)
+	require.Equal(t, "vi", got.Language, "the whole save is undone")
+	require.Equal(t, "z-split", s.dpi.lastStart().plan.Strategy)
+	sn := s.o.Snapshot().DPI
+	require.True(t, sn.Running)
+	require.Equal(t, "z-split", sn.Preset)
+}
+
+func TestSaveSettings_FailedDPIRestartBothWays(t *testing.T) {
+	s := zapretSvc(t)
+	s.dpi.failOn = map[string]error{"zapret2": dpi.ErrStartFailed}
+	st := s.box.Get()
+	st.DPI.Zapret2.Strategy = "z-fake"
+	requireCode(t, s.svc.SaveSettings(st), CodeDPIStartFailed)
+	require.Equal(t, "z-split", s.box.Get().DPI.Zapret2.Strategy)
+	sn := s.o.Snapshot().DPI
+	require.False(t, sn.Running)
+	require.Equal(t, "", sn.Engine)
+}
