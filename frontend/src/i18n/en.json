@@ -886,7 +886,7 @@
       "1hosts-lite": "Lightweight ads and tracking list.",
       "hagezi-tif-mini": "Malware, phishing, scam and cryptojacking domains (compact).",
       "hagezi-fake": "Fake shops, scams and rip-off sites.",
-      "urlhaus": "Hosts currently distributing malware.",
+      "netapi-compromised": "Malware domains taken over by sinkholes, and phishing domains.",
       "phishing-army": "Phishing domains from several feeds.",
       "hagezi-nsfw": "Adult content.",
       "stevenblack-porn": "Adult content (hosts format).",

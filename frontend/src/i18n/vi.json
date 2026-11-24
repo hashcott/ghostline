@@ -886,7 +886,7 @@
       "1hosts-lite": "danh sách quảng cáo và theo dõi gọn nhẹ",
       "hagezi-tif-mini": "domain mã độc, lừa đảo, scam, đào coin trái phép (bản gọn)",
       "hagezi-fake": "shop giả, lừa đảo và trang chặt chém",
-      "urlhaus": "các host đang phát tán mã độc",
+      "netapi-compromised": "domain mã độc đã bị sinkhole và domain lừa đảo",
       "phishing-army": "domain lừa đảo tổng hợp từ nhiều nguồn",
       "hagezi-nsfw": "nội dung người lớn",
       "stevenblack-porn": "nội dung người lớn (định dạng hosts)",
