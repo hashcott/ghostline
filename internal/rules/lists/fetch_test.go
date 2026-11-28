@@ -345,6 +345,14 @@ func TestCatalog_Valid(t *testing.T) {
 	}
 }
 
+// abuse.ch retired its keyless downloads in October 2026 (HTTP 410), so a
+// catalog link to them would add a list that never loads.
+func TestCatalog_NoRetiredAbuseChDownloads(t *testing.T) {
+	for _, it := range lists.Catalog() {
+		require.NotContains(t, it.URL, "abuse.ch/", it.ID)
+	}
+}
+
 func TestFetch_RejectsUnsafeID(t *testing.T) {
 	f := newFetcher(t, http.DefaultClient)
 	for _, id := range []string{`..\..\evil`, "../x", "a/b", "", "a b"} {

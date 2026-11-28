@@ -143,14 +143,14 @@
     "action": "block"
   },
   {
-    "id": "urlhaus",
-    "name": "URLhaus (abuse.ch)",
-    "description": "Hosts currently distributing malware.",
+    "id": "netapi-compromised",
+    "name": "NetAPI Compromised Domains",
+    "description": "Malware domains taken over by sinkholes, and phishing domains.",
     "category": "security",
-    "repo": "https://urlhaus.abuse.ch",
-    "license": "CC0-1.0",
-    "url": "https://urlhaus.abuse.ch/downloads/hostfile/",
-    "format": "hosts",
+    "repo": "https://netapi.com/compromised-urls/",
+    "license": "CC-BY-4.0",
+    "url": "https://netapi.com/api2/netapi-compromised-domains.txt",
+    "format": "domains",
     "action": "block"
   },
   {
